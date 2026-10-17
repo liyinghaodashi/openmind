@@ -1,0 +1,196 @@
+try{
+  const fixture=window.__nodeModeFixture;
+  let checks=0;
+  const assert=(passed,message)=>{checks++;if(!passed)throw new Error(message)};
+  const settle=async()=>{await new Promise(resolve=>setTimeout(resolve,100));await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame)};
+  const key=(value,options={},target=document.activeElement)=>{
+    const event=new KeyboardEvent('keydown',{key:value,bubbles:true,cancelable:true,...options});target.dispatchEvent(event);return event;
+  };
+  const root=()=>state.snapshot.root;
+  const a=()=>root().children[0];
+  const b=()=>root().children[root().children.length-1];
+  const click=async id=>{map.elements.get(id).dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));await settle()};
+  const pointerClick=async(id,count=1)=>{
+    const bounds=map.elements.get(id).getBoundingClientRect();
+    await new Promise(resolve=>{window.__nodePointerDone=resolve;window.webkit.messageHandlers.pointer.postMessage({x:(bounds.left+bounds.right)/2,y:(bounds.top+bounds.bottom)/2,count})});
+    await settle();
+  };
+  const selected=(id,message)=>assert(map.selected===id&&!state.editor&&!map.editing&&map.elements.get(id).classList.contains('selected')&&document.activeElement===map.elements.get(id),message);
+  const editing=(id,message)=>assert(map.selected===id&&map.editing===id&&state.editor===document.activeElement&&map.elements.get(id).classList.contains('editing'),message);
+  applySnapshot(structuredClone(fixture.snapshot),{resetView:true});map.render();await settle();
+  assert(!map.selected&&!state.editor,'Opening a map must leave every node unselected');
+  const contextMenu=id=>map.elements.get(id).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:window.innerWidth-1,clientY:window.innerHeight-1}));
+  const menuWrites=fixture.writes.length;
+  contextMenu(a().id);
+  assert(!map.nodeMenu.hidden&&map.nodeMenu.firstChild.textContent==='折叠','Expanded nodes must offer collapse');
+  key('ArrowDown');assert(document.activeElement===map.colorOptions.firstChild,'Down must move from folding to color choices');
+  key('Home');assert(document.activeElement===map.nodeMenu.firstChild,'Home must focus the first visible menu item');
+  key('End');assert(document.activeElement===map.nodeMenu.lastChild,'End must focus the last visible menu item');
+  key('ArrowUp');assert(document.activeElement===map.copyTreeButton,'Up must move from focus mode to copy tree');
+  key('ArrowUp');assert(document.activeElement===map.colorOptions.lastChild,'Up must return from copy tree to color choices');
+  const menuBounds=map.nodeMenu.getBoundingClientRect();
+  assert(menuBounds.right<=window.innerWidth&&menuBounds.bottom<=window.innerHeight,'Node menu must stay inside the window');
+  map.nodeMenu.firstChild.click();await settle();
+  assert(map.collapsed.has(a().id)&&!map.elements.has(a().children[0].id)&&map.nodeMenu.hidden,'Collapse must hide the clicked branch and dismiss its menu');
+  contextMenu(a().id);
+  assert(map.nodeMenu.firstChild.textContent==='展开','Collapsed nodes must offer expand');
+  map.nodeMenu.firstChild.click();await settle();
+  assert(!map.collapsed.has(a().id)&&map.elements.has(a().children[0].id),'Expand must restore the clicked branch');
+  contextMenu(b().id);assert(!map.nodeMenu.hidden&&map.nodeMenu.firstChild.hidden&&map.nodeMenu.lastChild.textContent==='聚焦模式','Leaf nodes must offer focus mode without folding');
+  contextMenu(a().id);key('Escape');
+  assert(map.nodeMenu.hidden&&document.activeElement===map.elements.get(a().id),'Escape must dismiss the menu and restore node focus');
+  assert(!map.selected&&fixture.writes.length===menuWrites,'Context folding must target the clicked node without editing the document');
+  const writes=fixture.writes.length;
+  for(const value of ['Enter','Tab','ArrowRight','a'])key(value,{},map.canvas);
+  assert(!key('c',{metaKey:true},map.canvas).defaultPrevented,'Copy without a selected node must preserve native behavior');
+  await settle();assert(fixture.writes.length===writes&&!state.editor&&!map.selected,'Unselected nodes must not react to node shortcuts');
+  await click(a().id);selected(a().id,'First click must select with a black outline and node focus');
+  map.collapsed.add(a().id);map.setRoot(root());map.render();
+  assert(key('c',{metaKey:true}).defaultPrevented,'Command+C on a selected node must copy only its text');
+  await settle();
+  assert(fixture.copies.length===1&&fixture.copies[0].session===state.snapshot.session&&fixture.copies[0].nodeId===a().id&&fixture.copies[0].label===null&&!fixture.copies[0].tree,'Selected copy must request only node text even when descendants are folded');
+  selected(a().id,'Copy must retain selected mode');
+  contextMenu(a().id);map.copyTreeButton.click();await settle();
+  assert(fixture.copies.at(-1).tree&&fixture.copies.at(-1).nodeId===a().id&&map.nodeMenu.hidden,'Copy tree must copy folded descendants and dismiss the menu');
+  contextMenu(b().id);map.copyTreeButton.click();await settle();
+  assert(fixture.copies.at(-1).tree&&fixture.copies.at(-1).nodeId===b().id&&map.selected===a().id,'Copy tree must target the right-clicked node rather than the selected node');
+  map.elements.get(a().id).focus({preventScroll:true});
+
+  map.collapsed.clear();map.setRoot(root());map.render();
+  assert(getComputedStyle(map.elements.get(a().id),'::after').opacity==='1'&&$('nodes').querySelectorAll('textarea').length===0&&document.querySelector('.global-caret').hidden,'Selection must display the border without an input or caret');
+  key('x');await settle();assert(fixture.writes.length===writes&&a().label==='节点 A'&&!state.editor,'Typing on a selected node must not edit or save');
+  await click(a().id);editing(a().id,'Clicking the selected node must enter editing');
+  assert(!document.querySelector('.global-caret').hidden,'Editing must display the text caret');
+  const copyEditor=state.editor,copyCount=fixture.copies.length;
+  fixture.delay=250;state.editor.value='尚未写盘的新标题';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));state.editor.setSelectionRange(0,2);
+  assert(key('c',{metaKey:true}).defaultPrevented,'Editing Command+C must override selected text copy');
+  await settle();
+  assert(fixture.copies.at(-1).label==='尚未写盘的新标题'&&state.editor===copyEditor&&state.editor.selectionStart===0&&state.editor.selectionEnd===2,'Copy must include the live draft without ending editing or changing text selection');
+  const copyEvent=new Event('copy',{bubbles:true,cancelable:true});state.editor.dispatchEvent(copyEvent);await settle();
+  assert(copyEvent.defaultPrevented&&fixture.copies.length===copyCount+2&&!fixture.copies.at(-1).tree,'Native Copy menu events must also copy only current node text');
+  const copies=fixture.copies.length;key('c',{metaKey:true,repeat:true});key('c',{metaKey:true,shiftKey:true});key('c',{metaKey:true,isComposing:true});
+  $('source-editor').dispatchEvent(new KeyboardEvent('keydown',{key:'c',metaKey:true,bubbles:true,cancelable:true}));await settle();
+  assert(fixture.copies.length===copies,'Repeated, modified, IME and source editor shortcuts must not copy a node');
+  await state.queue.drain();fixture.delay=0;
+  state.editor.value='节点 A';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));await state.queue.drain();
+  state.editor.value='已编辑 A';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));
+  key('Enter');await settle();selected(a().id,'Enter must finish editing and restore the selected node after reparsing IDs');
+  assert(fixture.writes.length===writes+3&&fixture.writes.at(-1).kind==='label'&&a().label==='已编辑 A'&&root().children.length===2,'Editing Enter must save the label without creating a sibling');
+  assert(document.querySelector('.global-caret').hidden,'Returning to selection must hide the caret');
+  await click(a().id);editing(a().id,'Selected nodes must be editable after ID remapping');
+  key('Enter',{isComposing:true});await settle();editing(a().id,'IME Enter must not exit editing');
+  state.editor.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+  key('Enter');key('Tab');key('ArrowRight');await settle();editing(a().id,'IME composition must preserve editing and block node operations');
+  state.editor.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true}));
+  const arrowEditor=state.editor,arrowWrites=fixture.writes.length;
+  for(const direction of ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight']){
+    for(const options of [{},{metaKey:true}]){
+      const event=key(direction,options);await settle();
+      assert(!event.defaultPrevented,'Editing arrows must preserve native text navigation: '+direction+' '+JSON.stringify(options));
+      editing(a().id,'Editing arrows must preserve the active node: '+direction);
+      assert(state.editor===arrowEditor&&fixture.writes.length===arrowWrites,'Editing arrows must not end editing, reparse or write');
+    }
+  }
+  key('Enter');await settle();selected(a().id,'Enter must still finish editing after text navigation');
+  key('ArrowRight');await settle();selected(a().children[0].id,'Plain Right from selection must select the child');
+  key('ArrowLeft');await settle();selected(a().id,'Plain Left must select the parent');
+  key('ArrowDown');await settle();selected(b().id,'Plain Down must select the next node');
+  key('ArrowUp');await settle();selected(a().id,'Plain Up must select the preceding node');
+  key('ArrowLeft');await settle();selected(root().id,'Plain Left must select the root');
+  key('ArrowLeft');key('ArrowUp');await settle();selected(root().id,'Navigation at a boundary must preserve selection');
+  key('ArrowRight',{metaKey:true});await settle();selected(b().id,'Existing Command+Arrow shortcuts must still select nodes');
+  await click(root().id);selected(root().id,'First root click must select');
+  map.elements.get(root().id).dispatchEvent(new MouseEvent('dblclick',{bubbles:true,detail:2}));await settle();editing(root().id,'Double-click must edit the root');
+  key('Escape');await settle();selected(root().id,'Escape must finish editing and focus the selected root');
+  await click(a().id);key('Tab');await settle();
+  let child=a().children.at(-1);editing(child.id,'Selected Tab must create a child and immediately edit it');
+  assert(fixture.writes.at(-1).kind==='insert-child','Tab must request child insertion');
+  state.editor.value='新子节点';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));key('Tab');await settle();
+  child=a().children.at(-1);editing(child.children[0].id,'Editing Tab must save the label and edit the new child');
+  assert(child.label==='新子节点'&&fixture.writes.at(-1).kind==='insert-child','Editing Tab must preserve the old label');
+  key('Enter');await settle();selected(a().children.at(-1).children[0].id,'Enter on an empty editor must return to selection');
+  await click(b().id);
+  const count=root().children.length,enterWrites=fixture.writes.length;
+  key('Enter',{repeat:true});await settle();selected(b().id,'Repeating Enter on selection must not enter editing');
+  key('Enter');await settle();editing(b().id,'Selected Enter must edit the selected node');
+  assert(fixture.writes.length===enterWrites&&root().children.length===count,'Selected Enter must not save or create a sibling');
+  key('Enter',{repeat:true});await settle();editing(b().id,'Repeating Enter must not finish editing or create siblings');
+  key('Enter');await settle();selected(b().id,'Editing Enter must return to selection');
+  assert(root().children.length===count,'Editing Enter must never insert another sibling');
+  await click(root().id);key('Enter');await settle();editing(root().id,'Selected Enter must edit the root');
+  assert(fixture.writes.length===enterWrites,'Root Enter must not create or save a node');
+  key('Enter');await settle();selected(root().id,'Root editing Enter must restore selection');
+  await click(a().id);await click(a().id);state.editor.value='点击保存';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));
+  await click(b().id);selected(b().id,'Clicking another node during editing must save and select that node');
+  assert(a().label==='点击保存','Click navigation must preserve the saved label');
+  await click(b().id);map.canvas.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));await settle();
+  assert(!map.selected&&!state.editor&&!map.editing&&document.activeElement===map.canvas,'Blank canvas click must leave all nodes unselected');
+  await click(a().id);fixture.delay=40;
+  map.elements.get(a().id).dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+  map.elements.get(b().id).dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));await settle();
+  selected(b().id,'Rapidly clicking another node must cancel a pending edit');
+  await click(a().id);await click(a().id);state.editor.value='延迟保存';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));
+  key('Enter');key('Enter');await settle();await settle();
+  selected(a().id,'Repeated Enter while saving must restore selection once');
+  assert(a().label==='延迟保存'&&root().children.length===count,'Delayed Enter must preserve content and not insert siblings');
+  fixture.delay=0;
+  await click(a().id);state.editor.dispatchEvent(new Event('blur'));await settle();
+  assert(!state.editor&&map.selected===a().id,'Blur must end editing and retain selection');
+  await selectNode(null);await settle();
+  let trustedPointers=0;map.canvas.addEventListener('pointerdown',event=>{if(event.isTrusted)trustedPointers++});
+  await pointerClick(a().id);selected(a().id,'Native pointer capture must select the branch exactly once on the first click');
+  await pointerClick(a().id,2);editing(a().id,'Native double-click must edit a branch after pointer capture');
+  key('Enter');await settle();await selectNode(null);await settle();
+  await pointerClick(root().id);selected(root().id,'Native root click must select without editing');
+  await pointerClick(root().id,2);editing(root().id,'Native double-click must edit the root');
+  assert(trustedPointers===4,'Native click checks must dispatch trusted pointer events');
+  key('Enter');await settle();
+  for(const depth of [0,1,2]){
+    const target=()=>depth===0?root():depth===1?a():a().children[0];
+    await selectNode(target().id);await settle();await editNode(target().id);await settle();
+    const editor=state.editor,label=target().label,compositionWrites=fixture.writes.length;
+    const assertEditorBounds=message=>{
+      const node=map.elements.get(map.editing),bounds=node.getBoundingClientRect(),input=editor.getBoundingClientRect();
+      assert(getComputedStyle(node,'::after').opacity==='1',message+' must retain the selection border');
+      assert(Math.abs(bounds.left-input.left)<1&&Math.abs(bounds.top-input.top)<1&&Math.abs(bounds.width-input.width)<1&&Math.abs(bounds.height-input.height)<1,message+' must align the node background and border with the editor');
+      assert(editor.scrollHeight<=editor.clientHeight+1&&editor.scrollWidth<=editor.clientWidth+1,message+' must fit the composing text without clipping');
+      assert(state.editor===editor&&document.activeElement===editor,message+' must preserve the focused editor');
+      for(const child of target().children){
+        const position=map.layout.positions.find(p=>p.id===child.id);
+        assert(position&&position.x*map.scale+map.x>=input.right-map.canvas.getBoundingClientRect().left+(depth===0?64:30)*map.scale-.5,message+' must move children beyond the live editor and preserve the branch gap');
+      }
+    };
+    editor.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+    for(const scale of [1,.65]){
+      map.scale=scale;
+      for(const suffix of ["bian'kuang","bian'kuang".repeat(16),'b','']){
+        editor.value=label+suffix;editor.setSelectionRange(editor.value.length,editor.value.length);
+        editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertCompositionText',data:suffix,isComposing:true}));await settle();
+        assertEditorBounds('IME depth '+depth+' scale '+scale+' length '+suffix.length);
+        if(suffix.length>100)assert(editor.clientHeight>parseFloat(getComputedStyle(editor).lineHeight)*2,'Long composition must wrap onto multiple lines');
+        assert(fixture.writes.length===compositionWrites&&target().label===label,'Unconfirmed composition must not save or alter the document');
+      }
+    }
+    editor.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:''}));await settle();
+    assert(fixture.writes.length===compositionWrites,'Cancelled composition must not save');
+    editor.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));
+    editor.value=label+'边框';
+    editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertCompositionText',data:'边框',isComposing:true}));await settle();
+    assertEditorBounds('Confirmed candidate before compositionend');
+    fixture.delay=40;
+    editor.dispatchEvent(new CompositionEvent('compositionend',{bubbles:true,data:'边框'}));
+    editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertText',data:'边框'}));await settle();
+    assert(fixture.writes.length===compositionWrites+1&&fixture.writes.at(-1).text===label+'边框'&&target().label===label+'边框','Confirmed composition must save exactly once');
+    assertEditorBounds('After composition save');fixture.delay=0;
+    key('Enter');await settle();
+    const node=map.elements.get(map.selected),position=map.layout.positions.find(p=>p.id===map.selected);
+    assert(!state.editor&&Math.abs(node.getBoundingClientRect().width-position.width*map.scale)<1,'Finishing composition must restore the normal node dimensions');
+  }
+  map.scale=1;map.schedule();await settle();
+  fixture.snapshot.root.children[0].editable=false;applySnapshot(structuredClone(fixture.snapshot));map.render();
+  await click(a().id);await click(a().id);assert(!state.editor&&map.selected===a().id,'Read-only nodes must remain selectable without a text editor');
+  const readOnlyWrites=fixture.writes.length;key('Enter');await settle();
+  assert(!state.editor&&map.selected===a().id&&fixture.writes.length===readOnlyWrites,'Enter on a read-only node must retain selection without creating nodes');
+  assert($('error-banner').hidden,'Interaction must not produce save errors');
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit node mode checks (selection, editing, arrows, insertion, IME, autosave and delayed operations)'});
+}catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

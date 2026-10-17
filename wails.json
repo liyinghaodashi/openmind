@@ -1,0 +1,17 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "OpenMind",
+  "outputfilename": "OpenMind",
+  "frontend:dir": "frontend",
+  "frontend:install": "",
+  "frontend:build": "",
+  "frontend:dev:watcher": "",
+  "author": { "name": "OpenMind" },
+  "info": {
+    "productName": "OpenMind", "productVersion": "0.4.1", "comments": "Markdown-native mind mapping",
+    "fileAssociations": [
+      { "ext": "md", "name": "Markdown", "role": "Editor", "iconName": "iconfile" },
+      { "ext": "markdown", "name": "Markdown", "role": "Editor", "iconName": "iconfile" }
+    ]
+  }
+}

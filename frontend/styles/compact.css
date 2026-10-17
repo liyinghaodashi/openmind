@@ -1,0 +1,10 @@
+.compact-window #sidebar,.compact-window #toggle-sidebar,.compact-window #toggle-source{display:none!important}
+.compact-window #workspace-page>.toolbar{position:relative;height:48px;justify-content:center;padding:0 82px;border-bottom:0}
+.compact-window .toolbar-actions{position:absolute;right:10px;top:9px;gap:4px}
+.compact-window .toolbar-actions .pin-toggle{width:30px;height:30px}
+.compact-window .document-heading{justify-content:center;width:100%}
+.compact-window #document-title{max-width:100%;font-size:14px;font-weight:500;text-align:center;line-height:28px}
+.compact-window #markdown-editor .vditor-reset{padding:16px 28px 64px!important;font-size:15px;line-height:1.9}
+.compact-window .toast{width:max-content;max-width:calc(100vw - 32px);bottom:24px}
+.compact-window .error-banner{flex-wrap:wrap}
+.compact-window .error-banner>span{flex-basis:100%}

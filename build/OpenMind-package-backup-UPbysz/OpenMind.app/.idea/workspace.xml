@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectColorInfo"><![CDATA[{
+  "customColor": "",
+  "associatedIndex": 5
+}]]></component>
+  <component name="ProjectId" id="3JtzMNww39cFpHgUlQdu3m6ZViB" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="false" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{}</component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <created>1790495104883</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1790495104883</updated>
+      <workItem from="1790495104884" duration="1000" />
+    </task>
+    <servers />
+  </component>
+</project>

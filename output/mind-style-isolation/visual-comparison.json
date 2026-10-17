@@ -1,0 +1,28 @@
+{
+  "processon": {
+    "dimensions": [
+      1470,
+      838
+    ],
+    "changed_pixels": 1047,
+    "diff_bbox": [
+      1408,
+      784,
+      1448,
+      816
+    ]
+  },
+  "mindnode": {
+    "dimensions": [
+      1470,
+      838
+    ],
+    "changed_pixels": 80,
+    "diff_bbox": [
+      697,
+      392,
+      712,
+      400
+    ]
+  }
+}

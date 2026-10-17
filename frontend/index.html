@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light">
+  <title>OpenMind</title>
+  <link rel="stylesheet" href="/src/vendor/vditor/dist/index.css">
+  <link rel="stylesheet" href="/styles/app.css">
+  <link rel="stylesheet" href="/src/mind-styles/processon/style.css">
+  <link rel="stylesheet" href="/src/mind-styles/mindnode/style.css">
+  <link rel="stylesheet" href="/styles/markdown.css">
+  <link rel="stylesheet" href="/styles/caret.css">
+  <link rel="stylesheet" href="/styles/search.css">
+  <link rel="stylesheet" href="/styles/file-tree-drag.css">
+  <link rel="stylesheet" href="/styles/compact.css">
+</head>
+<body>
+  <aside id="sidebar" class="sidebar">
+    <div class="section-label">
+      <span id="sidebar-title">文件</span>
+      <div class="sidebar-actions">
+        <div id="file-actions"><button id="new-folder" class="icon-button" title="新建文件夹" aria-label="新建文件夹">▱+</button><button id="new-file" class="icon-button" title="新建 Markdown" aria-label="新建 Markdown">＋</button></div>
+        <button id="toggle-outline" class="icon-button outline-toggle" title="切换到大纲（⌥⌘L）" aria-label="切换到大纲" aria-keyshortcuts="Meta+Alt+L" aria-controls="document-outline file-tree" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 5h2m3 0h9M5 10h2m3 0h7M5 15h2m3 0h7"/></svg></button>
+      </div>
+    </div>
+    <nav id="file-tree" class="file-tree" aria-label="工作区文件"><p class="tree-placeholder">选择一个文件夹，<br>让想法有处安放。</p></nav>
+    <nav id="document-outline" class="file-tree" aria-label="文档大纲" hidden><p class="tree-placeholder">打开一份 Markdown 查看大纲。</p></nav>
+    <div id="workspace-picker" class="workspace-picker">
+      <div id="workspace-context-menu" class="file-context-menu" role="menu" aria-label="最近文件夹操作" hidden><button id="remove-recent-workspace" type="button" role="menuitem">移除</button></div>
+      <div id="workspace-menu" class="workspace-menu" aria-label="切换工作区" hidden><div class="workspace-menu-label">最近使用</div><div id="recent-workspaces"></div><button id="add-workspace" class="add-workspace">＋ 添加文件夹…</button></div>
+      <button id="choose-workspace" class="workspace-button" aria-expanded="false" aria-controls="workspace-menu"><span><strong id="workspace-name">选择工作区</strong><small id="workspace-detail">你的文件，你的思考空间</small></span><span class="chevron">⌄</span></button>
+    </div>
+  </aside>
+  <main id="workspace-page" class="main">
+    <button id="toggle-sidebar" class="icon-button sidebar-toggle" title="收起侧边栏" aria-label="收起侧边栏" aria-controls="sidebar" aria-expanded="true" hidden disabled><svg width="18" height="18" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="2" y="3" width="16" height="14" rx="2"/><path d="M7 3v14"/><path class="sidebar-toggle-arrow" d="m13 7-3 3 3 3"/></svg></button>
+    <header class="toolbar">
+      <div class="document-heading"><h1 id="document-title">你的思考空间</h1></div>
+      <div class="toolbar-actions"><button id="enter-compact-window" class="pin-toggle" type="button" title="便签小窗" aria-label="便签小窗" hidden disabled><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7"/><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></button><button id="toggle-always-on-top" class="pin-toggle" type="button" title="始终置顶（⌥⌘T）" aria-label="始终置顶" aria-keyshortcuts="Alt+Meta+T" aria-pressed="false"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-4 1-3 5v3l-7-7h3l5-3 1-4Z"/><path d="m10 14-6 6"/></svg></button><button id="return-main-window" class="pin-toggle" type="button" title="返回主窗口" aria-label="返回主窗口" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-7 7"/><path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg></button><button id="toggle-source" class="source-toggle" aria-pressed="false" disabled><span>‹/›</span><span id="source-toggle-label">原文</span></button></div>
+    </header>
+    <div id="document-search" class="document-search" role="search" aria-label="当前文档搜索" hidden>
+      <input id="document-search-input" type="search" aria-label="搜索当前文档" placeholder="搜索当前文档" autocomplete="off" spellcheck="false">
+      <span id="document-search-count" class="document-search-count" role="status" aria-live="polite"></span>
+      <button id="document-search-previous" type="button" title="上一个（Shift+Enter）" aria-label="上一个匹配" disabled>↑</button>
+      <button id="document-search-next" type="button" title="下一个（Enter）" aria-label="下一个匹配" disabled>↓</button>
+      <button id="document-search-close" type="button" title="关闭（Esc）" aria-label="关闭搜索">×</button>
+    </div>
+    <div id="error-banner" class="error-banner" role="alert" hidden><span id="error-text"></span><button id="reload-document">保留草稿并重新读取</button><button id="dismiss-error" aria-label="关闭提示">×</button></div>
+    <div class="workbench">
+      <section id="canvas" class="canvas" aria-label="思维导图画布" tabindex="0">
+        <div id="scene" class="scene"><svg id="edges" class="edges" aria-hidden="true"></svg><div id="nodes" class="nodes"></div></div>
+        <div id="welcome" class="welcome">
+          <div class="welcome-art" aria-hidden="true"><div class="art-node art-root">一个想法</div><div class="art-line a"></div><div class="art-line b"></div><div class="art-node art-one">无限可能</div><div class="art-node art-two">从这里生长</div><span class="art-spark">✧</span></div>
+          <div class="eyebrow">A LITTLE SPACE FOR BIG IDEAS</div>
+        </div>
+        <div id="zoom-controls" class="zoom-controls" hidden><button id="zoom-out" aria-label="缩小">−</button><span id="zoom-value">100%</span><button id="zoom-in" aria-label="放大">＋</button><span class="zoom-divider"></span><button id="fit-map" title="适应窗口" aria-label="适应窗口">⛶</button></div>
+      </section>
+      <section id="markdown-page" class="markdown-page" aria-label="Markdown 文档" hidden><div id="markdown-editor"></div></section>
+      <aside id="source-panel" class="source-panel" hidden><textarea id="source-editor" spellcheck="false" aria-label="Markdown 原文编辑器" placeholder="打开一份 Markdown，原文会显示在这里。"></textarea><div class="source-footer"><span>UTF-8</span><span id="source-size">0 字节</span></div></aside>
+    </div>
+  </main>
+  <main id="settings-page" class="settings-page" aria-labelledby="settings-title" tabindex="-1" hidden>
+    <header class="toolbar"><button id="back-from-settings" class="quiet-button settings-back" type="button" aria-label="返回正常模式"><span aria-hidden="true">←</span> 返回</button><h1 id="settings-title">设置</h1><span class="settings-version" aria-label="当前版本 v0.9">v0.9</span></header>
+    <div id="settings-options" class="settings-content"></div>
+  </main>
+  <dialog id="create-dialog"><form id="create-form"><h2 id="create-title">新建 Markdown</h2><p id="create-location"></p><fieldset id="document-kind-field"><legend>类型</legend><div class="document-kind-options"><label class="document-kind-option"><input type="radio" name="document-kind" value="markdown" checked><span>Markdown 文档</span></label><label class="document-kind-option"><input type="radio" name="document-kind" value="mindmap"><span>思维导图</span></label></div></fieldset><label for="entry-name">名称</label><input id="entry-name" autocomplete="off" maxlength="180" required><div id="create-error" class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" id="cancel-create" class="quiet-button">取消</button><button type="submit" class="primary-button">创建</button></div></form></dialog>
+  <dialog id="delete-node-dialog" aria-labelledby="delete-node-title" aria-describedby="delete-node-description"><form method="dialog"><h2 id="delete-node-title">删除整个分支？</h2><p id="delete-node-description"></p><div class="dialog-actions"><button class="quiet-button" value="cancel" autofocus>取消</button><button class="primary-button" value="delete">删除分支</button></div></form></dialog>
+  <div id="file-context-menu" class="file-context-menu" role="menu" hidden><button type="button" role="menuitem" data-action="new-file">新建文件</button><button type="button" role="menuitem" data-action="new-folder">新建文件夹</button><button type="button" role="menuitem" data-action="rename">重命名</button><button type="button" role="menuitem" data-action="delete">删除</button></div>
+  <dialog id="rename-file-dialog" aria-labelledby="rename-file-title"><form><h2 id="rename-file-title">重命名文件</h2><p data-path></p><label for="rename-file-name">名称</label><input id="rename-file-name" autocomplete="off" maxlength="200" required><div class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" class="quiet-button" data-cancel>取消</button><button type="submit" class="primary-button">重命名</button></div></form></dialog>
+  <dialog id="delete-file-dialog" aria-labelledby="delete-file-title"><form><h2 id="delete-file-title">删除文件？</h2><p data-description></p><div class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" class="quiet-button" data-cancel autofocus>取消</button><button type="submit" class="primary-button">删除</button></div></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script src="/src/vendor/vditor/dist/index.min.js"></script>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

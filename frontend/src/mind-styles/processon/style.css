@@ -1,0 +1,29 @@
+.canvas[data-mind-style=processon]{background-color:#ffffff}
+:where([data-mind-style=processon]) .mind-node.colored.root,:where([data-mind-style=processon]) .mind-node.colored.branch{background:var(--node-color-background);border-color:var(--node-color-background);color:#303030}
+:where([data-mind-style=processon]) .mind-node.colored.editing{color:transparent}
+:where([data-mind-style=processon]) .mind-node.selected,:where([data-mind-style=processon]) .mind-node:focus,:where([data-mind-style=processon]) .mind-node:focus-visible{outline:none}
+:where([data-mind-style=processon]) .mind-node::after{content:"";position:absolute;inset:-4px;border:2px solid #202020;border-radius:12px;pointer-events:none;opacity:0}
+:where([data-mind-style=processon]) .mind-node.leaf::after{border-radius:6px}
+:where([data-mind-style=processon]) .mind-node.selected::after{opacity:1}
+:where([data-mind-style=processon]) .node-editor::selection{background:#d4d4d4;color:inherit}
+:where([data-mind-style=processon]) .node-editor.root::selection{background:#626262}
+:where([data-mind-style=processon]) .node-fold-count{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border:1px solid #b8b8b8;border-radius:999px;background:#fff;color:#777;font-size:11px;font-weight:400;line-height:20px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
+.canvas[data-mind-style=processon].node-dragging,.canvas[data-mind-style=processon].node-dragging .mind-node{cursor:grabbing}
+:where([data-mind-style=processon]) .mind-node.dragging-source{opacity:.35}
+:where([data-mind-style=processon]) .mind-node.drop-child{box-shadow:0 0 0 3px #202020;background:#ededed}
+:where([data-mind-style=processon]) .mind-node.root.drop-child{background:#202020;box-shadow:0 0 0 3px #777}
+:where([data-mind-style=processon]) .mind-node.drop-before::before,:where([data-mind-style=processon]) .mind-node.drop-after::before{content:"";position:absolute;left:-5px;right:-5px;height:3px;background:#202020;border-radius:2px;pointer-events:none}
+:where([data-mind-style=processon]) .mind-node.drop-before::before{top:-7px}
+:where([data-mind-style=processon]) .mind-node.drop-after::before{bottom:-7px}
+:where([data-mind-style=processon]) .node-drag-ghost{z-index:8;pointer-events:none;opacity:.8;box-shadow:0 5px 18px #00000025;background:#fff}
+:where([data-mind-style=processon]) .node-drag-ghost::after{display:none}
+:where([data-mind-style=processon]) .scene{position:absolute;left:0;top:0;transform-origin:0 0}
+:where([data-mind-style=processon]) .edges{position:absolute;overflow:visible;width:1px;height:1px;pointer-events:none}
+:where([data-mind-style=processon]) .mind-node{position:absolute;border-radius:9px;padding:12px 17px;font-size:15px;line-height:22px;background:white;border:1px solid #e0e0e0;color:#3e3e3e;box-shadow:0 2px 4px #00000004;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;-webkit-user-select:none;user-select:none;cursor:default}
+:where([data-mind-style=processon]) .mind-node.root{background:#202020;border-color:#202020;color:white;font-size:22px;font-weight:600;box-shadow:none;padding:17px 22px;line-height:29px}
+:where([data-mind-style=processon]) .mind-node.branch{font-weight:550;background:#f3f3f3;border-color:#d9d9d9;color:#303030}
+:where([data-mind-style=processon]) .mind-node.leaf{border:1px solid transparent;background:transparent;box-shadow:none;color:#404040;font-size:14px;border-radius:0;padding:4px 6px}
+:where([data-mind-style=processon]) .mind-node.editing{color:transparent;outline:none}
+:where([data-mind-style=processon]) .node-editor{position:absolute;resize:none;overflow:hidden;border:1px solid transparent;border-radius:0;background:transparent;color:#404040;outline:none;padding:4px 6px;font-size:14px;font-weight:400;line-height:22px;box-shadow:none;z-index:4;appearance:none;-webkit-appearance:none;caret-color:currentColor;white-space:pre-wrap;overflow-wrap:anywhere}
+:where([data-mind-style=processon]) .node-editor.branch{padding:12px 17px;font-size:15px;font-weight:550;color:#303030}
+:where([data-mind-style=processon]) .node-editor.root{font-size:22px;font-weight:600;line-height:29px;padding:17px 22px;color:#fff}
