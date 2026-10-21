@@ -17,13 +17,14 @@ export function mountSettings({container, features, storage}) {
   const revisions = new Map();
 
   function apply(feature, value) {
-    if (feature.options) feature.select(value);
+    if (feature.options || feature.type === 'number') feature.select(value);
     else if (value) feature.enable();
     else feature.disable();
   }
 
   function sync(feature) {
     for (const input of inputs.get(feature.id)) {
+      if (feature.type === 'number') {input.value = String(saved[feature.id]); continue;}
       input.checked = feature.options ? input.value === saved[feature.id] : saved[feature.id] === true;
       if (feature.options) input.tabIndex = input.checked ? 0 : -1;
     }
@@ -100,6 +101,32 @@ export function mountSettings({container, features, storage}) {
         });
       }
       row.append(text, choices);
+    } else if (feature.type === 'number') {
+      row.className += ' setting-number-row';
+      input.type = 'number';
+      input.min = feature.min;
+      input.max = feature.max;
+      input.step = 1;
+      const control = document.createElement('span');
+      control.className = 'setting-number-control';
+      const unit = document.createElement('span');
+      unit.textContent = 'px';
+      control.append(input, unit);
+      row.append(text, control);
+      controls.push(input);
+      input.addEventListener('input', () => revisions.set(feature.id, (revisions.get(feature.id) || 0) + 1));
+      input.addEventListener('change', () => {
+        const value = Number(input.value);
+        if (!Number.isInteger(value) || value < feature.min || value > feature.max) {
+          status.textContent = `${feature.label}请输入 ${feature.min}–${feature.max} 之间的整数。`;
+          sync(feature);
+          return;
+        }
+        save(feature, value);
+      });
+      input.addEventListener('keydown', event => {
+        if (event.key === 'Enter' && !event.isComposing) {event.preventDefault(); input.blur();}
+      });
     } else {
       row.append(input, text);
       controls.push(input);
@@ -127,7 +154,8 @@ export function mountSettings({container, features, storage}) {
     try {
       saved = await storage.load();
       for (const feature of features) {
-        const valid = feature.options ? feature.options.some(option => option.value === saved[feature.id]) : typeof saved[feature.id] === 'boolean';
+        if (feature.type === 'number' && saved[feature.id] === undefined) saved[feature.id] = feature.default;
+        const valid = feature.type === 'number' ? Number.isInteger(saved[feature.id]) && saved[feature.id] >= feature.min && saved[feature.id] <= feature.max : feature.options ? feature.options.some(option => option.value === saved[feature.id]) : typeof saved[feature.id] === 'boolean';
         if (!valid) throw new Error('无效的设置：' + feature.label);
       }
       for (const feature of features) {

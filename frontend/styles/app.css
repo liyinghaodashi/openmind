@@ -146,3 +146,7 @@
 .setting-choice:has(input:checked) input{border-color:#fff}
 .setting-choice:has(input:focus-visible){outline:2px solid #333;outline-offset:3px}
 .setting-choice input:focus-visible{outline:none}
+
+.setting-number-row{align-items:center;justify-content:space-between;cursor:default}
+.setting-number-control{display:flex;align-items:center;gap:8px;color:#787878;font-size:12px}
+.setting-number-control input{width:88px;height:34px;margin:0;padding:6px 10px;border:0;border-radius:7px;background:#f0f0f0;color:#202020;font:inherit;font-size:13px;cursor:text}

@@ -104,3 +104,23 @@ for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
     assert.doesNotMatch(commonCSS, /\.mind-node|\.node-editor|\.node-fold-count|\.node-drag-ghost|data-mind-style/);
   });
 }
+
+for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
+  test(Renderer.name + ' 配置宽度覆盖所有层级，重新测量长文本并保持短节点收缩', () => {
+    const {renderer} = setup(Renderer);
+    let width = 280;
+    renderer.getNodeMaxWidth = () => width;
+    for (const depth of [0, 1, 2, 3]) {
+      width = 280;
+      const short = renderer.measure('短节点', depth);
+      const narrow = renderer.measure('长文本'.repeat(40), depth);
+      for (const configured of [600, 1600, 160]) {
+        width = configured;
+        const size = renderer.measure('长文本'.repeat(40), depth);
+        assert.equal(size.width > narrow.width, configured > 280);
+        assert.equal(size.height < narrow.height, configured > 280);
+        assert.deepEqual(renderer.measure('短节点', depth), short);
+      }
+    }
+  });
+}

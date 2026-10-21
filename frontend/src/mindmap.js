@@ -10,7 +10,8 @@ export class MindMap {
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
     this.style='processon';
-    this.rendererOptions={canvas,scene,nodes,edges,onActivate:id=>this.activateNode(id),onEdit:id=>void this.onEdit(id)};
+    this.nodeMaxWidth=280;
+    this.rendererOptions={canvas,scene,nodes,edges,getNodeMaxWidth:()=>this.nodeMaxWidth,onActivate:id=>this.activateNode(id),onEdit:id=>void this.onEdit(id)};
     this.renderer=createMindRenderer(this.style,this.rendererOptions);
     this.elements=this.renderer.elements;this.edgeElements=this.renderer.edgeElements;
     this.nodeMenu=document.createElement('div');this.nodeMenu.className='file-context-menu node-context-menu';this.nodeMenu.setAttribute('role','menu');this.nodeMenu.setAttribute('aria-label','节点操作');this.nodeMenu.hidden=true;
@@ -112,6 +113,12 @@ export class MindMap {
   createEditor(position){return this.renderer.createEditor(position);}
   setNodeMark(level, enabled){
     this.canvas.classList.toggle(level === 'main' ? 'mind-main-node-mark' : 'mind-second-node-mark', enabled);
+    if(this.root)this.setRoot(this.root);
+  }
+  setNodeMaxWidth(width){
+    if(this.nodeMaxWidth===width)return;
+    this.nodeMaxWidth=width;
+    this.renderer.measurements.clear();
     if(this.root)this.setRoot(this.root);
   }
   setStyle(style){

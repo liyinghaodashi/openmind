@@ -969,6 +969,9 @@ const settings=mountSettings({
     options:[{value:'processon',label:'processon'},{value:'mindnode',label:'MindNode'}],
     select:value=>map.setStyle(value)
   },{
+    id:'mindNodeMaxWidth',group:'mind模式',label:'节点最大宽度',description:'文本换行宽度，默认 280px；数值越大，每行可显示的文字越多。',
+    type:'number',min:160,max:1600,default:280,select:value=>map.setNodeMaxWidth(value)
+  },{
     id:'mindMainNodeMark',group:'mind模式',label:'主节点标记',description:'显示主节点背景，关闭后保留特殊字体。',
     enable:()=>map.setNodeMark('main',true),disable:()=>map.setNodeMark('main',false)
   },{
@@ -994,7 +997,7 @@ const settings=mountSettings({
     enable:()=>{mdCompactWindowEnabled=true;updateDocumentView()},disable:()=>{mdCompactWindowEnabled=false;updateDocumentView()}
   }],
   storage:preview
-    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
+    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',mindNodeMaxWidth:280,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;
@@ -1057,6 +1060,7 @@ async function toggleSettings(open=$('settings-page').hidden){
     if(page.hidden)return;
     switchingSettings=true;
     try{
+      if(page.contains(document.activeElement))document.activeElement.blur();
       await settings.flush();
       if(state.closing)return;
       page.hidden=true;document.body.classList.remove('settings-open');

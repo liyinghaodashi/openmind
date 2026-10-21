@@ -9,8 +9,8 @@ function rootTint(color) {
 }
 
 export class MindNodeRenderer {
-  constructor({canvas, scene, nodes, edges, onActivate, onEdit}) {
-    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit});
+  constructor({canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth = () => 280}) {
+    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth});
     this.document = canvas.ownerDocument;
     this.context = this.document.createElement('canvas').getContext('2d');
     this.elements = new Map();
@@ -21,11 +21,11 @@ export class MindNodeRenderer {
 
   measure(label, depth) {
     const compact = depth !== 0 || !this.canvas.classList.contains('mind-main-node-mark');
-    const key = compact + ':' + depth + ':' + label;
+    const max = this.getNodeMaxWidth();
+    const key = max + ':' + compact + ':' + depth + ':' + label;
     if (this.measurements.has(key)) return this.measurements.get(key);
     const root = depth === 0, font = root ? 22 : 14, line = root ? 29 : 22, pad = compact ? 12 : 44;
     this.context.font = `${root ? 600 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
-    const max = root ? 255 : 280;
     let row = 0, lines = 1, widest = 0;
     for (const char of label) {
       const width = this.context.measureText(char).width;

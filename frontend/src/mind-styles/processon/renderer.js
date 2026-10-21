@@ -9,8 +9,8 @@ function colorTint(color) {
 }
 
 export class ProcessonRenderer {
-  constructor({canvas, scene, nodes, edges, onActivate, onEdit}) {
-    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit});
+  constructor({canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth = () => 280}) {
+    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth});
     this.document = canvas.ownerDocument;
     this.context = this.document.createElement('canvas').getContext('2d');
     this.elements = new Map();
@@ -21,12 +21,12 @@ export class ProcessonRenderer {
 
   measure(label, depth) {
     const compact = depth === 0 ? !this.canvas.classList.contains('mind-main-node-mark') : depth === 1 ? !this.canvas.classList.contains('mind-second-node-mark') : true;
-    const key = compact + ':' + depth + ':' + label;
+    const max = this.getNodeMaxWidth();
+    const key = max + ':' + compact + ':' + depth + ':' + label;
     if (this.measurements.has(key)) return this.measurements.get(key);
     const font = depth === 0 ? 22 : depth === 1 ? 15 : 14;
     const line = depth === 0 ? 29 : 22, pad = compact ? 12 : depth === 0 ? 44 : 34;
     this.context.font = `${depth === 0 ? 600 : depth === 1 ? 550 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
-    const max = depth === 0 ? 255 : 280;
     let row = 0, lines = 1, widest = 0;
     for (const char of label) {
       const width = this.context.measureText(char).width;

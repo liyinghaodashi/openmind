@@ -8,6 +8,7 @@ import (
 )
 
 type AppSettings struct {
+	MindNodeMaxWidth          int    `json:"mindNodeMaxWidth"`
 	MindMainNodeMark          bool   `json:"mindMainNodeMark"`
 	MindSecondNodeMark        bool   `json:"mindSecondNodeMark"`
 	MDCompactWindow           bool   `json:"mdCompactWindow"`
@@ -26,7 +27,7 @@ type AppSettings struct {
 func (a *App) GetSettings() (AppSettings, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	settings := &AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindStyle: "processon", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
+	settings := &AppSettings{MindNodeMaxWidth: 280, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindStyle: "processon", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil
@@ -40,13 +41,16 @@ func (a *App) GetSettings() (AppSettings, error) {
 	if settings == nil {
 		return AppSettings{}, fmt.Errorf("设置文件必须是 JSON 对象")
 	}
-	if err := settings.validateMindStyle(); err != nil {
+	if err := settings.validate(); err != nil {
 		return AppSettings{}, err
 	}
 	return *settings, nil
 }
 
-func (settings AppSettings) validateMindStyle() error {
+func (settings AppSettings) validate() error {
+	if settings.MindNodeMaxWidth < 160 || settings.MindNodeMaxWidth > 1600 {
+		return fmt.Errorf("节点最大宽度必须是 160–1600 之间的整数")
+	}
 	if settings.MindStyle != "processon" && settings.MindStyle != "mindnode" {
 		return fmt.Errorf("无效的 mind 渲染风格：%q", settings.MindStyle)
 	}
@@ -56,7 +60,7 @@ func (settings AppSettings) validateMindStyle() error {
 func (a *App) SaveSettings(settings AppSettings) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if err := settings.validateMindStyle(); err != nil {
+	if err := settings.validate(); err != nil {
 		return err
 	}
 	data, err := json.Marshal(settings)
