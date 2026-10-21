@@ -12,7 +12,7 @@ class Element extends EventTarget {
     this.ownerDocument = document;
     this.children = []; this.dataset = {}; this.attributes = new Map(); this.className = ''; this.textContent = '';
     this.style = {setProperty(name, value) {this[name] = value;}, removeProperty(name) {delete this[name];}};
-    this.classList = {add: name => {this.className += ' ' + name;}};
+    this.classList = {contains: name => this.className.split(' ').includes(name), add: name => {this.className += ' ' + name;}};
     this.clientWidth = 900; this.clientHeight = 600;
   }
   append(element) {this.children.push(element); element.parent = this;}
@@ -28,6 +28,7 @@ class Element extends EventTarget {
 function setup(Renderer) {
   const document = {createElement: () => new Element(document), createElementNS: () => new Element(document)};
   const canvas = new Element(document), scene = new Element(document), nodes = new Element(document), edges = new Element(document);
+  canvas.className = 'mind-main-node-mark mind-second-node-mark';
   const calls = [];
   const options = {canvas, scene, nodes, edges, onActivate: id => calls.push(['select', id]), onEdit: id => calls.push(['edit', id])};
   const renderer = new Renderer(options);
@@ -78,7 +79,7 @@ for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
     state.collapsed.clear();
     state.layout = layoutTree(root, state.collapsed, (...args) => renderer.measure(...args));
     renderer.render(state);
-    assert.equal(renderer.edgeElements.get('branch').getAttribute('stroke'), '#b8b8b8');
+    assert.equal(renderer.edgeElements.get('branch').getAttribute('stroke'), Renderer === ProcessonRenderer ? '#7c808d' : '#b8b8b8');
     assert.equal(branch.querySelector('.node-fold-count'), undefined);
     assert.equal(renderer.elements.get('root').style['--node-color-background'], undefined);
     state.x = -5000; state.selected = 'leaf';

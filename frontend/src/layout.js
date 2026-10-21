@@ -1,4 +1,4 @@
-export function layoutTree(root, collapsed, measure) {
+export function layoutTree(root, collapsed, measure, {rootGap = 64} = {}) {
   const positions = [], edges = [];
   const descendants=node=>node.children.reduce((sum,child)=>sum+1+descendants(child),0);
   function prepare(node, depth = 0, branch = 0, pathDepth = 0) {
@@ -14,7 +14,7 @@ export function layoutTree(root, collapsed, measure) {
     positions.push(p);
     let cy = top + (span - (children.reduce((sum,c)=>sum+c.span,0)+Math.max(0,children.length-1)*15))/2;
     for(const child of children) {
-      const c = place(child,x+size.width+(depth===0?64:30),cy,lineColor);
+      const c = place(child,x+size.width+(depth===0?rootGap:30),cy,lineColor);
       edges.push({id:child.node.id,from:p,to:c,color:child.node.color||lineColor});cy+=child.span+15;
     }
     return p;

@@ -12,16 +12,16 @@ const addressFile=path.join(directory,'address');
 const tests=await readFile(new URL('../frontend/test/'+(process.argv[2]||'mind-rules')+'.webkit.js',import.meta.url),'utf8');
 const mock=`
 window.__mindRules={};
-window.__mindRules.settings={mdCompactWindow:true,hideFileExtensions:false,expandFileNameOnHover:false,mindStyle:'processon',sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
+window.__mindRules.settings={mdCompactWindow:true,hideFileExtensions:false,expandFileNameOnHover:false,mindStyle:'processon',mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
 window.__mindRules.request=async(method,...args)=>{
   const response=await fetch('/_mind',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method,args})});
   const result=await response.json();if(!response.ok)throw new Error(result.error);return result.value;
 };
 window.go={main:{App:{
-  GetSettings:async()=>({...window.__mindRules.settings}),SaveSettings:async value=>{await window.__mindRules.saveGate;if(window.__mindRules.saveError)throw new Error(window.__mindRules.saveError);window.__mindRules.settings={...value}},FrontendReady:async()=>{},RestoreWorkspace:async()=>null,RecentWorkspaces:async()=>[],CheckDocument:async()=>null,
+  GetSettings:async()=>({...window.__mindRules.settings}),SaveSettings:async value=>{await window.__mindRules.saveGate;if(window.__mindRules.saveError)throw new Error(window.__mindRules.saveError);window.__mindRules.settings={...value}},FrontendReady:async()=>{},TakePendingFileOpens:async()=>[],RestoreWorkspace:async()=>null,RecentWorkspaces:async()=>[],CheckDocument:async()=>null,
   ...Object.fromEntries(['OpenDocument','ApplyEdit','ReparseDocument','CopyNodeMarkdown','CopyNodeText'].map(method=>[method,(...args)=>window.__mindRules.request(method,...args)]))
 }}};
-window.runtime={EventsOn:()=>{}};
+window.runtime={EventsOn:()=>{},WindowShow:()=>{}};
 `;
 let bridge;
 const backend=spawn('go',['test','./internal/document','-run','^TestMindWebKitBridge$','-count=1'],{cwd:project,env:{...process.env,OPENMIND_MIND_TEST_ADDRESS:addressFile},stdio:'inherit'});

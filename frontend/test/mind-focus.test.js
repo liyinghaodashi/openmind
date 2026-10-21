@@ -10,7 +10,7 @@ const forest=()=>({id:'file',kind:'file',children:[node('A',[node('A2',[node('A3
 function setup(collapsed=[]){
   const map=Object.assign(Object.create(MindMap.prototype),{
     root:forest(),collapsed:new Set(collapsed),elements:new Map(),scale:1.25,x:24,y:80,
-    canvas:{clientWidth:800,clientHeight:600},closeNodeMenu(){},schedule(){},render(){},
+    canvas:{clientWidth:800,clientHeight:600,classList:{contains:()=>false}},closeNodeMenu(){},schedule(){},render(){},
     measure:()=>({width:100,height:40})
   });
   map.setRoot(map.root);return map;

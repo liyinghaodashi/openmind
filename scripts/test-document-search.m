@@ -7,6 +7,19 @@
 @implementation SearchProbe
 - (void)userContentController:(WKUserContentController *)controller didReceiveScriptMessage:(WKScriptMessage *)message {
     NSDictionary *result = message.body;
+    if ([result[@"inputAction"] isEqualToString:@"enter"]) {
+        NSWindow *window = message.webView.window;
+        [window makeKeyAndOrderFront:nil];
+        [NSApp activateIgnoringOtherApps:YES];
+        for (NSNumber *type in @[@(NSEventTypeKeyDown), @(NSEventTypeKeyUp)]) {
+            NSEvent *event = [NSEvent keyEventWithType:type.unsignedIntegerValue location:NSZeroPoint modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil characters:@"\r" charactersIgnoringModifiers:@"\r" isARepeat:NO keyCode:36];
+            [NSApp sendEvent:event];
+        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 150 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+            [message.webView evaluateJavaScript:@"window.nativeInputDone()" completionHandler:nil];
+        });
+        return;
+    }
     if (result[@"inputAction"]) {
         id<NSTextInputClient> target = (id)[NSApp keyWindow].firstResponder;
         if (![target respondsToSelector:@selector(setMarkedText:selectedRange:replacementRange:)]) {

@@ -20,10 +20,11 @@ export class ProcessonRenderer {
   }
 
   measure(label, depth) {
-    const key = depth + ':' + label;
+    const compact = depth === 0 ? !this.canvas.classList.contains('mind-main-node-mark') : depth === 1 ? !this.canvas.classList.contains('mind-second-node-mark') : true;
+    const key = compact + ':' + depth + ':' + label;
     if (this.measurements.has(key)) return this.measurements.get(key);
     const font = depth === 0 ? 22 : depth === 1 ? 15 : 14;
-    const line = depth === 0 ? 29 : 22, pad = depth === 0 ? 44 : depth === 1 ? 34 : 12;
+    const line = depth === 0 ? 29 : 22, pad = compact ? 12 : depth === 0 ? 44 : 34;
     this.context.font = `${depth === 0 ? 600 : depth === 1 ? 550 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
     const max = depth === 0 ? 255 : 280;
     let row = 0, lines = 1, widest = 0;
@@ -32,7 +33,7 @@ export class ProcessonRenderer {
       if (char === '\n' || row + width > max) {widest = Math.max(widest, row); row = char === '\n' ? 0 : width; lines++;}
       else row += width;
     }
-    const size = {width: Math.max(depth === 0 ? 145 : depth === 1 ? 83 : 24, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (depth === 0 ? 36 : depth === 1 ? 26 : 10)};
+    const size = {width: Math.max(compact ? 24 : depth === 0 ? 145 : 83, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (compact ? 10 : depth === 0 ? 36 : 26)};
     if (this.measurements.size > 5000) this.measurements.clear();
     this.measurements.set(key, size);
     return size;
@@ -112,9 +113,9 @@ export class ProcessonRenderer {
       if (!path) {path = this.document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('fill', 'none'); this.edges.append(path); this.edgeElements.set(edge.id, path);}
       const mid = startX + (b.x - startX) * .4, radius = Math.min(7, Math.abs(endY - startY), (b.x - mid) / 2), direction = Math.sign(endY - startY);
       path.setAttribute('d', direction === 0 ? `M ${startX} ${startY} H ${b.x}` : `M ${startX} ${startY} H ${mid} V ${endY - direction * radius} Q ${mid} ${endY} ${mid + radius} ${endY} H ${b.x}`);
-      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-width', '1.85');
       path.setAttribute('stroke-linecap', 'butt');
-      path.setAttribute('stroke', edge.color || '#b8b8b8');
+      path.setAttribute('stroke', edge.color || '#7c808d');
     }
     for (const [id, path] of this.edgeElements) if (!keepEdges.has(id)) {path.remove(); this.edgeElements.delete(id);}
     if (editor) {

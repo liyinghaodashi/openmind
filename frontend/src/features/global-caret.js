@@ -25,7 +25,7 @@ function selectionRect(target, mirror, cache) {
     probe.selectNode(br);
     return [...probe.getClientRects()].find(rect => rect.height > 0) || null;
   }
-  if (element.tagName === 'LI' && !element.hasChildNodes()) {
+  if ((element === target || element.matches('p,li')) && !element.hasChildNodes()) {
     const style = getComputedStyle(element), bounds = element.getBoundingClientRect();
     if (!element.offsetWidth || !element.offsetHeight) return null;
     for (const property of mirrorProperties) mirror.style[property] = style[property];

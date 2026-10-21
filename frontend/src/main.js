@@ -143,6 +143,14 @@ const fileActions=mountFileActions({
   onError:error=>toast(errorText(error))
 });
 fileActions.bindBackground($('file-tree'));
+document.addEventListener('keydown',event=>{
+  if(event.key!=='F6'||!event.shiftKey||event.metaKey||event.ctrlKey||event.altKey||event.isComposing||event.keyCode===229)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  if(event.repeat||preview||!state.snapshot||state.navigating||state.checking||state.closing||state.composing||switchingSettings||switchingCompactWindow||fileActions.active||document.querySelector('dialog[open]')||document.body.classList.contains('settings-open'))return;
+  const path=state.snapshot.path;
+  closeWorkspaceMenu();documentSearch.close(false);
+  void fileActions.renameEntry({path,name:path.split('/').pop(),directory:false});
+},true);
 const fileTreeDrag=mountFileTreeDrag({
   tree:$('file-tree'),rootTarget:$('sidebar-title').parentElement,rootLabel:$('sidebar-title'),
   canDrag:()=>!!state.workspace&&!preview&&!state.navigating&&!state.checking&&!state.closing&&!state.blocked&&!state.composing&&!state.fileMoving&&!state.nodeDragging&&!addingChild&&!deletingNode&&!movingNode&&!fileActions.active&&!document.querySelector('dialog[open]')&&!document.body.classList.contains('settings-open'),
@@ -634,7 +642,7 @@ $('remove-recent-workspace').onclick=async()=>{
   const target=recentWorkspaceTarget;if(!target)return;
   closeWorkspaceContextMenu(true);
   try{await call('RemoveRecentWorkspace',target.key);await refreshRecentWorkspaces()}
-  catch(error){toast('移除最近文件夹失败：'+errorText(error))}
+  catch(error){toast('移除快捷文件夹失败：'+errorText(error))}
 };
 $('workspace-context-menu').addEventListener('keydown',event=>{
   if(event.key==='Escape'||event.key==='Tab'){
@@ -683,7 +691,7 @@ function renderRecentWorkspaces(){
     };
     row.append(button,finder);items.append(row);
   }
-  if(!recentWorkspaces.length){const empty=document.createElement('p');empty.className='workspace-menu-empty';empty.textContent='还没有最近使用的文件夹';items.append(empty)}
+  if(!recentWorkspaces.length){const empty=document.createElement('p');empty.className='workspace-menu-empty';empty.textContent='还没有添加文件夹';items.append(empty)}
   $('recent-workspaces').replaceChildren(items);
 }
 async function refreshRecentWorkspaces(){
@@ -705,14 +713,14 @@ async function refreshRecentWorkspaces(){
   }
 }
 function refreshVisibleWorkspaceMenu(){
-  if(!$('workspace-menu').hidden&&!state.navigating)void refreshRecentWorkspaces().catch(error=>toast('更新最近文件夹失败：'+errorText(error)));
+  if(!$('workspace-menu').hidden&&!state.navigating)void refreshRecentWorkspaces().catch(error=>toast('更新快捷文件夹失败：'+errorText(error)));
 }
 async function toggleWorkspaceMenu(){
   if(state.navigating)return;
   const open=$('workspace-menu').hidden;
   $('workspace-menu').hidden=!open;$('choose-workspace').setAttribute('aria-expanded',String(open));
   if(open){
-    try{await refreshRecentWorkspaces()}catch(error){toast('更新最近文件夹失败：'+errorText(error))}
+    try{await refreshRecentWorkspaces()}catch(error){toast('更新快捷文件夹失败：'+errorText(error))}
     if(!$('workspace-menu').hidden)$('workspace-menu').querySelector('button:not(:disabled)')?.focus();
   }
 }
@@ -866,6 +874,49 @@ async function openDocument(path){
   try{if(!await readyToNavigate())return;const snapshot=await call('OpenDocument',path);state.queue.reset();state.draft=null;state.blocked=false;map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;state.selectedDir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';applySnapshot(snapshot,{resetView:true});resetSourceInput()}catch(e){banner(errorText(e))}finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
 }
 
+const externalFiles=[];
+let externalFilesReady=false,openingExternalFiles=null,externalFileRetry=null;
+async function receiveExternalFiles(){
+  try{
+    externalFiles.push(...(await call('TakePendingFileOpens')||[]));
+    if(externalFilesReady)await processExternalFiles();
+  }catch(error){banner('无法接收系统打开请求：'+errorText(error))}
+}
+function processExternalFiles(){
+  if(openingExternalFiles)return openingExternalFiles;
+  clearTimeout(externalFileRetry);
+  openingExternalFiles=(async()=>{
+    while(externalFiles.length){
+      if(state.navigating||state.checking||state.closing||state.blocked||state.composing||state.fileDragging||state.fileMoving||state.nodeDragging||addingChild||deletingNode||movingNode||switchingSettings||switchingCompactWindow||fileActions.active||document.querySelector('dialog[open]'))return;
+      if(compactWindow&&!await setCompactWindow(false))return;
+      if(!$('settings-page').hidden){
+        await toggleSettings(false);
+        if(!$('settings-page').hidden)return;
+      }
+      state.navigating=true;
+      try{
+        if(!await readyToNavigate())return;
+        const path=externalFiles.shift();
+        const result=await call('OpenExternalDocument',path);
+        if(state.workspace?.root!==result.workspace.root)await setWorkspace(result.workspace);
+        state.queue.reset();state.draft=null;state.blocked=false;
+        map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;
+        state.selectedDir=result.snapshot.path.includes('/')?result.snapshot.path.slice(0,result.snapshot.path.lastIndexOf('/')):'';
+        const parts=state.selectedDir.split('/').filter(Boolean);
+        for(let i=1;i<=parts.length;i++)state.expanded.add(parts.slice(0,i).join('/'));
+        applySnapshot(result.snapshot,{resetView:true});resetSourceInput();
+        setOutlineMode(true);documentSearch.close(false);
+        await refreshTree();await refreshRecentWorkspaces();
+      }catch(error){banner('无法打开文件：'+errorText(error))}
+      finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
+    }
+  })().catch(error=>banner('无法打开文件：'+errorText(error))).finally(()=>{
+    openingExternalFiles=null;
+    if(externalFiles.length)externalFileRetry=setTimeout(()=>void processExternalFiles(),250);
+  });
+  return openingExternalFiles;
+}
+
 async function checkExternal(){
   if(state.fileDragging||map.nodeDrag||preview||state.navigating||!state.snapshot||state.checking||addingChild||deletingNode||movingNode||state.queue.pending||state.blocked||state.composing||state.closing||finishing)return;
   state.checking=true;
@@ -918,6 +969,12 @@ const settings=mountSettings({
     options:[{value:'processon',label:'processon'},{value:'mindnode',label:'MindNode'}],
     select:value=>map.setStyle(value)
   },{
+    id:'mindMainNodeMark',group:'mind模式',label:'主节点标记',description:'显示主节点背景，关闭后保留特殊字体。',
+    enable:()=>map.setNodeMark('main',true),disable:()=>map.setNodeMark('main',false)
+  },{
+    id:'mindSecondNodeMark',group:'mind模式',label:'二级节点标记',description:'显示二级节点背景，关闭后保留特殊字体。',
+    enable:()=>map.setNodeMark('second',true),disable:()=>map.setNodeMark('second',false)
+  },{
     id:'mindZoomControls',group:'mind模式',label:'显示缩放控件',description:'在 mind 模式的右下角显示缩小、缩放比例、放大和适应窗口控件。',
     enable:()=>{mindZoomControlsEnabled=true;updateDocumentView()},disable:()=>{mindZoomControlsEnabled=false;updateDocumentView()}
   },{
@@ -937,7 +994,7 @@ const settings=mountSettings({
     enable:()=>{mdCompactWindowEnabled=true;updateDocumentView()},disable:()=>{mdCompactWindowEnabled=false;updateDocumentView()}
   }],
   storage:preview
-    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
+    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;
@@ -1048,9 +1105,16 @@ if(native){
   window.runtime.EventsOn('document:check',()=>{void checkExternal();refreshVisibleWorkspaceMenu()});
   window.runtime.EventsOn('app:closing',()=>void closeApp());
   window.runtime.EventsOn('window:closing',()=>void closeApp(true));
-  await call('FrontendReady');
+  window.runtime.EventsOn('document:open-requested',()=>void receiveExternalFiles());
+  await receiveExternalFiles();
   window.addEventListener('focus',()=>{void refreshTree();void checkExternal();refreshVisibleWorkspaceMenu()});
-  try{const workspace=await call('RestoreWorkspace');if(workspace)await setWorkspace(workspace)}catch(error){banner('上次的工作区暂时不可用，请重新选择文件夹。'+errorText(error))}
+  if(!externalFiles.length){
+    try{const workspace=await call('RestoreWorkspace');if(workspace)await setWorkspace(workspace)}catch(error){banner('上次的工作区暂时不可用，请重新选择文件夹。'+errorText(error))}
+  }
+  externalFilesReady=true;
+  await call('FrontendReady');
+  await receiveExternalFiles();
+  window.runtime.WindowShow();
 }else{
   const {previewSnapshot,previewDocuments}=await import('./preview.js');
   state.workspace={root:'只读界面预览',name:'我的知识库'};
@@ -1059,4 +1123,4 @@ if(native){
   applySnapshot(previewSnapshot,{resetView:true});resetSourceInput();
 }
 
-try{await refreshRecentWorkspaces()}catch(error){banner('读取最近工作区失败：'+errorText(error))}
+try{await refreshRecentWorkspaces()}catch(error){banner('读取快捷文件夹失败：'+errorText(error))}

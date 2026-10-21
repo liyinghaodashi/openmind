@@ -27,8 +27,8 @@
     <nav id="file-tree" class="file-tree" aria-label="工作区文件"><p class="tree-placeholder">选择一个文件夹，<br>让想法有处安放。</p></nav>
     <nav id="document-outline" class="file-tree" aria-label="文档大纲" hidden><p class="tree-placeholder">打开一份 Markdown 查看大纲。</p></nav>
     <div id="workspace-picker" class="workspace-picker">
-      <div id="workspace-context-menu" class="file-context-menu" role="menu" aria-label="最近文件夹操作" hidden><button id="remove-recent-workspace" type="button" role="menuitem">移除</button></div>
-      <div id="workspace-menu" class="workspace-menu" aria-label="切换工作区" hidden><div class="workspace-menu-label">最近使用</div><div id="recent-workspaces"></div><button id="add-workspace" class="add-workspace">＋ 添加文件夹…</button></div>
+      <div id="workspace-context-menu" class="file-context-menu" role="menu" aria-label="快捷文件夹操作" hidden><button id="remove-recent-workspace" type="button" role="menuitem">移除</button></div>
+      <div id="workspace-menu" class="workspace-menu" aria-label="切换工作区" hidden><div class="workspace-menu-label">常用文件夹</div><div id="recent-workspaces"></div><button id="add-workspace" class="add-workspace">＋ 添加文件夹…</button></div>
       <button id="choose-workspace" class="workspace-button" aria-expanded="false" aria-controls="workspace-menu"><span><strong id="workspace-name">选择工作区</strong><small id="workspace-detail">你的文件，你的思考空间</small></span><span class="chevron">⌄</span></button>
     </div>
   </aside>
@@ -60,7 +60,7 @@
     </div>
   </main>
   <main id="settings-page" class="settings-page" aria-labelledby="settings-title" tabindex="-1" hidden>
-    <header class="toolbar"><button id="back-from-settings" class="quiet-button settings-back" type="button" aria-label="返回正常模式"><span aria-hidden="true">←</span> 返回</button><h1 id="settings-title">设置</h1><span class="settings-version" aria-label="当前版本 v0.9">v0.9</span></header>
+    <header class="toolbar"><button id="back-from-settings" class="quiet-button settings-back" type="button" aria-label="返回正常模式"><span aria-hidden="true">←</span> 返回</button><h1 id="settings-title">设置</h1><span class="settings-version" aria-label="当前版本 v0.9.18">v0.9.18</span></header>
     <div id="settings-options" class="settings-content"></div>
   </main>
   <dialog id="create-dialog"><form id="create-form"><h2 id="create-title">新建 Markdown</h2><p id="create-location"></p><fieldset id="document-kind-field"><legend>类型</legend><div class="document-kind-options"><label class="document-kind-option"><input type="radio" name="document-kind" value="markdown" checked><span>Markdown 文档</span></label><label class="document-kind-option"><input type="radio" name="document-kind" value="mindmap"><span>思维导图</span></label></div></fieldset><label for="entry-name">名称</label><input id="entry-name" autocomplete="off" maxlength="180" required><div id="create-error" class="form-error" role="alert"></div><div class="dialog-actions"><button type="button" id="cancel-create" class="quiet-button">取消</button><button type="submit" class="primary-button">创建</button></div></form></dialog>

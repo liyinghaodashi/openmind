@@ -10,6 +10,23 @@ try{
   const colorOriginal=state.snapshot.source;
   const appearance=label=>getComputedStyle(map.elements.get(find(label).id));
   const stroke=label=>map.edgeElements.get(find(label).id)?.getAttribute('stroke');
+  const mainMark=$('setting-mindMainNodeMark'),secondMark=$('setting-mindSecondNodeMark');
+  assert(!mainMark.checked&&!secondMark.checked,'Saved disabled node marks must be retained');
+  assert(appearance('主节点').backgroundColor==='rgba(0, 0, 0, 0)'&&appearance('主节点').color==='rgb(48, 48, 48)'&&appearance('主节点').fontSize==='22px','Unmarked main must retain typography with readable text');
+  assert(appearance('二级').backgroundColor==='rgba(0, 0, 0, 0)'&&appearance('二级').fontWeight==='550','Unmarked second node must retain typography');
+  const compactMainWidth=map.layout.positions.find(p=>p.id===find('主节点').id).width;
+  assert(appearance('主节点').paddingLeft==='6px'&&appearance('二级').paddingLeft==='6px','Unmarked headings must use normal node padding');
+  assert(map.layout.edges.every(edge=>Math.abs(edge.to.x-edge.from.x-edge.from.width-30)<.01),'Unmarked root and ordinary nodes must have the same horizontal gap');
+  await editNode(find('主节点').id);await settle();
+  assert(getComputedStyle(state.editor).color==='rgb(48, 48, 48)'&&appearance('主节点').color==='rgba(0, 0, 0, 0)','Unmarked main editor must remain readable without duplicate text');
+  await finishNodeSelection();await settle();
+  await toggleSettings(true);mainMark.click();await settings.flush();
+  assert(appearance('主节点').backgroundColor!=='rgba(0, 0, 0, 0)'&&appearance('二级').backgroundColor==='rgba(0, 0, 0, 0)','Main mark must operate independently');
+  secondMark.click();await settings.flush();mainMark.click();await settings.flush();
+  assert(appearance('主节点').backgroundColor==='rgba(0, 0, 0, 0)'&&appearance('二级').backgroundColor!=='rgba(0, 0, 0, 0)','Second mark must operate independently');
+  mainMark.click();await settings.flush();await toggleSettings(false);await settle();
+  assert(window.__mindRules.settings.mindMainNodeMark&&window.__mindRules.settings.mindSecondNodeMark,'Both marks must persist');
+  assert(map.layout.positions.find(p=>p.id===find('主节点').id).width>compactMainWidth&&appearance('主节点').paddingLeft==='22px'&&appearance('二级').paddingLeft==='17px','Enabling marks must restore node dimensions and padding');
   assert(find('二级').color==='#3B82F6'&&!$('nodes').textContent.includes('[color:'),'Color metadata must be hidden from rendered node labels');
   assert(appearance('主节点').backgroundColor==='rgb(248, 225, 223)'&&appearance('主节点').color==='rgb(48, 48, 48)','Main nodes must use a pale color background and dark text');
   assert(appearance('二级').backgroundColor==='rgb(216, 230, 253)'&&stroke('二级')==='#3B82F6','Second nodes must tint their background and incoming edge');
@@ -29,7 +46,7 @@ try{
   await setNodeColor(find('主节点').id,'#858C98');await settle();
   assert(appearance('二级').backgroundColor==='rgb(231, 232, 234)'&&stroke('二级')==='#858C98'&&appearance('三级').backgroundColor==='rgba(0, 0, 0, 0)','Changing the main color must update inherited second backgrounds without adding backgrounds to deeper nodes');
   await setNodeColor(find('主节点').id,'');await settle();
-  assert(appearance('主节点').backgroundColor==='rgb(32, 32, 32)'&&appearance('二级').backgroundColor==='rgb(243, 243, 243)'&&stroke('二级')==='#b8b8b8','Removing the main color must restore uncolored second nodes to the original background');
+  assert(appearance('主节点').backgroundColor==='rgb(32, 32, 32)'&&appearance('二级').backgroundColor==='rgb(228, 228, 231)'&&appearance('二级').borderTopColor==='rgba(0, 0, 0, 0)'&&appearance('二级').boxShadow==='none'&&stroke('二级')==='#7c808d','Removing the main color must restore uncolored second nodes to the original background');
   await setNodeColor(find('主节点').id,'#DC6A5E');await setNodeColor(find('二级').id,'#3B82F6');await settle();
   setOutlineMode(true);await settle();
   assert(!$('document-outline').textContent.includes('[color:'),'Mind outline must hide color metadata');setOutlineMode(false);
@@ -86,7 +103,11 @@ try{
   await setNodeColor(find('主节点').id,'');await settle();
   assert(appearance('主节点').backgroundColor==='rgb(32, 32, 32)'&&appearance('主节点').color==='rgb(255, 255, 255)','Removing root color must restore black background and white text');
   const defaultSwatches=showColors('主节点');
-  assert(defaultSwatches[3].getAttribute('aria-checked')==='true'&&getComputedStyle(defaultSwatches[3]).backgroundColor==='rgb(32, 32, 32)','Unconfigured nodes must select the gray swatch');
+  assert(defaultSwatches.every(button=>button.getAttribute('aria-checked')==='false')&&defaultSwatches[3].dataset.color==='#3B82F6','Unconfigured nodes must leave all color presets unselected');
+  defaultSwatches[3].click();await settle();
+  assert(find('主节点').color==='#3B82F6'&&showColors('主节点')[3].getAttribute('aria-checked')==='true','The blue preset must apply and show its selected state');
+  showColors('主节点')[3].click();await settle();
+  assert(!find('主节点').color,'Clicking selected blue must restore the default color');
   map.closeNodeMenu();
   const colorSaved=state.snapshot.source;
   applySnapshot(await call('OpenDocument','颜色.mind.md'),{resetView:true});map.fit();map.render();await settle();
@@ -236,7 +257,7 @@ try{
   const viewBeforeSettings=outlineViewState();
   const changeOutlineSetting=async(input,enabled)=>{
     await toggleSettings(true);
-    input.focus();
+    input.focus();await settle();
     const settingsPresentation=()=>({
       rows:[...$('settings-options').querySelectorAll('.setting-row')].map(row=>{const rect=row.getBoundingClientRect();return {opacity:getComputedStyle(row).opacity,x:rect.x,y:rect.y,width:rect.width,height:rect.height}}),
       statusHeight:$('settings-options').querySelector('.settings-status').getBoundingClientRect().height,
@@ -593,6 +614,12 @@ try{
   assert(getComputedStyle(restoredBranch).fontWeight==='550'&&getComputedStyle(restoredBranch).borderBottomWidth==='1px'&&!map.edgeElements.get(find(oldLabel).id).getAttribute('d').includes(' C '),'Switching back must restore original nodes and edge geometry');
   await checkStyleIsolation('mindnode');
   await editNode(find(oldLabel).id);await settle();await checkStyleIsolation('mindnode');await finishNodeSelection();await settle();
+  await open();
+  await selectNode(state.snapshot.root.children[0].id);key('Tab');await settle();
+  assert(state.editor&&map.layout.positions.find(p=>p.id===map.editing).depth===1,'Tab from a main node must create a second-level node');
+  state.editor.value='默认灰色新节点';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));await state.queue.drain();await finishNodeSelection();await settle();
+  assert(appearance('默认灰色新节点').backgroundColor==='rgb(228, 228, 231)'&&appearance('默认灰色新节点').borderTopColor==='rgba(0, 0, 0, 0)'&&appearance('默认灰色新节点').boxShadow==='none'&&stroke('默认灰色新节点')==='#7c808d','Tab-created second nodes must use the default gray fill, invisible border and gray connector');
+  assert(!find('默认灰色新节点').color,'Default styling must not add explicit color metadata');
   assert($('error-banner').hidden,'Regression checks must not produce save errors');
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit checks with the real document service (forest, strict syntax, startup steps, editing, insertion, move, copy, deletion, collapse, search, reopen and Markdown mode)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

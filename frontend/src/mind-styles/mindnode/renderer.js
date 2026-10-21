@@ -20,9 +20,10 @@ export class MindNodeRenderer {
   }
 
   measure(label, depth) {
-    const key = depth + ':' + label;
+    const compact = depth !== 0 || !this.canvas.classList.contains('mind-main-node-mark');
+    const key = compact + ':' + depth + ':' + label;
     if (this.measurements.has(key)) return this.measurements.get(key);
-    const root = depth === 0, font = root ? 22 : 14, line = root ? 29 : 22, pad = root ? 44 : 12;
+    const root = depth === 0, font = root ? 22 : 14, line = root ? 29 : 22, pad = compact ? 12 : 44;
     this.context.font = `${root ? 600 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
     const max = root ? 255 : 280;
     let row = 0, lines = 1, widest = 0;
@@ -31,13 +32,13 @@ export class MindNodeRenderer {
       if (char === '\n' || row + width > max) {widest = Math.max(widest, row); row = char === '\n' ? 0 : width; lines++;}
       else row += width;
     }
-    const size = {width: Math.max(root ? 145 : 24, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (root ? 36 : 10)};
+    const size = {width: Math.max(compact ? 24 : 145, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (compact ? 10 : 36)};
     if (this.measurements.size > 5000) this.measurements.clear();
     this.measurements.set(key, size);
     return size;
   }
 
-  lineWidth(depth) {return depth === 1 ? 3 : depth === 2 ? 2 : 1.5;}
+  lineWidth(depth) {return depth === 1 ? 3.35 : depth === 2 ? 2.35 : 1.85;}
 
   createEditor(position) {
     const editor = this.document.createElement('textarea');

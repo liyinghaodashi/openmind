@@ -8,6 +8,8 @@ import (
 )
 
 type AppSettings struct {
+	MindMainNodeMark          bool   `json:"mindMainNodeMark"`
+	MindSecondNodeMark        bool   `json:"mindSecondNodeMark"`
 	MDCompactWindow           bool   `json:"mdCompactWindow"`
 	ExpandFileNameOnHover     bool   `json:"expandFileNameOnHover"`
 	HideFileExtensions        bool   `json:"hideFileExtensions"`
@@ -24,7 +26,7 @@ type AppSettings struct {
 func (a *App) GetSettings() (AppSettings, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	settings := &AppSettings{MDCompactWindow: true, MindStyle: "processon", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
+	settings := &AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindStyle: "processon", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil

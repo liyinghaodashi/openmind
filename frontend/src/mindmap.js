@@ -110,6 +110,10 @@ export class MindMap {
   }
   measure(label,depth,node){return this.editor&&node?.id===this.editing?this.renderer.measureEditor(this.editor,depth):this.renderer.measure(label,depth);}
   createEditor(position){return this.renderer.createEditor(position);}
+  setNodeMark(level, enabled){
+    this.canvas.classList.toggle(level === 'main' ? 'mind-main-node-mark' : 'mind-second-node-mark', enabled);
+    if(this.root)this.setRoot(this.root);
+  }
   setStyle(style){
     if(this.style===style)return;
     const anchor=this.layout?.positions.find(p=>p.id===(this.focusedId||this.selected))||this.layout?.positions[0];
@@ -144,7 +148,7 @@ export class MindMap {
     const focusButton=this.nodeMenu.lastChild;focusButton.textContent=fromCanvas?'退出聚焦模式':'聚焦模式';focusButton.setAttribute('aria-checked',String(this.focusedId===node.id));
     this.colorRow.hidden=fromCanvas||fromOutline||!node.editable;
     this.copyTreeButton.hidden=fromCanvas||fromOutline||!this.copyTreeEnabled;
-    const selectedColor=(this.layout?.positions.find(p=>p.id===node.id)?.effectiveColor||nodeColors[3].hex).toUpperCase();
+    const selectedColor=(this.layout?.positions.find(p=>p.id===node.id)?.effectiveColor||'').toUpperCase();
     for(const button of this.colorOptions.children)button.setAttribute('aria-checked',String(button.dataset.color===selectedColor));
     this.nodeMenu.hidden=false;this.nodeMenu.style.left='0px';this.nodeMenu.style.top='0px';
     const bounds=this.nodeMenu.getBoundingClientRect(),origin=(el||this.canvas).getBoundingClientRect();
@@ -161,7 +165,7 @@ export class MindMap {
     const focused=this.focusedId?find(root):null;
     if(!focused)this.focusedId=null;
     this.viewRoot=focused||root;
-    this.layout=layoutTree(root,this.collapsed,(...args)=>this.measure(...args));
+    this.layout=layoutTree(root,this.collapsed,(...args)=>this.measure(...args),{rootGap:this.canvas.classList.contains('mind-main-node-mark')?64:30});
     if(focused){
       const ids=new Set();
       const add=node=>{ids.add(node.id);node.children.forEach(add)};add(focused);

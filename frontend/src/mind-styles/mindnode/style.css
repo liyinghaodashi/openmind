@@ -31,3 +31,7 @@
 :where([data-mind-style=mindnode]) .node-editor.branch,:where([data-mind-style=mindnode]) .node-editor.leaf{border:0;background:transparent;color:#777780;font-size:14px;font-weight:400;line-height:22px;padding:4px 6px 6px}
 :where([data-mind-style=mindnode]) .mind-node:not(.root) .node-fold-count{top:auto;bottom:-11px;transform:none;border:0;color:var(--node-line-color);background:#fff}
 :where([data-mind-style=mindnode]) .mind-node:not(.root).drop-child{background:#dedee2;box-shadow:0 0 0 3px #202020}
+.canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .mind-node.root{background:transparent;border-color:transparent;box-shadow:none;color:#303030}
+.canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .mind-node.root.editing{color:transparent}
+.canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .node-editor.root{color:#303030}
+.canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .mind-node.root,.canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .node-editor.root{padding:4px 6px;text-align:left}

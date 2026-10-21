@@ -21,9 +21,16 @@
 :where([data-mind-style=processon]) .edges{position:absolute;overflow:visible;width:1px;height:1px;pointer-events:none}
 :where([data-mind-style=processon]) .mind-node{position:absolute;border-radius:9px;padding:12px 17px;font-size:15px;line-height:22px;background:white;border:1px solid #e0e0e0;color:#3e3e3e;box-shadow:0 2px 4px #00000004;white-space:pre-wrap;overflow-wrap:anywhere;text-align:left;-webkit-user-select:none;user-select:none;cursor:default}
 :where([data-mind-style=processon]) .mind-node.root{background:#202020;border-color:#202020;color:white;font-size:22px;font-weight:600;box-shadow:none;padding:17px 22px;line-height:29px}
-:where([data-mind-style=processon]) .mind-node.branch{font-weight:550;background:#f3f3f3;border-color:#d9d9d9;color:#303030}
+:where([data-mind-style=processon]) .mind-node.branch{font-weight:550;background:#e4e4e7;border-color:transparent;color:#303030;box-shadow:none}
 :where([data-mind-style=processon]) .mind-node.leaf{border:1px solid transparent;background:transparent;box-shadow:none;color:#404040;font-size:14px;border-radius:0;padding:4px 6px}
 :where([data-mind-style=processon]) .mind-node.editing{color:transparent;outline:none}
 :where([data-mind-style=processon]) .node-editor{position:absolute;resize:none;overflow:hidden;border:1px solid transparent;border-radius:0;background:transparent;color:#404040;outline:none;padding:4px 6px;font-size:14px;font-weight:400;line-height:22px;box-shadow:none;z-index:4;appearance:none;-webkit-appearance:none;caret-color:currentColor;white-space:pre-wrap;overflow-wrap:anywhere}
 :where([data-mind-style=processon]) .node-editor.branch{padding:12px 17px;font-size:15px;font-weight:550;color:#303030}
 :where([data-mind-style=processon]) .node-editor.root{font-size:22px;font-weight:600;line-height:29px;padding:17px 22px;color:#fff}
+.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .mind-node.root{background:transparent;border-color:transparent;box-shadow:none;color:#303030}
+.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .mind-node.root.editing{color:transparent}
+.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .node-editor.root{color:#303030}
+.canvas[data-mind-style=processon]:not(.mind-second-node-mark) .mind-node.branch{background:transparent;border-color:transparent;box-shadow:none}
+.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .node-editor.root::selection{background:#d4d4d4}
+.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .mind-node.root,.canvas[data-mind-style=processon]:not(.mind-main-node-mark) .node-editor.root{padding:4px 6px;text-align:left}
+.canvas[data-mind-style=processon]:not(.mind-second-node-mark) .mind-node.branch,.canvas[data-mind-style=processon]:not(.mind-second-node-mark) .node-editor.branch{padding:4px 6px}

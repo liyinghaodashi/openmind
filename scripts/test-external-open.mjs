@@ -25,7 +25,7 @@ const server=http.createServer(async(req,res)=>{
 try{
   const executable=path.join(probeDirectory,'external-open-probe');
   const compilation=spawnSync('clang',['-framework','Cocoa','-framework','WebKit',fileURLToPath(new URL('./test-file-tree-drag.m',import.meta.url)),'-o',executable],{stdio:'inherit'});
-  if(compilation.status!==0)throw new Error('Cannot compile native WebKit workspace history probe');
+  if(compilation.status!==0)throw new Error('Cannot compile native WebKit external file open probe');
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   const code=await new Promise((resolve,reject)=>{
     const child=spawn(executable,['http://127.0.0.1:'+server.address().port],{stdio:'inherit'});

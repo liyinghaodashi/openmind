@@ -8,12 +8,13 @@ export class MarkdownEditor {
     this.loaded=false;this.composing=false;this.readOnly=true;this.source='';this.normalized='';
     this.imageGeneration=0;
     if(images)bindImageImport(this,images);
-    container.addEventListener('compositionstart',()=>{this.composing=true;this.onComposition(true)},true);
+    container.addEventListener('compositionstart',()=>{this.headingContinuation=null;this.composing=true;this.onComposition(true)},true);
     container.addEventListener('compositionend',()=>{this.composing=false;this.onComposition(false);this.flush()});
     container.addEventListener('beforeinput',event=>{
-      if(this.readOnly||!this.onBeforeInput(this.source,event))event.preventDefault();
+      if(this.readOnly||!this.onBeforeInput(this.source,event)){event.preventDefault();return}
+      this.handleHeadingContinuation(event);
     },true);
-    container.addEventListener('input',event=>{if(!event.isComposing)this.flush()});
+    container.addEventListener('input',event=>{if(event.inputType==='insertParagraph'&&this.headingContinuation)this.headingContinuation.source=this.editor.getValue();if(!event.isComposing)this.flush()});
     container.addEventListener('click',event=>{
       if(event.target.tagName!=='IMG'||!this.editable?.contains(event.target))return;
       const node=event.target.closest('.vditor-ir__node[data-type="img"]');
@@ -29,8 +30,9 @@ export class MarkdownEditor {
       const selection=window.getSelection();
       if(selection&&this.editable.contains(selection.anchorNode))selection.removeAllRanges();
     });
-    container.addEventListener('paste',event=>{const text=event.clipboardData?.getData('text')||'';if(this.readOnly||!this.onBeforeInput(this.source,{data:text})){event.preventDefault();event.stopImmediatePropagation()}},true);
-    container.addEventListener('keydown',event=>this.handleShortcut(event),true);
+    container.addEventListener('paste',event=>{this.headingContinuation=null;const text=event.clipboardData?.getData('text')||'';if(this.readOnly||!this.onBeforeInput(this.source,{data:text})){event.preventDefault();event.stopImmediatePropagation()}},true);
+    container.addEventListener('pointerdown',()=>{this.headingContinuation=null},true);
+    container.addEventListener('keydown',event=>{this.headingContinuation=null;this.handleShortcut(event)},true);
     this.ready=new Promise(resolve=>{
       this.editor=new window.Vditor(container,{
         cdn:'/src/vendor/vditor',mode:'ir',lang:'zh_CN',height:'100%',
@@ -44,6 +46,25 @@ export class MarkdownEditor {
         after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.editor.disabled();resolve()}
       });
     });
+  }
+  handleHeadingContinuation(event) {
+    const pending=this.headingContinuation;this.headingContinuation=null;
+    if(this.composing||event.isComposing||!this.loaded)return;
+    const selection=window.getSelection();
+    if(!selection?.rangeCount||!selection.isCollapsed||!this.editable?.contains(selection.anchorNode))return;
+    const range=selection.getRangeAt(0),start=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
+    const paragraph=start.closest('p');
+    if(pending&&event.inputType==='insertText'&&event.data?.trimEnd()===pending.marker&&this.editor.getValue()===pending.source&&paragraph?.parentElement===this.editable&&paragraph.previousElementSibling?.matches('h1,h2,h3,h4,h5,h6')&&!paragraph.textContent.replace(/\u200B/g,'').trim()){
+      event.preventDefault();return;
+    }
+    if(event.inputType!=='insertParagraph')return;
+    const heading=start.closest('h1,h2,h3,h4,h5,h6');
+    if(heading?.parentElement!==this.editable)return;
+    const tail=range.cloneRange();tail.setEnd(heading,heading.childNodes.length);
+    if(tail.toString().replace(/\u200B/g,''))return;
+    const label=heading.cloneNode(true);label.querySelectorAll('.vditor-ir__marker').forEach(marker=>marker.remove());
+    const number=/^\s*([0-9]+)([.)])/.exec(label.textContent);
+    if(number)this.headingContinuation={marker:String(BigInt(number[1])+1n)+number[2],source:this.editor.getValue()};
   }
   handleShortcut(event) {
     if(!event.metaKey||event.ctrlKey||event.altKey||event.shiftKey||!this.editable?.contains(event.target))return;
@@ -139,6 +160,7 @@ export class MarkdownEditor {
     this.replaceTable(table,clone.outerHTML);
   }
   load(source,{session,path,reset=false}={}) {
+    this.headingContinuation=null;
     if(!reset&&this.loaded&&this.source===source&&this.session===session&&this.path===path){this.onOutline?.();return}
     this.tableDialog?.finish();this.tableActions?.reset();this.loaded=false;
     this.imageGeneration++;
@@ -174,6 +196,7 @@ export class MarkdownEditor {
     value=!!value;
     if(value)this.tableDialog?.finish();
     if(this.readOnly===value)return;
+    this.headingContinuation=null;
     this.readOnly=value;value?this.editor.disabled():this.editor.enable();
     this.editable.setAttribute('aria-readonly',String(value));
   }

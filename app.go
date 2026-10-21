@@ -155,7 +155,7 @@ func (a *App) OpenRecentWorkspace(root string) (*WorkspaceInfo, error) {
 			return a.openWorkspace(info.Root)
 		}
 	}
-	return nil, fmt.Errorf("该文件夹不在最近使用记录中，请重新添加")
+	return nil, fmt.Errorf("该文件夹不在快捷列表中，请重新添加")
 }
 
 func (a *App) OpenRecentWorkspaceInFinder(root string) error {
@@ -185,7 +185,7 @@ func (a *App) OpenRecentWorkspaceInFinder(root string) error {
 		}
 		return exec.Command("open", "-a", "Finder", full).Run()
 	}
-	return fmt.Errorf("该文件夹不在最近使用记录中，请重新添加")
+	return fmt.Errorf("该文件夹不在快捷列表中，请重新添加")
 }
 
 func (a *App) openWorkspace(root string) (*WorkspaceInfo, error) {

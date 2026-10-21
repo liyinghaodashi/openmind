@@ -6,7 +6,8 @@ import {MindMap} from '../src/mindmap.js';
 
 for(const [name,parentColor,ownColor,expected] of [
   ['继承父节点','#DC6A5E','','#DC6A5E'],
-  ['未配置颜色','','','#858C98'],
+  ['未配置颜色','','',''],
+  ['蓝色预设','','#3B82F6','#3B82F6'],
   ['显式覆盖','#DC6A5E','#5EAA80','#5EAA80'],
 ])test(`节点颜色菜单选中生效颜色：${name}`,()=>{
   const child={id:'child',label:'child',editable:true,color:ownColor,children:[]};
@@ -22,7 +23,7 @@ for(const [name,parentColor,ownColor,expected] of [
   const previous=globalThis.window;globalThis.window={innerWidth:800,innerHeight:600};
   try{
     map.showNodeMenu({target:{closest:selector=>selector==='.mind-node'?el:null},preventDefault(){},clientX:100,clientY:100});
-    assert.deepEqual(buttons.filter(button=>button.attributes['aria-checked']==='true').map(button=>button.dataset.color),[expected]);
+    assert.deepEqual(buttons.filter(button=>button.attributes['aria-checked']==='true').map(button=>button.dataset.color),expected?[expected]:[]);
   }finally{if(previous===undefined)delete globalThis.window;else globalThis.window=previous}
 });
 
@@ -56,6 +57,6 @@ test('分支颜色递归继承，删除显式颜色回到祖先颜色，独立�
 });
 
 test('颜色菜单保留四个 HEX 预设',()=>{
-  assert.deepEqual(nodeColors.map(color=>color.name),['红','绿','黄','灰']);
+  assert.deepEqual(nodeColors.map(color=>color.name),['红','绿','黄','蓝']);
   for(const {hex} of nodeColors)assert.match(hex,/^#[\da-f]{6}$/i);
 });

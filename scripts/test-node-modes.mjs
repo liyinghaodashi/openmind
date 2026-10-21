@@ -16,7 +16,7 @@ fixture.snapshot={session:'node-modes',version:1,path:'交互验证.mind.md',sou
 const find=(root,id)=>root.id===id?root:root.children.map(child=>find(child,id)).find(Boolean);
 const copy=()=>structuredClone(fixture.snapshot);
 window.go={main:{App:{
-  GetSettings:async()=>({mdCompactWindow:true,mindStyle:'${process.env.OPENMIND_MIND_STYLE||'processon'}',sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),FrontendReady:async()=>{},RestoreWorkspace:async()=>null,RecentWorkspaces:async()=>[],CheckDocument:async()=>null,
+  GetSettings:async()=>({mdCompactWindow:true,mindStyle:'${process.env.OPENMIND_MIND_STYLE||'processon'}',mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),FrontendReady:async()=>{},TakePendingFileOpens:async()=>[],RestoreWorkspace:async()=>null,RecentWorkspaces:async()=>[],CheckDocument:async()=>null,
   CopyNodeText:async(session,nodeId,label)=>{fixture.copies.push({session,nodeId,label,tree:false})},
   CopyNodeMarkdown:async(session,nodeId,label)=>{fixture.copies.push({session,nodeId,label,tree:true})},
   ApplyEdit:async edit=>{
@@ -37,7 +37,7 @@ window.go={main:{App:{
     let index=0;const reidentify=root=>{root.id='n'+fixture.generation+'-'+index++;root.children.forEach(reidentify)};reidentify(fixture.snapshot.root);return copy();
   }
 }}};
-window.runtime={EventsOn:()=>{}};
+window.runtime={EventsOn:()=>{},WindowShow:()=>{}};
 `;
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const server=http.createServer(async(req,res)=>{

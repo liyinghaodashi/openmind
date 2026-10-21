@@ -30,8 +30,7 @@ export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,cr
     buttons.find(button=>!button.hidden)?.focus({preventScroll:true});
   }
 
-  async function openDialog(action) {
-    const entry=target;
+  async function openDialog(action,entry=target) {
     closeMenu(true);
     if(action==='new-file'||action==='new-folder') {
       if(activeEntry)return;
@@ -115,6 +114,7 @@ export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,cr
   return {
     get active(){return !!activeEntry},
     closeMenu,
+    renameEntry:entry=>openDialog('rename',entry),
     bindBackground(tree) {
       tree.addEventListener('contextmenu',event=>{if(!event.target.closest('.tree-row'))showMenu(event,null,tree)});
     },

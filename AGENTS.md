@@ -4,7 +4,7 @@
 
 目前支持两种模式
 
-- mind模式：相当于思维导图，文件的格式是 xxx.mind.md 
+- mind模式：相当于思维导图，文件的格式是 xxx.mind.md
 - md模式：常规md，功能类似Typora
 
 在 examples/灵感.mind.md 中有产品的设计原则，其中包含重要数据，比如mind模式下的渲染原则，我推荐你查看
@@ -17,5 +17,20 @@
 
 按钮使用圆角，不包含外边框，黑色为选中，灰色为未选中，对于并排的按钮，应该支持左右方向键切换选择，enter键确定
 
+# 版本原则
 
+本产品有版本号的原则
 
+版本格式 大版本.常规版本.小升级版本
+
+大版本和常规版本由我手动更新，小版本由AI修改代码的时候修改，每一次修改，都+1
+
+每次升级版本必须同时更新 `wails.json` 的 `info.productVersion`，以及 `frontend/index.html` 中 `.settings-version` 的显示文字和 `aria-label`，确保设置页版本与打包版本一致，不得只修改打包配置。
+
+打包前必须运行 `node --test frontend/test/version.test.js`，检查通过后重新打包 mac 版本，并核对 `build/bin/OpenMind.app/Contents/Info.plist` 中的版本号与本次版本一致。
+
+当你修改完版本号的时候，你要在对话的最后告诉我，升级为新版本，新的版本号为x.xx.x
+
+# git提交
+
+本次项目特别允许ai进行git提交，当本次的版本变化的时候，需要进行git提交，具体的提交规范，你需要看 ./自动提交规范中的规范.md中的规范，并严格遵守
