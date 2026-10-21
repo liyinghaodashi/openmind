@@ -9,7 +9,7 @@ function colorTint(color) {
 }
 
 export class ProcessonRenderer {
-  constructor({canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth = () => 280}) {
+  constructor({canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth = () => 340}) {
     Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth});
     this.document = canvas.ownerDocument;
     this.context = this.document.createElement('canvas').getContext('2d');

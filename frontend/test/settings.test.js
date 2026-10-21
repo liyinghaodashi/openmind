@@ -239,7 +239,7 @@ test('节点宽度兼容旧配置，校验整数与范围，保存失败回退',
   const container = new Element(), applied = [], written = [];
   let fail = false;
   const settings = mountSettings({container, features: [{
-    id: 'mindNodeMaxWidth', label: '节点最大宽度', type: 'number', min: 160, max: 1600, default: 280,
+    id: 'mindNodeMaxWidth', label: '节点最大宽度', type: 'number', min: 160, max: 1600, default: 340,
     select: value => applied.push(value)
   }], storage: {load: async () => ({sourceView: false}), save: async value => {
     if (fail) throw new Error('disk full');
@@ -248,10 +248,10 @@ test('节点宽度兼容旧配置，校验整数与范围，保存失败回退',
   await settings.ready;
   const [fields, status] = container.children;
   const input = fields.children[0].children[1].children[0];
-  assert.equal(input.value, '280');
+  assert.equal(input.value, '340');
   const change = async value => {input.value = value; input.dispatchEvent(new Event('change')); await settings.flush();};
   for (const value of ['160', '600', '1600']) await change(value);
-  assert.deepEqual(applied, [280, 160, 600, 1600]);
+  assert.deepEqual(applied, [340, 160, 600, 1600]);
   assert.deepEqual(written.at(-1), {sourceView: false, mindNodeMaxWidth: 1600});
   for (const value of ['', '0', '159', '1601', '280.5', 'abc']) {
     await change(value);

@@ -10,7 +10,7 @@ export class MindMap {
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
     this.style='processon';
-    this.nodeMaxWidth=280;
+    this.nodeMaxWidth=340;
     this.rendererOptions={canvas,scene,nodes,edges,getNodeMaxWidth:()=>this.nodeMaxWidth,onActivate:id=>this.activateNode(id),onEdit:id=>void this.onEdit(id)};
     this.renderer=createMindRenderer(this.style,this.rendererOptions);
     this.elements=this.renderer.elements;this.edgeElements=this.renderer.edgeElements;
