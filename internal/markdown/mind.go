@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 func parseMind(source []byte, name string) *Document {
@@ -19,6 +20,7 @@ func parseMind(source []byte, name string) *Document {
 	maskFrontMatter(masked)
 	var headings, lists []*Node
 	var active *Node
+	var current *Node
 	closeLists := func(position int) {
 		for _, node := range lists {
 			node.branchEnd = position
@@ -62,6 +64,7 @@ func parseMind(source []byte, name string) *Document {
 			continue
 		}
 		if bytes.HasPrefix(trimmed, []byte("<!--")) {
+			current = nil
 			closeLists(lineStart)
 			comment = !bytes.Contains(trimmed, []byte("-->"))
 			continue
@@ -72,6 +75,7 @@ func parseMind(source []byte, name string) *Document {
 				count++
 			}
 			if count >= 3 {
+				current = nil
 				closeLists(lineStart)
 				fence, fenceLength = trimmed[0], count
 				continue
@@ -94,6 +98,7 @@ func parseMind(source []byte, name string) *Document {
 			level++
 		}
 		if indent <= 3 && level > 0 && mindMarkerEnd(line, leading+level) {
+			current = nil
 			closeLists(lineStart)
 			for len(headings) > 0 && headings[len(headings)-1].Level >= level {
 				headings[len(headings)-1].branchEnd = lineStart
@@ -112,12 +117,17 @@ func parseMind(source []byte, name string) *Document {
 			parent.Children = append(parent.Children, node)
 			headings = append(headings, node)
 			active = node
+			current = node
 			continue
 		}
 		if line[leading] != '-' || !mindMarkerEnd(line, leading+1) {
-			closeLists(lineStart)
+			if current != nil {
+				current.End = base + len(bytes.TrimRight(line, " \t"))
+				current.lineEnd = stop
+			}
 			continue
 		}
+		current = nil
 		for len(lists) > 0 && lists[len(lists)-1].indent >= indent {
 			lists[len(lists)-1].branchEnd = lineStart
 			lists = lists[:len(lists)-1]
@@ -133,8 +143,64 @@ func parseMind(source []byte, name string) *Document {
 		node := newNode("list", 0, base+start, base+end, lineStart, stop, indent)
 		parent.Children = append(parent.Children, node)
 		lists = append(lists, node)
+		current = node
+	}
+	for _, node := range d.Nodes {
+		if node.Kind != "file" && bytes.ContainsAny(source[node.Start:node.End], "\r\n") {
+			node.Label, node.Color = mindMultilineLabel(string(source[node.Start:node.End]), node.Kind == "heading")
+		}
 	}
 	return d
+}
+
+func mindMultilineLabel(raw string, heading bool) (string, string) {
+	first, rest, multiline := strings.Cut(strings.ReplaceAll(raw, "\r\n", "\n"), "\n")
+	_, end := mindLabelSpan([]byte(first), 0, heading)
+	label, color := mindLabelColor(first[:end])
+	if multiline {
+		label += "\n" + rest
+	}
+	return label, color
+}
+
+func (d *Document) mindLabelReplacement(n *Node, label string, preserveColor bool) (string, int) {
+	label = strings.ReplaceAll(strings.ReplaceAll(label, "\r\n", "\n"), "\r", "\n")
+	first, rest, multiline := strings.Cut(label, "\n")
+	lineEnd := n.Start
+	for lineEnd < len(d.Source) && d.Source[lineEnd] != '\r' && d.Source[lineEnd] != '\n' {
+		lineEnd++
+	}
+	oldFirst := d.Source[n.Start:lineEnd]
+	_, headerEnd := mindLabelSpan(oldFirst, 0, n.Kind == "heading")
+	if preserveColor && n.Color != "" {
+		if _, color := mindLabelColor(first); color == "" {
+			oldLabel, _ := mindLabelColor(string(oldFirst[:headerEnd]))
+			metadata := string(oldFirst[len(oldLabel):headerEnd])
+			if first == "" {
+				metadata = strings.TrimLeft(metadata, " \t")
+			} else if strings.HasPrefix(metadata, "[") {
+				metadata = " " + metadata
+			}
+			first += metadata
+		}
+	}
+	end := n.End
+	if multiline || n.End > lineEnd {
+		suffix := string(oldFirst[headerEnd:])
+		if first != "" && strings.HasPrefix(suffix, "#") {
+			suffix = " " + suffix
+		}
+		first += suffix
+		end = max(end, lineEnd)
+	}
+	if multiline {
+		ending := "\n"
+		if bytes.Contains(d.Source, []byte("\r\n")) {
+			ending = "\r\n"
+		}
+		first += ending + strings.ReplaceAll(rest, "\n", ending)
+	}
+	return first, end
 }
 
 func mindMarkerEnd(line []byte, end int) bool {

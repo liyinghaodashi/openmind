@@ -334,6 +334,9 @@ func (d *Document) moveBranch(n *Node, kind string, level, indent int, ranges ma
 	} else {
 		lineEnd = len(d.Source)
 	}
+	if d.mind {
+		lineEnd = n.lineEnd
+	}
 	if !n.Editable && (kind != n.Kind || level != n.Level || kind == "list" && indent != d.listIndent(n)) {
 		return nil, nil, fmt.Errorf("复杂节点改变层级请在 Markdown 原文中编辑")
 	}
