@@ -27,10 +27,10 @@
         NSWindow *window = self.web.window;
         NSPoint point = NSMakePoint([result[@"x"] doubleValue], self.web.bounds.size.height - [result[@"y"] doubleValue]);
         NSInteger count = [result[@"count"] integerValue];
-        NSEvent *down = [NSEvent mouseEventWithType:NSEventTypeLeftMouseDown location:point modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:count pressure:1];
+        NSEvent *down = [NSEvent mouseEventWithType:([result[@"right"] boolValue] ? NSEventTypeRightMouseDown : NSEventTypeLeftMouseDown) location:point modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:count pressure:1];
         [NSApp sendEvent:down];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 20 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
-            NSEvent *up = [NSEvent mouseEventWithType:NSEventTypeLeftMouseUp location:point modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:count pressure:0];
+            NSEvent *up = [NSEvent mouseEventWithType:([result[@"right"] boolValue] ? NSEventTypeRightMouseUp : NSEventTypeLeftMouseUp) location:point modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:window.windowNumber context:nil eventNumber:0 clickCount:count pressure:0];
             [NSApp sendEvent:up];
         });
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 80 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{

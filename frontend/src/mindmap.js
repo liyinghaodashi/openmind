@@ -42,6 +42,7 @@ export class MindMap {
       const buttons=[...this.nodeMenu.querySelectorAll('button')].filter(button=>!button.hidden&&!button.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
       buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus({preventScroll:true});
     });
+    this.nodeMenu.addEventListener('mousedown',event=>{if(document.activeElement===this.editor)event.preventDefault()});
     canvas.addEventListener('contextmenu',event=>this.showNodeMenu(event));
     document.addEventListener('pointerdown',event=>{if(!this.nodeMenu.contains(event.target))this.closeNodeMenu()});
     document.addEventListener('focusin',event=>{if(!this.nodeMenu.contains(event.target))this.closeNodeMenu()});
@@ -141,15 +142,15 @@ export class MindMap {
     if(restoreFocus&&origin?.isConnected)origin.focus({preventScroll:true});
   }
   showNodeMenu(event,{id,fromOutline=false}={}){
-    if(event.target.closest('textarea'))return;
-    const el=event.target.closest(fromOutline?'.outline-item':'.mind-node');
+    const editor=!fromOutline&&event.target===this.editor?this.editor:null;
+    const el=editor?this.elements.get(this.editing):event.target.closest(fromOutline?'.outline-item':'.mind-node');
     const fromCanvas=!fromOutline&&!el&&this.focusedId&&!event.target.closest('.zoom-controls,button');
     if(!el&&!fromCanvas)return;
     event.preventDefault();this.closeNodeMenu();
     const find=node=>node?.id===id?node:node?.children.map(find).find(Boolean);
     const node=fromCanvas?this.viewRoot:fromOutline?find(this.viewRoot):this.layout?.positions.find(p=>p.id===el.dataset.id)?.node;
     if(this.nodeDrag||!node)return;
-    this.menuNodeId=node.id;this.menuFromOutline=fromOutline;this.menuOrigin=fromCanvas?this.canvas:fromOutline?el.querySelector('.outline-row'):el;
+    this.menuNodeId=node.id;this.menuFromOutline=fromOutline;this.menuOrigin=editor||(fromCanvas?this.canvas:fromOutline?el.querySelector('.outline-row'):el);
     this.nodeMenu.setAttribute('aria-label',fromCanvas?'画布操作':'节点操作');
     const button=this.nodeMenu.firstChild;button.hidden=fromCanvas||fromOutline||!node.children.length;button.textContent=this.collapsed.has(node.id)?'展开':'折叠';
     const focusButton=this.nodeMenu.lastChild;focusButton.textContent=fromCanvas?'退出聚焦模式':'聚焦模式';focusButton.setAttribute('aria-checked',String(this.focusedId===node.id));
@@ -162,7 +163,7 @@ export class MindMap {
     const keyboard=event.clientX===0&&event.clientY===0;
     this.nodeMenu.style.left=Math.max(8,Math.min(keyboard?origin.left+24:event.clientX,window.innerWidth-bounds.width-8))+'px';
     this.nodeMenu.style.top=Math.max(8,Math.min(keyboard?origin.bottom:event.clientY,window.innerHeight-bounds.height-8))+'px';
-    (button.hidden?(this.copyTreeButton.hidden?focusButton:this.copyTreeButton):button).focus({preventScroll:true});
+    if(!editor)(button.hidden?(this.copyTreeButton.hidden?focusButton:this.copyTreeButton):button).focus({preventScroll:true});
   }
   setRoot(root,{resetView=false}={}){
     const anchor=!resetView&&this.editor?this.layout?.positions.find(p=>p.id===this.editing):null;

@@ -584,8 +584,14 @@ async function editNode(id){
   const editor=map.createEditor(p);
   state.editor=editor;map.editor=editor;map.editing=id;map.selected=id;state.draft=null;$('source-editor').readOnly=true;
   map.nodes.append(editor);bindInput(editor,'label',id);editor.addEventListener('input',()=>map.setRoot(map.root));
-  editor.addEventListener('mousedown',event=>{if(event.detail>1)event.preventDefault()});
-  editor.addEventListener('keydown',event=>{if(event.isComposing||state.composing||event.keyCode===229)return;if(event.key==='Escape'){event.preventDefault();void finishNodeSelection()}});
+  let contextSelection=null;
+  editor.addEventListener('pointerdown',event=>{
+    contextSelection=event.button===2||event.ctrlKey&&event.button===0?[editor.selectionStart,editor.selectionEnd,editor.selectionDirection]:null;
+    if(contextSelection)event.preventDefault();
+  });
+  editor.addEventListener('contextmenu',()=>{if(contextSelection){editor.setSelectionRange(...contextSelection);contextSelection=null}});
+  editor.addEventListener('mousedown',event=>{if(event.button===2||event.ctrlKey&&event.button===0||event.detail>1)event.preventDefault()});
+  editor.addEventListener('keydown',event=>{if(event.isComposing||state.composing||event.keyCode===229)return;if(event.key==='Escape'){event.preventDefault();if(!map.nodeMenu.hidden){map.closeNodeMenu(true);return}void finishNodeSelection()}});
   editor.addEventListener('blur',()=>{setTimeout(()=>{if(!state.nodeDragging&&!state.closing&&state.editor===editor)void finishNode()},0)});
   map.setRoot(map.root);map.render();editor.focus();editor.setSelectionRange(editor.value.length,editor.value.length);
 }
