@@ -62,10 +62,10 @@ try{
   await click(a().id);editing(a().id,'Clicking the selected node must enter editing');
   assert(!document.querySelector('.global-caret').hidden,'Editing must display the text caret');
   const copyEditor=state.editor,copyCount=fixture.copies.length;
-  fixture.delay=250;state.editor.value='尚未写盘的新标题';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));state.editor.setSelectionRange(0,2);
-  assert(key('c',{metaKey:true}).defaultPrevented,'Editing Command+C must override selected text copy');
+  fixture.delay=250;state.editor.value='尚未写盘的新标题';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));state.editor.setSelectionRange(2,2);
+  assert(key('c',{metaKey:true}).defaultPrevented,'Editing Command+C without selected text must copy the whole node');
   await settle();
-  assert(fixture.copies.at(-1).label==='尚未写盘的新标题'&&state.editor===copyEditor&&state.editor.selectionStart===0&&state.editor.selectionEnd===2,'Copy must include the live draft without ending editing or changing text selection');
+  assert(fixture.copies.at(-1).label==='尚未写盘的新标题'&&state.editor===copyEditor&&state.editor.selectionStart===2&&state.editor.selectionEnd===2,'Copy must include the live draft without ending editing or changing the caret');
   const copyEvent=new Event('copy',{bubbles:true,cancelable:true});state.editor.dispatchEvent(copyEvent);await settle();
   assert(copyEvent.defaultPrevented&&fixture.copies.length===copyCount+2&&!fixture.copies.at(-1).tree,'Native Copy menu events must also copy only current node text');
   const copies=fixture.copies.length;key('c',{metaKey:true,repeat:true});key('c',{metaKey:true,shiftKey:true});key('c',{metaKey:true,isComposing:true});

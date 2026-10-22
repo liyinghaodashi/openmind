@@ -452,6 +452,8 @@ async function moveSelection(direction){
 }
 function copyNodeText(event){
   if(!state.snapshot||!isMindMapPath(state.snapshot.path)||!map.selected||state.composing||event.isComposing)return;
+  if(state.editor&&event.target===state.editor&&state.editor.selectionStart!==state.editor.selectionEnd)return;
+  if(window.getSelection()?.isCollapsed===false)return;
   event.preventDefault();
   if(event.repeat)return;
   copyNode(map.selected);

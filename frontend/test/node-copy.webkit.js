@@ -11,6 +11,13 @@ try{
   map.collapsed.add(branch().id);map.setRoot(state.snapshot.root);map.render();
   assert(key(map.elements.get(branch().id)).defaultPrevented,'Command+C must intercept node copy');
   assert(fixture.copies.at(-1).nodeId===branch().id&&!fixture.copies.at(-1).tree&&fixture.copies.at(-1).label===null,'Command+C must request current node text without folded children');
+  const selection=window.getSelection(),range=document.createRange();
+  range.selectNodeContents(map.elements.get(branch().id));selection.removeAllRanges();selection.addRange(range);
+  const rangeCount=fixture.copies.length;
+  assert(!key(map.elements.get(branch().id)).defaultPrevented,'Selected rendered text must preserve native keyboard copy');
+  const rangeCopy=new Event('copy',{bubbles:true,cancelable:true});map.elements.get(branch().id).dispatchEvent(rangeCopy);
+  assert(!rangeCopy.defaultPrevented&&fixture.copies.length===rangeCount,'Selected rendered text must preserve native copy events');
+  selection.removeAllRanges();
   const menu=id=>map.elements.get(id).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:200,clientY:200}));
   menu(branch().id);map.copyTreeButton.click();
   assert(fixture.copies.at(-1).tree&&fixture.copies.at(-1).nodeId===branch().id,'Tree copy must request folded branch');
@@ -26,9 +33,19 @@ try{
   const draft='全部文本🐱'.repeat(30);
   editor.value=draft;editor.setSelectionRange(0,2);
   const writes=fixture.writes.length;
-  assert(key(editor).defaultPrevented,'Editing copy must override partial text selection');
+  const selectedCount=fixture.copies.length;
+  assert(!key(editor).defaultPrevented,'Editing copy must preserve partial text selection');
+  const selectedCopy=new Event('copy',{bubbles:true,cancelable:true});editor.dispatchEvent(selectedCopy);
+  assert(!selectedCopy.defaultPrevented&&fixture.copies.length===selectedCount,'Native copy with selected text must not request the whole node');
+  assert(state.editor===editor&&editor.selectionStart===0&&editor.selectionEnd===2&&fixture.writes.length===writes,'Selected text copy must preserve editor, selection and saved document');
+  editor.setSelectionRange(0,draft.length);
+  assert(!key(editor).defaultPrevented&&fixture.copies.length===selectedCount,'Fully selected editor text must preserve native copy');
+  editor.setSelectionRange(2,2);
+  assert(key(editor).defaultPrevented,'Editing copy without selected text must copy the whole node');
   assert(fixture.copies.at(-1).label===draft&&!fixture.copies.at(-1).tree,'Editing copy must pass the full live draft');
-  assert(state.editor===editor&&editor.selectionStart===0&&editor.selectionEnd===2&&fixture.writes.length===writes,'Copy must preserve editor, selection and saved document');
+  assert(state.editor===editor&&editor.selectionStart===2&&editor.selectionEnd===2&&fixture.writes.length===writes,'Copy must preserve editor, caret and saved document');
+  const caretCopy=new Event('copy',{bubbles:true,cancelable:true});editor.dispatchEvent(caretCopy);
+  assert(caretCopy.defaultPrevented&&fixture.copies.at(-1).label===draft,'Native copy without selected text must copy the live draft');
   editor.value='';const event=new Event('copy',{bubbles:true,cancelable:true});editor.dispatchEvent(event);
   assert(event.defaultPrevented&&fixture.copies.at(-1).label==='','Native copy events must copy empty current text');
   const count=fixture.copies.length;
@@ -36,5 +53,5 @@ try{
   assert(fixture.copies.length===count,'Repeated, modified, composing and source editor events must preserve native behavior');
   state.composing=true;key(editor);assert(fixture.copies.length===count,'Active composition must block node copy');state.composing=false;
   assert($('error-banner').hidden,'Copy operations must not cause document errors');
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit node copy checks (text, live draft, tree, folded children, right-click target, focus and disabled feature)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit node copy checks (text selection, native copy, live draft, tree, folded children, right-click target, focus and disabled feature)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}
