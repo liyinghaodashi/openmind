@@ -10,7 +10,7 @@ export function layoutTree(root, collapsed, measure, {rootGap = 64} = {}) {
   function place(item, x, top, inheritedColor = '') {
     const {node, depth, branch, size, children, span} = item;
     const lineColor = node.color || inheritedColor;
-    const p = {id:node.id,node,effectiveColor:lineColor,depth,pathDepth:item.pathDepth,branch,x,y:top+(span-size.height)/2,width:size.width,height:size.height,hiddenCount:item.hiddenCount};
+    const p = {id:node.id,node,effectiveColor:lineColor,depth,pathDepth:item.pathDepth,branch,x,y:top+(span-size.height)/2,width:size.width,height:size.height,displayLabel:size.displayLabel,hiddenCount:item.hiddenCount};
     positions.push(p);
     let cy = top + (span - (children.reduce((sum,c)=>sum+c.span,0)+Math.max(0,children.length-1)*15))/2;
     for(const child of children) {

@@ -22,7 +22,7 @@ try{
   const contextMenu=id=>map.elements.get(id).dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true,clientX:window.innerWidth-1,clientY:window.innerHeight-1}));
   const menuWrites=fixture.writes.length;
   contextMenu(a().id);
-  assert(!map.nodeMenu.hidden&&map.nodeMenu.firstChild.textContent==='折叠','Expanded nodes must offer collapse');
+  assert(!map.nodeMenu.hidden&&map.nodeMenu.firstChild.textContent==='折叠子节点','Expanded nodes must offer collapse');
   key('ArrowDown');assert(document.activeElement===map.colorOptions.firstChild,'Down must move from folding to color choices');
   key('Home');assert(document.activeElement===map.nodeMenu.firstChild,'Home must focus the first visible menu item');
   key('End');assert(document.activeElement===map.nodeMenu.lastChild,'End must focus the last visible menu item');
@@ -33,7 +33,7 @@ try{
   map.nodeMenu.firstChild.click();await settle();
   assert(map.collapsed.has(a().id)&&!map.elements.has(a().children[0].id)&&map.nodeMenu.hidden,'Collapse must hide the clicked branch and dismiss its menu');
   contextMenu(a().id);
-  assert(map.nodeMenu.firstChild.textContent==='展开','Collapsed nodes must offer expand');
+  assert(map.nodeMenu.firstChild.textContent==='展开子节点','Collapsed nodes must offer expand');
   map.nodeMenu.firstChild.click();await settle();
   assert(!map.collapsed.has(a().id)&&map.elements.has(a().children[0].id),'Expand must restore the clicked branch');
   contextMenu(b().id);assert(!map.nodeMenu.hidden&&map.nodeMenu.firstChild.hidden&&map.nodeMenu.lastChild.textContent==='聚焦模式','Leaf nodes must offer focus mode without folding');

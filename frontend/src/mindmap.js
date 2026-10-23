@@ -4,8 +4,8 @@ import {nodeDropTarget} from './node-drop.js';
 import {nodeColors} from './node-colors.js';
 
 export class MindMap {
-  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onColor, onCopyTree, onZoom, onLayout, canDrag, onMove, onDragState}) {
-    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onColor,onCopyTree,onZoom,onLayout,canDrag,onMove,onDragState});
+  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onFold, onColor, onCopyTree, onZoom, onLayout, canDrag, onMove, onDragState}) {
+    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onFold,onColor,onCopyTree,onZoom,onLayout,canDrag,onMove,onDragState});
     this.scale=1;this.x=0;this.y=0;this.collapsed=new Set();this.frame=0;this.selected=null;this.focusedId=null;
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
@@ -16,6 +16,8 @@ export class MindMap {
     this.elements=this.renderer.elements;this.edgeElements=this.renderer.edgeElements;
     this.nodeMenu=document.createElement('div');this.nodeMenu.className='file-context-menu node-context-menu';this.nodeMenu.setAttribute('role','menu');this.nodeMenu.setAttribute('aria-label','节点操作');this.nodeMenu.hidden=true;
     const foldButton=document.createElement('button');foldButton.type='button';foldButton.setAttribute('role','menuitem');this.nodeMenu.append(foldButton);document.body.append(this.nodeMenu);
+    this.textFoldButton=document.createElement('button');this.textFoldButton.type='button';this.textFoldButton.setAttribute('role','menuitem');this.nodeMenu.append(this.textFoldButton);
+    this.textFoldButton.addEventListener('click',()=>{const id=this.menuNodeId;this.closeNodeMenu();void this.onFold?.(id)});
     const focusButton=document.createElement('button');focusButton.type='button';focusButton.setAttribute('role','menuitemcheckbox');focusButton.setAttribute('aria-checked','false');focusButton.textContent='聚焦模式';this.nodeMenu.append(focusButton);
     this.colorRow=document.createElement('div');this.colorRow.className='node-color-row';
     const colorLabel=document.createElement('span');colorLabel.textContent='颜色';this.colorRow.append(colorLabel);
@@ -110,7 +112,15 @@ export class MindMap {
     if(this.selected===id)void this.onEdit(id);
     else void this.onSelect?.(id);
   }
-  measure(label,depth,node){return this.editor&&node?.id===this.editing?this.renderer.measureEditor(this.editor,depth,node):this.renderer.measure(label,depth,node);}
+  measure(label,depth,node){
+    if(this.editor&&node?.id===this.editing)return this.renderer.measureEditor(this.editor,depth,node);
+    const full=this.renderer.measure(label,depth,node);
+    if(!node?.isFold||node.id===this.selected||node.id===this.editing||full.lines<=1)return full;
+    const chars=Array.from(label.split('\n')[0]);
+    let low=0,high=chars.length;
+    while(low<high){const mid=Math.ceil((low+high)/2),size=this.renderer.measure(chars.slice(0,mid).join('')+'...',depth,node);if(size.lines===1&&size.width<=full.width)low=mid;else high=mid-1;}
+    return {...full,height:full.height-(full.lines-1)*full.lineHeight,displayLabel:chars.slice(0,low).join('')+'...'};
+  }
   createEditor(position){return this.renderer.createEditor(position);}
   setNodeMark(level, enabled){
     this.canvas.classList.toggle(level === 'main' ? 'mind-main-node-mark' : 'mind-second-node-mark', enabled);
@@ -152,7 +162,10 @@ export class MindMap {
     if(this.nodeDrag||!node)return;
     this.menuNodeId=node.id;this.menuFromOutline=fromOutline;this.menuOrigin=editor||(fromCanvas?this.canvas:fromOutline?el.querySelector('.outline-row'):el);
     this.nodeMenu.setAttribute('aria-label',fromCanvas?'画布操作':'节点操作');
-    const button=this.nodeMenu.firstChild;button.hidden=fromCanvas||fromOutline||!node.children.length;button.textContent=this.collapsed.has(node.id)?'展开':'折叠';
+    const button=this.nodeMenu.firstChild;button.hidden=fromCanvas||fromOutline||!node.children.length;button.textContent=this.collapsed.has(node.id)?'展开子节点':'折叠子节点';
+    const position=this.layout?.positions.find(p=>p.id===node.id),label=editor?editor.value:node.label;
+    this.textFoldButton.hidden=fromCanvas||fromOutline||!node.editable||(!node.isFold&&this.renderer.measure(label,position?.depth||0,node).lines<=2);
+    this.textFoldButton.textContent=node.isFold?'取消折叠':'折叠';
     const focusButton=this.nodeMenu.lastChild;focusButton.textContent=fromCanvas?'退出聚焦模式':'聚焦模式';focusButton.setAttribute('aria-checked',String(this.focusedId===node.id));
     this.colorRow.hidden=fromCanvas||fromOutline||!node.editable;
     this.copyTreeButton.hidden=fromCanvas||fromOutline||!this.copyTreeEnabled;
@@ -163,7 +176,7 @@ export class MindMap {
     const keyboard=event.clientX===0&&event.clientY===0;
     this.nodeMenu.style.left=Math.max(8,Math.min(keyboard?origin.left+24:event.clientX,window.innerWidth-bounds.width-8))+'px';
     this.nodeMenu.style.top=Math.max(8,Math.min(keyboard?origin.bottom:event.clientY,window.innerHeight-bounds.height-8))+'px';
-    if(!editor)(button.hidden?(this.copyTreeButton.hidden?focusButton:this.copyTreeButton):button).focus({preventScroll:true});
+    if(!editor)[...this.nodeMenu.querySelectorAll('button')].find(button=>!button.hidden&&!button.closest('[hidden]'))?.focus({preventScroll:true});
   }
   setRoot(root,{resetView=false}={}){
     const anchor=!resetView&&this.editor?this.layout?.positions.find(p=>p.id===this.editing):null;

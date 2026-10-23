@@ -146,9 +146,12 @@ func parseMind(source []byte, name string) *Document {
 		current = node
 	}
 	for _, node := range d.Nodes {
-		if node.Kind != "file" && bytes.ContainsAny(source[node.Start:node.End], "\r\n") {
-			node.Label, node.Color = mindMultilineLabel(string(source[node.Start:node.End]), node.Kind == "heading")
+		if node.Kind == "file" {
+			continue
 		}
+		raw := string(source[node.Start:node.End])
+		raw, node.Fold = mindLabelFold(raw)
+		node.Label, node.Color = mindMultilineLabel(raw, node.Kind == "heading")
 	}
 	return d
 }

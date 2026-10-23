@@ -16,6 +16,7 @@ type Node struct {
 	ID        string  `json:"id"`
 	Label     string  `json:"label"`
 	Color     string  `json:"color,omitempty"`
+	Fold      bool    `json:"isFold,omitempty"`
 	Kind      string  `json:"kind"`
 	Level     int     `json:"level"`
 	Editable  bool    `json:"editable"`
@@ -198,6 +199,17 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 	n, ok := d.Nodes[id]
 	if !ok || !n.Editable {
 		return nil, fmt.Errorf("该节点请在 Markdown 原文中编辑")
+	}
+	if d.mind && n.Fold {
+		plain, err := d.WithFold(id, false)
+		if err != nil {
+			return nil, err
+		}
+		next, err := plain.withLabel(id, label, preserveColor)
+		if err != nil {
+			return nil, err
+		}
+		return next.WithFold(id, true)
 	}
 	if strings.ContainsRune(label, '\x00') || !utf8.ValidString(label) {
 		return nil, fmt.Errorf("节点文本必须是有效 UTF-8 文本且不能包含空字符")

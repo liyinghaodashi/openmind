@@ -38,7 +38,7 @@ export class ProcessonRenderer {
       if (char === '\n' || row + width > max) {widest = Math.max(widest, row); row = char === '\n' ? 0 : width; lines++;}
       else row += width;
     }
-    const size = {width: Math.max(compact ? 24 : depth === 0 ? 145 : 83, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (compact ? 10 : depth === 0 ? 36 : 26)};
+    const size = {lines, lineHeight: line, width: Math.max(compact ? 24 : depth === 0 ? 145 : 83, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (compact ? 10 : depth === 0 ? 36 : 26)};
     if (this.measurements.size > 5000) this.measurements.clear();
     this.measurements.set(key, size);
     return size;
@@ -97,7 +97,7 @@ export class ProcessonRenderer {
       if (tint) {element.classList.add('colored'); element.style.setProperty('--node-color-background', tint);}
       else element.style.removeProperty('--node-color-background');
       const text = element.firstChild;
-      const label = editing === p.id && editor ? editor.value : p.node.label;
+      const label = editing === p.id && editor ? editor.value : (p.displayLabel ?? p.node.label);
       if (text.textContent !== (label || '空节点')) text.textContent = label || '空节点';
       Object.assign(element.style, {left: p.x + 'px', top: p.y + 'px', width: p.width + 'px', minHeight: p.height + 'px'});
       element.setAttribute('aria-label', p.node.label + (p.node.editable ? '，单击选中，再次单击或双击编辑' : '，只读节点'));

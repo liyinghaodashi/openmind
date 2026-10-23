@@ -196,7 +196,7 @@ function clearCurrentDocument(){
   updateDocumentView();renderOutline();
 }
 function banner(message,reload=false){$('error-text').textContent=message;$('error-banner').hidden=false;$('reload-document').hidden=!reload}
-const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
+const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
 const markdown=new MarkdownEditor({container:$('markdown-editor'),onInput:text=>enqueue('source',text),onComposition:composing=>state.composing=composing,onBeforeInput:canInputMarkdown,onOutline:()=>{if(state.snapshot&&!isMindMapPath(state.snapshot.path))renderOutline()},images:{importImage:(session,data)=>call('ImportImage',session,data),discardImages:(session,paths)=>call('DiscardImages',session,paths),onError:error=>toast(errorText(error))}});
 const documentSearch=mountDocumentSearch({
   bar:$('document-search'),input:$('document-search-input'),count:$('document-search-count'),
@@ -372,6 +372,23 @@ async function toggleFocusMode(id,{fromOutline=false}={}){
 }
 function canDragNode(){
   return !!state.snapshot&&isMindMapPath(state.snapshot.path)&&!state.fileDragging&&!addingChild&&!deletingNode&&!movingNode&&!state.checking&&!state.blocked&&!state.closing&&!state.composing&&!state.navigating&&!state.queue.pending&&!finishing&&!document.querySelector('dialog[open]')&&!document.body.classList.contains('settings-open');
+}
+async function toggleNodeFold(id){
+  if(state.fileDragging||state.nodeDragging||addingChild||deletingNode||movingNode||state.checking||state.blocked||state.closing||state.composing||state.navigating||!state.snapshot||!isMindMapPath(state.snapshot.path))return;
+  if(preview){toast('请在 macOS 应用中折叠节点。');return}
+  const path=nodePath(state.snapshot.root,id);if(!path)return;
+  movingNode=true;++editRequest;setEditorsReadOnly();
+  try{
+    if(!await finishNode()||!await state.queue.drain())return;
+    const node=nodeAtPath(state.snapshot.root,path);if(!node)return;
+    enqueue('node-fold',String(!node.isFold),node.id);
+    if(!await state.queue.drain())return;
+    state.draft=null;map.selected=node.id;map.setRoot(state.snapshot.root);map.render();map.elements.get(node.id)?.focus({preventScroll:true});
+  }catch(error){banner(errorText(error),true)}finally{
+    movingNode=false;
+    if(state.editor)state.editor.readOnly=state.blocked||state.closing;
+    $('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
+  }
 }
 async function setNodeColor(id,color){
   if(state.fileDragging||state.nodeDragging||addingChild||deletingNode||movingNode||state.checking||state.blocked||state.closing||state.composing||state.navigating||!state.snapshot||!isMindMapPath(state.snapshot.path))return;
@@ -562,7 +579,7 @@ async function selectNode(id){
   const request=++editRequest;
   if((state.editor||finishing)&&(!await finishNode()||request!==editRequest))return;
   map.selected=id===null?null:nodeAtPath(state.snapshot.root,path)?.id;
-  map.render();
+  map.setRoot(state.snapshot.root);map.render();
   (map.elements.get(map.selected)||map.canvas).focus({preventScroll:true});
 }
 async function finishNodeSelection(){

@@ -46,13 +46,17 @@ func (d *Document) BranchMarkdown(id string, label *string) (string, error) {
 	if d.mind {
 		var colored []*Node
 		for _, n := range exported.Nodes {
-			if n.Color != "" && n.Start >= start && n.End <= end {
+			if (n.Color != "" || n.Fold) && n.Start >= start && n.End <= end {
 				colored = append(colored, n)
 			}
 		}
 		sort.Slice(colored, func(i, j int) bool { return colored[i].Start > colored[j].Start })
 		for _, n := range colored {
-			first, _, _ := strings.Cut(string(source[n.Start:n.End]), "\n")
+			raw, folded := mindLabelFold(string(source[n.Start:n.End]))
+			if folded {
+				result = result[:n.Start-start+len(raw)] + result[n.End-start:]
+			}
+			first, _, _ := strings.Cut(raw, "\n")
 			first = strings.TrimSuffix(first, "\r")
 			_, headerEnd := mindLabelSpan([]byte(first), 0, n.Kind == "heading")
 			label, _ := mindLabelColor(first[:headerEnd])

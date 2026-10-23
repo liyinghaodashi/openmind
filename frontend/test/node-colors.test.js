@@ -12,13 +12,13 @@ for(const [name,parentColor,ownColor,expected] of [
 ])test(`节点颜色菜单选中生效颜色：${name}`,()=>{
   const child={id:'child',label:'child',editable:true,color:ownColor,children:[]};
   const root={id:'root',kind:'file',children:[{id:'parent',label:'parent',color:parentColor,children:[child]}]};
-  const element=()=>({dataset:{},style:{},attributes:{},setAttribute(key,value){this.attributes[key]=value},focus(){},getBoundingClientRect:()=>({left:0,bottom:40,width:100,height:100})});
+  const element=()=>({dataset:{},style:{},attributes:{},setAttribute(key,value){this.attributes[key]=value},focus(){},closest(){return null},getBoundingClientRect:()=>({left:0,bottom:40,width:100,height:100})});
   const el=element();el.dataset.id=child.id;
   const buttons=nodeColors.map(({hex})=>Object.assign(element(),{dataset:{color:hex}}));
   const map=Object.assign(Object.create(MindMap.prototype),{
     layout:layoutTree(root,new Set(),()=>({width:100,height:40})),collapsed:new Set(),
-    nodeMenu:Object.assign(element(),{firstChild:element(),lastChild:element()}),
-    colorRow:element(),colorOptions:{children:buttons},copyTreeButton:element(),copyTreeEnabled:true,
+    nodeMenu:Object.assign(element(),{firstChild:element(),lastChild:element(),querySelectorAll(){return [this.firstChild,this.lastChild]}}),
+    renderer:{measure:()=>({lines:1})},textFoldButton:element(),colorRow:element(),colorOptions:{children:buttons},copyTreeButton:element(),copyTreeEnabled:true,
   });
   const previous=globalThis.window;globalThis.window={innerWidth:800,innerHeight:600};
   try{
