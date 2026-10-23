@@ -20,10 +20,12 @@ func TestMindWebKitBridge(t *testing.T) {
 	}
 	root := t.TempDir()
 	for name, source := range map[string]string{
-		"规则.mind.md": "# xxl-job\n## 使用\n### 启动步骤\n- 1. 配置数据库\n- 2. 访问网页\n  - 默认为 127.0.0.1:8080\n- 3. 配置 access token\n  - 在xxl-job的启动配置文件中\n    - xxl.job.accessToken\n      - 默认\n        - default_token\n#### 不显示四级标题\n- 不显示四级列表\n# 第二主节点\n## 第二分支\n### 第二主题\n- 独立细分\n## 不允许跳级\n- 不显示跳级列表\n",
-		"正文.md":      "# 正文\n\n#### 四级标题\n\n1. 有序列表\n2. 第二项\n",
-		"空白.mind.md": "",
-		"颜色.mind.md": "# 主节点 [color:#DC6A5E]\n## 二级 [color:#3B82F6]\n### 三级 [color:#5EAA80]\n- 子项 [color:#D5AA45]\n  - 深层 [color:#858C98]\n```md\n# 示例 [color:#123456]\n```\n",
+		"规则.mind.md":   "# xxl-job\n## 使用\n### 启动步骤\n- 1. 配置数据库\n- 2. 访问网页\n  - 默认为 127.0.0.1:8080\n- 3. 配置 access token\n  - 在xxl-job的启动配置文件中\n    - xxl.job.accessToken\n      - 默认\n        - default_token\n```md\n#### 不显示四级标题\n- 不显示四级列表\n```\n# 第二主节点\n## 第二分支\n### 第二主题\n- 独立细分\n## 不允许跳级\n```md\n- 不显示跳级列表\n```\n",
+		"正文.md":        "# 正文\n\n#### 四级标题\n\n1. 有序列表\n2. 第二项\n",
+		"空白.mind.md":   "",
+		"缺失父级.mind.md": "## 二级起点\n- 直接列表\n  - 子列表\n#### 跳级标题\n###### 六级标题\n- 细分\n## 另一个起点\n",
+		"纯列表.mind.md":  "  - 缩进起点\n    - 子项\n- 独立节点\n",
+		"颜色.mind.md":   "# 主节点 [color:#DC6A5E]\n## 二级 [color:#3B82F6]\n### 三级 [color:#5EAA80]\n- 子项 [color:#D5AA45]\n  - 深层 [color:#858C98]\n```md\n# 示例 [color:#123456]\n```\n",
 	} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte(source), 0644); err != nil {
 			t.Fatal(err)

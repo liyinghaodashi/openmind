@@ -41,18 +41,18 @@ func TestMindInsertFollowsStrictLevels(t *testing.T) {
 	}
 }
 
-func TestMindAddingToThirdHeadingBeforeUnsupportedContent(t *testing.T) {
-	for _, suffix := range []string{"正文\n#### Hidden\n- hidden detail\n", "- Existing\n\n#### Hidden\n- hidden detail\n"} {
+func TestMindAddingToThirdHeadingBeforeDeeperHeadings(t *testing.T) {
+	for _, suffix := range []string{"正文\n#### Deeper\n- deeper detail\n", "- Existing\n\n#### Deeper\n- deeper detail\n"} {
 		source := "# Main\n## Secondary\n### Third\n" + suffix + "### Other\n- Move\n"
-		doc, _ := Parse([]byte(source), "hidden.mind.md")
+		doc, _ := Parse([]byte(source), "deeper.mind.md")
 		third := doc.Root.Children[0].Children[0].Children[0]
 		next, id, err := doc.WithChild(third.ID)
-		if err != nil || next.Nodes[id].Kind != "list" || !bytes.Contains(next.Source, []byte("#### Hidden\n- hidden detail\n")) {
-			t.Fatalf("cannot add before hidden content: %v", err)
+		if err != nil || next.Nodes[id].Kind != "list" || !bytes.Contains(next.Source, []byte("#### Deeper\n- deeper detail\n")) {
+			t.Fatalf("cannot add before deeper headings: %v", err)
 		}
 		moved, _, focus, err := doc.WithMovedNode(moveNodeByLabel(t, doc, "Move").ID, third.ID, "child")
-		if err != nil || moved.Nodes[focus].Kind != "list" || !bytes.Contains(moved.Source, []byte("#### Hidden\n- hidden detail\n")) {
-			t.Fatalf("cannot move before hidden content: %v", err)
+		if err != nil || moved.Nodes[focus].Kind != "list" || !bytes.Contains(moved.Source, []byte("#### Deeper\n- deeper detail\n")) {
+			t.Fatalf("cannot move before deeper headings: %v", err)
 		}
 	}
 }

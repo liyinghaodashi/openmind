@@ -124,7 +124,7 @@ try{
   }
   assert(find('启动步骤').children.map(node=>node.label).join('|')==='1. 配置数据库|2. 访问网页|3. 配置 access token','Startup steps must preserve numbering without empty wrappers');
   assert(find('2. 访问网页').children[0].label==='默认为 127.0.0.1:8080','Notes must belong to their numbered step');
-  assert(!nodes().some(node=>node.label.includes('不显示')||node.label.includes('空节点 ·')),'Unsupported headings and skipped lists must be absent');
+  assert(!nodes().some(node=>node.label.includes('不显示')||node.label.includes('空节点 ·')),'Fenced headings and lists must be absent');
   assert(await window.__mindRules.request('ReadDisk')===original,'Opening must not rewrite the source');
   const outlineEntries=()=>[...$('document-outline').querySelectorAll('.outline-row')].map(row=>({id:row.dataset.id,level:row.className.match(/level-(\d+)/)?.[1]}));
   const assertFocusedOutline=node=>assert(JSON.stringify(outlineEntries())===JSON.stringify([node,...node.children].map((entry,index)=>({id:entry.id,level:index===0?'1':'2'}))),'Focused outline must show its entry and direct children at relative levels 1 and 2: '+node.label);
@@ -621,5 +621,5 @@ try{
   assert(appearance('默认灰色新节点').backgroundColor==='rgb(228, 228, 231)'&&appearance('默认灰色新节点').borderTopColor==='rgba(0, 0, 0, 0)'&&appearance('默认灰色新节点').boxShadow==='none'&&stroke('默认灰色新节点')==='#7c808d','Tab-created second nodes must use the default gray fill, invisible border and gray connector');
   assert(!find('默认灰色新节点').color,'Default styling must not add explicit color metadata');
   assert($('error-banner').hidden,'Regression checks must not produce save errors');
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit checks with the real document service (forest, strict syntax, startup steps, editing, insertion, move, copy, deletion, collapse, search, reopen and Markdown mode)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit checks with the real document service (forest, fenced syntax, startup steps, editing, insertion, move, copy, deletion, collapse, search, reopen and Markdown mode)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

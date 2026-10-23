@@ -105,7 +105,7 @@ func parseMind(source []byte, name string) *Document {
 				headings = headings[:len(headings)-1]
 			}
 			active = nil
-			if level > 3 || level > 1 && (len(headings) == 0 || headings[len(headings)-1].Level != level-1) {
+			if level > 6 {
 				continue
 			}
 			start, end := mindLabelSpan(line, leading+level, true)
@@ -132,10 +132,10 @@ func parseMind(source []byte, name string) *Document {
 			lists[len(lists)-1].branchEnd = lineStart
 			lists = lists[:len(lists)-1]
 		}
-		if active == nil || active.Level != 3 || len(lists) == 0 && indent != 0 {
-			continue
+		parent := d.Root
+		if active != nil {
+			parent = active
 		}
-		parent := active
 		if len(lists) > 0 {
 			parent = lists[len(lists)-1]
 		}
@@ -252,7 +252,12 @@ func mindChildShape(kind string, level, indent int) (string, int, int) {
 }
 
 func (d *Document) mindChildPosition(node *Node) int {
-	if node.Kind == "heading" && node.Level == 3 {
+	if node.Kind == "heading" && node.Level >= 3 {
+		for _, child := range node.Children {
+			if child.Kind == "heading" {
+				return child.lineStart
+			}
+		}
 		if len(node.Children) > 0 {
 			return node.Children[len(node.Children)-1].branchEnd
 		}

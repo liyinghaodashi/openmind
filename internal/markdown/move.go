@@ -195,6 +195,14 @@ func (d *Document) WithMovedNode(id, targetID, placement string) (*Document, map
 		}
 		if old == owner {
 			index := len(expected)
+			if d.mind && placement == "child" {
+				index = 0
+				for _, child := range expected {
+					if child.lineStart < d.mindChildPosition(target) {
+						index++
+					}
+				}
+			}
 			if placement != "child" {
 				for i, child := range expected {
 					if child == target {
