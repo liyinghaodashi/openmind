@@ -124,3 +124,18 @@ for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
     }
   });
 }
+
+for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
+  test(Renderer.name + ' 缺失父级时仍按原文级别设置节点和编辑器样式', () => {
+    const {renderer,state}=setup(Renderer);
+    const third={id:'third',kind:'heading',level:3,label:'数据采集',children:[]};
+    const second={id:'second',kind:'heading',level:2,label:'设备采集',color:'#5EAA80',children:[third]};
+    state.layout=layoutTree({kind:'file',children:[second]},new Set(),(...args)=>renderer.measure(...args));
+    renderer.render(state);
+    assert.match(renderer.elements.get('third').className,/\bleaf\b/);
+    assert.equal(renderer.elements.get('third').style['--node-color-background'],undefined);
+    assert.equal(renderer.createEditor(state.layout.positions[1]).className,'node-editor leaf');
+    assert.deepEqual(renderer.measure(third.label,1,third),renderer.measure(third.label,2,third));
+    assert.match(renderer.elements.get('second').className,/\bbranch\b/);
+  });
+}

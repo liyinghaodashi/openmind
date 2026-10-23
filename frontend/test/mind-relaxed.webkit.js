@@ -3,19 +3,36 @@ try {
   const assert=(value,message)=>{checks++;if(!value)throw new Error(message)};
   const settle=async()=>{await new Promise(resolve=>setTimeout(resolve,90));await new Promise(requestAnimationFrame)};
   for(const [path,labels,roots] of [
-    ['缺失父级.mind.md',['二级起点','直接列表','子列表','跳级标题','六级标题','细分','另一个起点'],2],
+    ['缺失父级.mind.md',['二级起点','数据采集','直接列表','子列表','跳级标题','六级标题','细分','另一个起点'],2],
     ['纯列表.mind.md',['缩进起点','子项','独立节点'],2]
   ]) {
     state.queue.reset();map.collapsed.clear();map.selected=null;
     applySnapshot(await call('OpenDocument',path),{resetView:true});
     const original=state.snapshot.source;
+    const expectedOutline=state.snapshot.root.children.flatMap(node=>[node,...node.children]).map(node=>node.id);
+    assert(JSON.stringify([...$('document-outline').querySelectorAll('.outline-row')].map(row=>row.dataset.id))===JSON.stringify(expectedOutline),'Outline must show the top two actual layers');
     for(const style of ['processon','mindnode']) {
-      map.setStyle(style);map.fit();map.render();await settle();
+      map.setNodeMark('main',true);map.setNodeMark('second',true);map.setStyle(style);map.fit();map.render();await settle();
       assert(map.layout.positions.map(p=>p.node.label).join('|')===labels.join('|'),style+': every node must be laid out');
       assert(map.layout.positions.every(p=>map.elements.has(p.id)),style+': every node must render');
       assert(map.layout.positions.filter(p=>p.depth===0).length===roots,style+': missing parents must produce independent roots');
       assert(map.layout.edges.length===labels.length-roots,style+': edges must follow actual parents');
       assert(!map.elements.has('root'),style+': file root must remain hidden');
+      for(const p of map.layout.positions.filter(p=>p.node.kind==='list'||p.node.level>=3)) {
+        const element=map.elements.get(p.id);
+        assert(getComputedStyle(element).backgroundColor==='rgba(0, 0, 0, 0)',style+': deeper headings and lists must not gain a background');
+        assert(Math.abs(element.offsetHeight-p.height)<1,style+': measured height must match rendered style');
+      }
+      const third=map.layout.positions.find(p=>p.node.level===3);
+      if(third) {
+        await editNode(third.id);await settle();
+        assert(state.editor.classList.contains('leaf')&&getComputedStyle(state.editor).fontSize==='14px',style+': third heading editor must retain leaf style');
+        await finishNodeSelection();await settle();
+        await toggleFocusMode(third.id);await settle();
+        assert($('document-outline').querySelectorAll('.outline-row').length===third.node.children.length+1,'Focused outline must show its top two layers');
+        assert(getComputedStyle(map.elements.get(third.id)).backgroundColor==='rgba(0, 0, 0, 0)','Focus must retain third heading style');
+        await toggleFocusMode(third.id);map.fit();map.render();await settle();
+      }
     }
     assert(await window.__mindRules.request('ReadDisk',path)===original,'Opening and rendering must preserve source');
     const first=state.snapshot.root.children[0];

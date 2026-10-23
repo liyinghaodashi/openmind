@@ -1,3 +1,7 @@
+function styleDepth(node, depth) {
+  return node?.kind === 'heading' ? node.level - 1 : node?.kind === 'list' ? Math.max(2, depth) : depth;
+}
+
 function intersects(p, view) {
   return p.x + p.width >= view.x && p.x <= view.x + view.width && p.y + p.height >= view.y && p.y <= view.y + view.height;
 }
@@ -19,7 +23,8 @@ export class ProcessonRenderer {
     canvas.dataset.mindStyle = 'processon';
   }
 
-  measure(label, depth) {
+  measure(label, depth, node) {
+    depth = styleDepth(node, depth);
     const compact = depth === 0 ? !this.canvas.classList.contains('mind-main-node-mark') : depth === 1 ? !this.canvas.classList.contains('mind-second-node-mark') : true;
     const max = this.getNodeMaxWidth();
     const key = max + ':' + compact + ':' + depth + ':' + label;
@@ -41,15 +46,16 @@ export class ProcessonRenderer {
 
   createEditor(position) {
     const editor = this.document.createElement('textarea');
-    editor.className = 'node-editor ' + (position.depth === 0 ? 'root' : position.depth === 1 ? 'branch' : 'leaf');
+    const depth = styleDepth(position.node, position.depth);
+    editor.className = 'node-editor ' + (depth === 0 ? 'root' : depth === 1 ? 'branch' : 'leaf');
     editor.value = position.node.label;
     editor.spellcheck = false;
     editor.setAttribute('aria-label', '编辑节点名称');
     return editor;
   }
 
-  measureEditor(editor, depth) {
-    const size = this.measure(editor.value || '空节点', depth);
+  measureEditor(editor, depth, node) {
+    const size = this.measure(editor.value || '空节点', depth, node);
     Object.assign(editor.style, {width: size.width + 'px', height: size.height + 'px'});
     const borderHeight = editor.offsetHeight - editor.clientHeight;
     return {width: size.width, height: Math.max(size.height, editor.scrollHeight + borderHeight)};
@@ -71,6 +77,7 @@ export class ProcessonRenderer {
     for (const p of layout.positions) {
       if (!intersects(p, view) && p.id !== selected) continue;
       keep.add(p.id);
+      const depth = styleDepth(p.node, p.depth);
       let element = this.elements.get(p.id);
       if (!element) {
         element = this.document.createElement('div');
@@ -85,8 +92,8 @@ export class ProcessonRenderer {
         this.nodes.append(element);
         this.elements.set(p.id, element);
       }
-      element.className = `mind-node ${p.depth === 0 ? 'root' : p.depth === 1 ? 'branch' : 'leaf'}${p.id === selected ? ' selected' : ''}${editing === p.id ? ' editing' : ''}${drag?.active && drag.id === p.id ? ' dragging-source' : ''}${drag?.target?.targetId === p.id ? ' drop-' + drag.target.placement : ''}`;
-      const tint = p.depth <= 1 ? colorTint(p.effectiveColor) : '';
+      element.className = `mind-node ${depth === 0 ? 'root' : depth === 1 ? 'branch' : 'leaf'}${p.id === selected ? ' selected' : ''}${editing === p.id ? ' editing' : ''}${drag?.active && drag.id === p.id ? ' dragging-source' : ''}${drag?.target?.targetId === p.id ? ' drop-' + drag.target.placement : ''}`;
+      const tint = depth <= 1 ? colorTint(p.effectiveColor) : '';
       if (tint) {element.classList.add('colored'); element.style.setProperty('--node-color-background', tint);}
       else element.style.removeProperty('--node-color-background');
       const text = element.firstChild;
@@ -121,8 +128,9 @@ export class ProcessonRenderer {
     if (editor) {
       const p = layout.positions.find(position => position.id === editing);
       if (p) {
-        editor.className = 'node-editor ' + (p.depth === 0 ? 'root' : p.depth === 1 ? 'branch' : 'leaf');
-        editor.style.color = p.depth <= 1 && colorTint(p.effectiveColor) ? '#303030' : '';
+        const depth = styleDepth(p.node, p.depth);
+        editor.className = 'node-editor ' + (depth === 0 ? 'root' : depth === 1 ? 'branch' : 'leaf');
+        editor.style.color = depth <= 1 && colorTint(p.effectiveColor) ? '#303030' : '';
         Object.assign(editor.style, {left: p.x + 'px', top: p.y + 'px', width: p.width + 'px', height: p.height + 'px'});
       }
     }

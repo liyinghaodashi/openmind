@@ -110,7 +110,7 @@ export class MindMap {
     if(this.selected===id)void this.onEdit(id);
     else void this.onSelect?.(id);
   }
-  measure(label,depth,node){return this.editor&&node?.id===this.editing?this.renderer.measureEditor(this.editor,depth):this.renderer.measure(label,depth);}
+  measure(label,depth,node){return this.editor&&node?.id===this.editing?this.renderer.measureEditor(this.editor,depth,node):this.renderer.measure(label,depth,node);}
   createEditor(position){return this.renderer.createEditor(position);}
   setNodeMark(level, enabled){
     this.canvas.classList.toggle(level === 'main' ? 'mind-main-node-mark' : 'mind-second-node-mark', enabled);

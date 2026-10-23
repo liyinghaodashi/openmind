@@ -787,9 +787,9 @@ function renderOutline(){
     outline.replaceChildren(fragment);return;
   }
   function add(node,depth=1){
-    if(map.focusedId&&depth>2)return;
-    const level=map.focusedId?depth:node.level;
-    if(map.focusedId||node.kind==='heading'&&(level===1||level===2)){
+    if(depth>2)return;
+    const level=depth;
+    if(node.kind!=='file'){
       const row=document.createElement('button');row.className='outline-row level-'+level;row.textContent=node.label||'空标题';row.title=node.label;row.dataset.id=node.id;
       const item=document.createElement('div');item.className='outline-item';
       const focus=document.createElement('button');focus.type='button';focus.className='outline-focus';focus.dataset.id=node.id;focus.setAttribute('aria-pressed',String(map.focusedId===node.id));focus.setAttribute('aria-label',(map.focusedId===node.id?'退出':'进入')+'“'+(node.label||'空标题')+'”聚焦模式');focus.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>';
@@ -811,8 +811,8 @@ function renderOutline(){
     }
     for(const child of node.children)add(child,depth+1);
   }
-  if(state.snapshot)add(map.focusedId?map.viewRoot:state.snapshot.root);
-  if(!fragment.childNodes.length){const hint=document.createElement('p');hint.className='tree-placeholder';hint.textContent=state.snapshot?(map.focusedId?'当前分支没有一级或二级标题。':'当前文档没有一级或二级标题。'):'打开一份 Markdown 查看大纲。';fragment.append(hint)}
+  if(state.snapshot)add(map.focusedId?map.viewRoot:state.snapshot.root,map.focusedId?1:0);
+  if(!fragment.childNodes.length){const hint=document.createElement('p');hint.className='tree-placeholder';hint.textContent=state.snapshot?(map.focusedId?'当前分支没有节点。':'当前文档没有节点。'):'打开一份 Markdown 查看大纲。';fragment.append(hint)}
   outline.replaceChildren(fragment);updateOutlineCollapseButtons();
 }
 function updateOutlineCollapseButtons(){
