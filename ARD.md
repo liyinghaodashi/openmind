@@ -199,3 +199,7 @@ F12 的 mind 设置新增「节点最大宽度」，保存为 `mindNodeMaxWidth`
 ## 2026-10-22：mind 编辑态右键菜单
 
 编辑节点时右键打开同一套节点菜单，保留编辑框、光标及已有选区；macOS WebKit 会在右键按下后、contextmenu 前自动选词，因此记录右键按下时的选区并在 contextmenu 中恢复。编辑态打开菜单不抢走输入框焦点，菜单鼠标按下不触发失焦保存，Escape 仅关闭菜单；复制树继续使用当前草稿，颜色和聚焦沿用原有保存流程。两种渲染风格共用此行为。
+
+## macOS 文件图标与 Dock 图标一致（0.9.24）
+
+`build/appicon.png` 与 `internal/appicon/assets/anime-02a.png` 保持一致，使用现有带透明留白和圆角的 Dock 素材。Wails 生成的应用图标与 `.md` / `.markdown` 文件关联图标因此使用相同外观，不依赖运行时 `NSApp` 图标覆盖来修正文件图标。回归测试检查两份素材一致，防止再次打包为不透明正方形。
