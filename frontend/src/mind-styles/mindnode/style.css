@@ -4,14 +4,12 @@
 :where([data-mind-style=mindnode]) .mind-node.selected,:where([data-mind-style=mindnode]) .mind-node:focus,:where([data-mind-style=mindnode]) .mind-node:focus-visible{outline:none}
 :where([data-mind-style=mindnode]) .mind-node::after{content:"";position:absolute;inset:-4px;border:2px solid #202020;border-radius:12px;pointer-events:none;opacity:0}
 :where([data-mind-style=mindnode]) .mind-node.leaf::after{border-radius:6px}
-:where([data-mind-style=mindnode]) .mind-node.selected::after{opacity:1}
+:where([data-mind-style=mindnode]) .mind-node.selected::after,:where([data-mind-style=mindnode]) .mind-node.drop-child::after{opacity:1}
 :where([data-mind-style=mindnode]) .node-editor::selection{background:#d4d4d4;color:inherit}
 :where([data-mind-style=mindnode]) .node-editor.root::selection{background:#d4d4d4}
 :where([data-mind-style=mindnode]) .node-fold-count{position:absolute;left:calc(100% + 10px);top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border:1px solid #b8b8b8;border-radius:999px;background:#fff;color:#777;font-size:11px;font-weight:400;line-height:20px;white-space:nowrap;pointer-events:none;font-variant-numeric:tabular-nums}
 .canvas[data-mind-style=mindnode].node-dragging,.canvas[data-mind-style=mindnode].node-dragging .mind-node{cursor:grabbing}
 :where([data-mind-style=mindnode]) .mind-node.dragging-source{opacity:.35}
-:where([data-mind-style=mindnode]) .mind-node.drop-child{box-shadow:0 0 0 3px #202020;background:#ededed}
-:where([data-mind-style=mindnode]) .mind-node.root.drop-child{background:#fff;box-shadow:0 0 0 3px #9b9ba5,0 10px 24px #2020300a}
 :where([data-mind-style=mindnode]) .mind-node.drop-before::before,:where([data-mind-style=mindnode]) .mind-node.drop-after::before{content:"";position:absolute;left:-5px;right:-5px;height:3px;background:#202020;border-radius:2px;pointer-events:none}
 :where([data-mind-style=mindnode]) .mind-node.drop-before::before{top:-7px}
 :where([data-mind-style=mindnode]) .mind-node.drop-after::before{bottom:-7px}
@@ -30,7 +28,6 @@
 :where([data-mind-style=mindnode]) .mind-node.editing{color:transparent}
 :where([data-mind-style=mindnode]) .node-editor.branch,:where([data-mind-style=mindnode]) .node-editor.leaf{border:0;background:transparent;color:#777780;font-size:14px;font-weight:400;line-height:22px;padding:4px 6px 6px}
 :where([data-mind-style=mindnode]) .mind-node:not(.root) .node-fold-count{top:auto;bottom:-11px;transform:none;border:0;color:var(--node-line-color);background:#fff}
-:where([data-mind-style=mindnode]) .mind-node:not(.root).drop-child{background:#dedee2;box-shadow:0 0 0 3px #202020}
 .canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .mind-node.root{background:transparent;border-color:transparent;box-shadow:none;color:#303030}
 .canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .mind-node.root.editing{color:transparent}
 .canvas[data-mind-style=mindnode]:not(.mind-main-node-mark) .node-editor.root{color:#303030}
