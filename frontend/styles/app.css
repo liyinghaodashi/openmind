@@ -47,7 +47,6 @@
 .toolbar{--wails-draggable:drag;-webkit-user-select:none;user-select:none}
 .toolbar button{--wails-draggable:no-drag}
 .pin-toggle{display:flex;align-items:center;justify-content:center;width:34px;height:34px;padding:0;border:0;border-radius:7px;color:#777777}
-.pin-toggle svg{transition:transform .15s}
 .pin-toggle[aria-pressed=true]{color:#202020}
 .pin-toggle[aria-pressed=true] svg{transform:rotate(-45deg)}
 #delete-node-dialog .dialog-actions button{border:0;outline:none;box-shadow:none;background:transparent;color:#666;padding:12px 19px;border-radius:7px;transition:none}

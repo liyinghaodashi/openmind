@@ -9,7 +9,7 @@ const project=fileURLToPath(new URL('../',import.meta.url));
 const root=path.join(project,'frontend');
 const output=path.join(project,'output/compact-window');
 const temporary=await mkdtemp(path.join(tmpdir(),'openmind-compact-'));
-const tests=await readFile(path.join(root,'test/compact-window.webkit.js'),'utf8');
+const tests=await readFile(path.join(root,'test/'+(process.argv[2]||'compact-window')+'.webkit.js'),'utf8');
 const fixture=await readFile(path.join(root,'test/file-tree-drag.fixture.js'),'utf8');
 const bridge=`
 window.__compactSettings={mdCompactWindow:false,hideFileExtensions:false,expandFileNameOnHover:false,mindStyle:'processon',mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
@@ -36,7 +36,7 @@ const server=http.createServer(async(req,res)=>{
 try{
   await mkdir(output,{recursive:true});
   const executable=path.join(temporary,'probe');
-  const build=spawnSync('clang',['-fobjc-arc','-framework','Cocoa','-framework','WebKit',path.join(project,'scripts/test-compact-window.m'),path.join(project,'internal/window/window_darwin.m'),'-o',executable],{stdio:'inherit'});
+  const build=spawnSync('clang',['-fobjc-arc','-framework','Cocoa','-framework','WebKit',...(process.argv[2]==='window-pin'?['-framework','ScreenCaptureKit']:[]),path.join(project,process.argv[2]==='window-pin'?'scripts/test-window-pin.m':'scripts/test-compact-window.m'),path.join(project,'internal/window/window_darwin.m'),'-o',executable],{stdio:'inherit'});
   if(build.status!==0)throw new Error('Cannot compile compact window probe');
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   process.exitCode=await new Promise((resolve,reject)=>{
