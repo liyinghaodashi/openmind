@@ -52,6 +52,27 @@ try {
   }
   begin(); hover('leaf'); map.stopNodeDrag(point('leaf'), true); map.render();
   assert(!highlighted('leaf') && moves.length === 1 && moves[0].join(',') === 'source,leaf,child', 'Drop must clear hover and commit once');
+  const gapRoot = node('root', 1, [
+    node('upper', 2, [node('u1', 3), node('u2', 3), node('u3', 3)]),
+    node('lower', 2, [node('l1', 3), node('l2', 3), node('l3', 3)]),
+    node('source', 2)
+  ]);
+  for (const style of ['processon', 'mindnode']) {
+    map.setStyle(style); map.setRoot(gapRoot, {resetView: true});
+    for (const scale of [.5, 1, 1.5]) {
+      map.scale = scale; map.x = 80; map.y = 100; map.render();
+      const upper = map.elements.get('upper').getBoundingClientRect();
+      const lower = map.elements.get('lower').getBoundingClientRect();
+      const event = {pointerId: 1, clientX: upper.left + upper.width / 2, clientY: (upper.bottom + lower.top) / 2};
+      begin(); map.moveNodeDrag(event); map.render();
+      assert(map.nodeDrag.target?.targetId === 'lower' && map.nodeDrag.target.placement === 'before', style + ': sibling gap must accept insertion at scale ' + scale);
+      assert(getComputedStyle(map.elements.get('lower'), '::before').height === '3px' && !highlighted('lower'), 'Gap must show insertion line instead of child highlight');
+      const count = moves.length;
+      map.stopNodeDrag(event, true); map.render();
+      assert(moves.length === count + 1 && moves.at(-1).join(',') === 'source,lower,before', 'Releasing in gap must commit one sibling move');
+      assert(!map.elements.get('lower').classList.contains('drop-before'), 'Drop must clear insertion state');
+    }
+  }
   window.webkit.messageHandlers.result.postMessage({passed: true, message: 'PASS: ' + checks + ' native WebKit drop highlight checks'});
 } catch (error) {
   window.webkit.messageHandlers.result.postMessage({passed: false, message: 'FAIL: ' + error.message + '\n' + error.stack});
