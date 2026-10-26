@@ -991,6 +991,9 @@ const sidebarCollapse=createSidebarCollapse({sidebar:$('sidebar'),button:$('togg
 const settings=mountSettings({
   container:$('settings-options'),
   features:[sidebarCollapse,{
+    id:'globalWakeShortcut',group:'通用设置',label:'全局唤起快捷键',type:'shortcut',
+    description:'选择修饰键和主键后保存，即可从其他应用唤起 OpenMind。清除后关闭；F1–F20 可能需要同时按 Fn。'
+  },{
     id:'hideFileExtensions',group:'通用设置',label:'隐藏文件后缀',description:'文件树隐藏 .md、.markdown 和 .mind.md 后缀。',
     enable:()=>{hideFileExtensions=true;renderTree()},disable:()=>{hideFileExtensions=false;renderTree()}
   },{
@@ -1033,7 +1036,7 @@ const settings=mountSettings({
   }],
   storage:preview
     ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',mindNodeMaxWidth:340,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
-    :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
+    :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value),shortcutStatus:()=>call('GetGlobalShortcutStatus')}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;
 function setOutlineMode(enabled){

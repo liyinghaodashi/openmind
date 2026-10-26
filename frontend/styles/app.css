@@ -149,3 +149,12 @@
 .setting-number-row{align-items:center;justify-content:space-between;cursor:default}
 .setting-number-control{display:flex;align-items:center;gap:8px;color:#787878;font-size:12px}
 .setting-number-control input{width:88px;height:34px;margin:0;padding:6px 10px;border:0;border-radius:7px;background:#f0f0f0;color:#202020;font:inherit;font-size:13px;cursor:text}
+.setting-shortcut-row{display:block;cursor:default}
+.setting-shortcut-current{margin:12px 0 8px;font-size:12px;color:#555}
+.setting-shortcut-choices,.setting-shortcut-actions{display:flex;flex-wrap:wrap;gap:8px}
+.setting-shortcut-actions{margin-top:10px}
+.setting-shortcut-control button,.setting-shortcut-control select{border:0;border-radius:7px;background:#f0f0f0;color:#666;padding:8px 12px;font:inherit;font-size:12px}
+.setting-shortcut-control button[aria-pressed="true"],.setting-shortcut-actions button:first-child{background:#202020;color:#fff}
+.setting-shortcut-control button:focus-visible,.setting-shortcut-control select:focus-visible{outline:2px solid #333;outline-offset:3px}
+.setting-shortcut-status{margin:8px 0 0;font-size:12px;line-height:20px;color:#a3422b}
+.setting-shortcut-status:empty{display:none}

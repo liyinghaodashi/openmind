@@ -1,3 +1,5 @@
+import {mountShortcutControl, validShortcut} from './features/global-shortcut.js';
+
 export function mountSettings({container, features, storage}) {
   const document = container.ownerDocument;
   const fields = document.createElement('fieldset');
@@ -15,14 +17,22 @@ export function mountSettings({container, features, storage}) {
   const inputs = new Map();
   const groups = new Map();
   const revisions = new Map();
+  const shortcuts = new Map();
+
+  async function shortcutStatus() {
+    try {return await storage.shortcutStatus?.() || '';}
+    catch (error) {return '无法确认全局快捷键状态：' + (error?.message || String(error));}
+  }
 
   function apply(feature, value) {
+    if (feature.type === 'shortcut') return;
     if (feature.options || feature.type === 'number') feature.select(value);
     else if (value) feature.enable();
     else feature.disable();
   }
 
   function sync(feature) {
+    if (feature.type === 'shortcut') {shortcuts.get(feature.id).setValue(saved[feature.id]); return;}
     for (const input of inputs.get(feature.id)) {
       if (feature.type === 'number') {input.value = String(saved[feature.id]); continue;}
       input.checked = feature.options ? input.value === saved[feature.id] : saved[feature.id] === true;
@@ -34,6 +44,7 @@ export function mountSettings({container, features, storage}) {
     if (fields.disabled) {sync(feature); return;}
     const revision = (revisions.get(feature.id) || 0) + 1;
     revisions.set(feature.id, revision);
+    shortcuts.get(feature.id)?.setBusy(true);
     pending = pending.then(async () => {
       const next = {...saved, [feature.id]: value};
       try {
@@ -41,16 +52,22 @@ export function mountSettings({container, features, storage}) {
         saved = next;
         apply(feature, value);
         status.textContent = '';
+        for (const shortcut of shortcuts.values()) shortcut.setStatus(await shortcutStatus());
       } catch (error) {
-        status.textContent = '设置保存失败，已保留原设置：' + (error?.message || String(error));
+        const message = '设置保存失败，已保留原设置：' + (error?.message || String(error));
+        if (feature.type === 'shortcut') shortcuts.get(feature.id).setStatus(message);
+        else status.textContent = message;
       } finally {
-        if (revisions.get(feature.id) === revision) sync(feature);
+        if (revisions.get(feature.id) === revision) {
+          sync(feature);
+          shortcuts.get(feature.id)?.setBusy(false);
+        }
       }
     });
   }
 
   for (const feature of features) {
-    const row = document.createElement(feature.options ? 'div' : 'label');
+    const row = document.createElement(feature.options || feature.type === 'shortcut' ? 'div' : 'label');
     row.className = 'setting-row';
     const input = document.createElement('input');
     input.type = 'checkbox';
@@ -67,7 +84,12 @@ export function mountSettings({container, features, storage}) {
     input.setAttribute('aria-describedby', description.id);
     text.append(title, description);
     const controls = [];
-    if (feature.options) {
+    if (feature.type === 'shortcut') {
+      row.className += ' setting-shortcut-row';
+      const shortcut = mountShortcutControl({document, id: input.id, labelID: title.id, descriptionID: description.id, save: value => save(feature, value)});
+      shortcuts.set(feature.id, shortcut);
+      row.append(text, shortcut.element);
+    } else if (feature.options) {
       row.className += ' setting-choice-row';
       const choices = document.createElement('div');
       choices.className = 'setting-choices';
@@ -154,8 +176,9 @@ export function mountSettings({container, features, storage}) {
     try {
       saved = await storage.load();
       for (const feature of features) {
+        if (feature.type === 'shortcut' && saved[feature.id] === undefined) saved[feature.id] = '';
         if (feature.type === 'number' && saved[feature.id] === undefined) saved[feature.id] = feature.default;
-        const valid = feature.type === 'number' ? Number.isInteger(saved[feature.id]) && saved[feature.id] >= feature.min && saved[feature.id] <= feature.max : feature.options ? feature.options.some(option => option.value === saved[feature.id]) : typeof saved[feature.id] === 'boolean';
+        const valid = feature.type === 'shortcut' ? validShortcut(saved[feature.id]) : feature.type === 'number' ? Number.isInteger(saved[feature.id]) && saved[feature.id] >= feature.min && saved[feature.id] <= feature.max : feature.options ? feature.options.some(option => option.value === saved[feature.id]) : typeof saved[feature.id] === 'boolean';
         if (!valid) throw new Error('无效的设置：' + feature.label);
       }
       for (const feature of features) {
@@ -164,6 +187,7 @@ export function mountSettings({container, features, storage}) {
       }
       fields.disabled = false;
       status.textContent = '';
+      for (const shortcut of shortcuts.values()) shortcut.setStatus(await shortcutStatus());
     } catch (error) {
       status.textContent = '设置读取失败，请检查配置后重新打开应用：' + (error?.message || String(error));
     }
