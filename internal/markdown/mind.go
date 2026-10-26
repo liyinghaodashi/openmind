@@ -150,7 +150,7 @@ func parseMind(source []byte, name string) *Document {
 			continue
 		}
 		raw := string(source[node.Start:node.End])
-		raw, node.Fold = mindLabelFold(raw)
+		raw, node.Fold, node.FoldKid = mindLabelFolds(raw)
 		node.Label, node.Color = mindMultilineLabel(raw, node.Kind == "heading")
 	}
 	return d

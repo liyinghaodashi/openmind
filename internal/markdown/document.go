@@ -17,6 +17,7 @@ type Node struct {
 	Label     string  `json:"label"`
 	Color     string  `json:"color,omitempty"`
 	Fold      bool    `json:"isFold,omitempty"`
+	FoldKid   bool    `json:"isFoldKid,omitempty"`
 	Kind      string  `json:"kind"`
 	Level     int     `json:"level"`
 	Editable  bool    `json:"editable"`
@@ -199,6 +200,17 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 	n, ok := d.Nodes[id]
 	if !ok || !n.Editable {
 		return nil, fmt.Errorf("该节点请在 Markdown 原文中编辑")
+	}
+	if d.mind && n.FoldKid {
+		plain, err := d.WithFoldKid(id, false)
+		if err != nil {
+			return nil, err
+		}
+		next, err := plain.withLabel(id, label, preserveColor)
+		if err != nil {
+			return nil, err
+		}
+		return next.WithFoldKid(id, true)
 	}
 	if d.mind && n.Fold {
 		plain, err := d.WithFold(id, false)

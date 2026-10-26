@@ -4,8 +4,8 @@ import {nodeDropTarget} from './node-drop.js';
 import {nodeColors} from './node-colors.js';
 
 export class MindMap {
-  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onFold, onColor, onCopyTree, onZoom, onLayout, canDrag, onMove, onDragState}) {
-    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onFold,onColor,onCopyTree,onZoom,onLayout,canDrag,onMove,onDragState});
+  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onFold, onFoldKid, onColor, onCopyTree, onZoom, onLayout, canDrag, onMove, onDragState}) {
+    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onFold,onFoldKid,onColor,onCopyTree,onZoom,onLayout,canDrag,onMove,onDragState});
     this.scale=1;this.x=0;this.y=0;this.collapsed=new Set();this.frame=0;this.selected=null;this.focusedId=null;
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
@@ -206,6 +206,7 @@ export class MindMap {
     if(this.nodeDrag)return;
     const p=this.layout?.positions.find(p=>p.id===id);
     if(!p?.node.children.length)return;
+    if(this.onFoldKid)return this.onFoldKid(p.id);
     this.collapsed.has(p.id)?this.collapsed.delete(p.id):this.collapsed.add(p.id);
     this.setRoot(this.root);
   }

@@ -196,7 +196,7 @@ function clearCurrentDocument(){
   updateDocumentView();renderOutline();
 }
 function banner(message,reload=false){$('error-text').textContent=message;$('error-banner').hidden=false;$('reload-document').hidden=!reload}
-const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
+const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onFoldKid:id=>toggleNodeFold(id,{children:true}),onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
 const markdown=new MarkdownEditor({container:$('markdown-editor'),onInput:text=>enqueue('source',text),onComposition:composing=>state.composing=composing,onBeforeInput:canInputMarkdown,onOutline:()=>{if(state.snapshot&&!isMindMapPath(state.snapshot.path))renderOutline()},images:{importImage:(session,data)=>call('ImportImage',session,data),discardImages:(session,paths)=>call('DiscardImages',session,paths),onError:error=>toast(errorText(error))}});
 const documentSearch=mountDocumentSearch({
   bar:$('document-search'),input:$('document-search-input'),count:$('document-search-count'),
@@ -255,7 +255,7 @@ function updateDocumentView(){
   if(!opened)documentSearch.close(false);
 }
 
-function applySnapshot(snapshot,{resetView=false,external=false}={}){
+function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=false}={}){
   if(snapshot.imageWarning)toast(snapshot.imageWarning);
   const pathChanged=state.snapshot?.path!==snapshot.path;
   if(resetView||pathChanged||external)mindHistory.clear();
@@ -263,6 +263,11 @@ function applySnapshot(snapshot,{resetView=false,external=false}={}){
   else if(map.focusedId){
     const path=nodePath(state.snapshot.root,map.focusedId);
     map.focusedId=snapshot.nodeIdMap?snapshot.nodeIdMap[map.focusedId]||null:nodeAtPath(snapshot.root,path)?.id||null;
+  }
+  if(isMindMapPath(snapshot.path)&&(resetView||pathChanged||external||restoreFolds)){
+    map.collapsed.clear();
+    const restore=node=>{if(node.isFoldKid)map.collapsed.add(node.id);node.children.forEach(restore)};
+    restore(snapshot.root);
   }
   state.snapshot=snapshot;
   if(pathChanged)state.sourceOpen=false;
@@ -281,7 +286,12 @@ function applySnapshot(snapshot,{resetView=false,external=false}={}){
 
 state.queue=new EditQueue({
   write:edit=>call('ApplyEdit',{...edit,session:state.snapshot.session,version:state.snapshot.version}),
-  onCommit:reply=>applySnapshot(reply),
+  onCommit:(reply,edit)=>{
+    if(edit.kind==='node-fold-kid'){
+      if(edit.text==='true')map.collapsed.add(edit.nodeId);else map.collapsed.delete(edit.nodeId);
+    }
+    applySnapshot(reply,{restoreFolds:edit.kind==='source'});
+  },
   onError:async error=>{state.blocked=true;setEditorsReadOnly();let message=errorText(error);try{const path=await preserveDraft();message+='。本地内容已保留到恢复副本。';state.recoveryPath=path}catch(e){message+='；恢复副本失败：'+errorText(e)+'。请保留窗口并复制文字。'}banner(message,true)}
 });
 
@@ -373,7 +383,7 @@ async function toggleFocusMode(id,{fromOutline=false}={}){
 function canDragNode(){
   return !!state.snapshot&&isMindMapPath(state.snapshot.path)&&!state.fileDragging&&!addingChild&&!deletingNode&&!movingNode&&!state.checking&&!state.blocked&&!state.closing&&!state.composing&&!state.navigating&&!state.queue.pending&&!finishing&&!document.querySelector('dialog[open]')&&!document.body.classList.contains('settings-open');
 }
-async function toggleNodeFold(id){
+async function toggleNodeFold(id,{children=false}={}){
   if(state.fileDragging||state.nodeDragging||addingChild||deletingNode||movingNode||state.checking||state.blocked||state.closing||state.composing||state.navigating||!state.snapshot||!isMindMapPath(state.snapshot.path))return;
   if(preview){toast('请在 macOS 应用中折叠节点。');return}
   const path=nodePath(state.snapshot.root,id);if(!path)return;
@@ -381,7 +391,8 @@ async function toggleNodeFold(id){
   try{
     if(!await finishNode()||!await state.queue.drain())return;
     const node=nodeAtPath(state.snapshot.root,path);if(!node)return;
-    enqueue('node-fold',String(!node.isFold),node.id);
+    if(children&&!node.children.length)return;
+    enqueue(children?'node-fold-kid':'node-fold',String(children?!map.collapsed.has(node.id):!node.isFold),node.id);
     if(!await state.queue.drain())return;
     state.draft=null;map.selected=node.id;map.setRoot(state.snapshot.root);map.render();map.elements.get(node.id)?.focus({preventScroll:true});
   }catch(error){banner(errorText(error),true)}finally{

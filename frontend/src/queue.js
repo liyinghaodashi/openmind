@@ -18,7 +18,7 @@ export class EditQueue {
         const {edit, size} = this.items[0];
         const reply = await this.write(edit);
         this.items.shift(); this.bytes -= size;
-        this.onCommit?.(reply); this.onState?.();
+        this.onCommit?.(reply, edit); this.onState?.();
       }
     } catch (error) {
       this.failed = true;

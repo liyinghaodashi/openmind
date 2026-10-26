@@ -5,25 +5,52 @@ import (
 	"strings"
 )
 
-func mindLabelFold(raw string) (string, bool) {
-	trimmed := strings.TrimRight(raw, " \t")
-	if !strings.HasSuffix(trimmed, "[isFold]") {
-		return raw, false
+func mindLabelFolds(raw string) (string, bool, bool) {
+	fold, foldKid := false, false
+	for {
+		trimmed := strings.TrimRight(raw, " \t")
+		switch {
+		case strings.HasSuffix(trimmed, "[isFold]"):
+			raw = strings.TrimRight(strings.TrimSuffix(trimmed, "[isFold]"), " \t")
+			fold = true
+		case strings.HasSuffix(trimmed, "[isFoldKid]"):
+			raw = strings.TrimRight(strings.TrimSuffix(trimmed, "[isFoldKid]"), " \t")
+			foldKid = true
+		default:
+			return raw, fold, foldKid
+		}
 	}
-	return strings.TrimRight(strings.TrimSuffix(trimmed, "[isFold]"), " \t"), true
 }
 
 func (d *Document) WithFold(id string, folded bool) (*Document, error) {
+	return d.withFold(id, folded, false)
+}
+
+func (d *Document) WithFoldKid(id string, folded bool) (*Document, error) {
+	return d.withFold(id, folded, true)
+}
+
+func (d *Document) withFold(id string, folded, children bool) (*Document, error) {
 	n := d.Nodes[id]
 	if !d.mind || n == nil || !n.Editable {
-		return nil, fmt.Errorf("仅思维导图节点支持折叠文本")
+		return nil, fmt.Errorf("仅思维导图节点支持折叠")
 	}
-	if n.Fold == folded {
+	fold, foldKid := n.Fold, n.FoldKid
+	if children {
+		foldKid = folded
+	} else {
+		fold = folded
+	}
+	if n.Fold == fold && n.FoldKid == foldKid {
 		return d, nil
 	}
-	raw, _ := mindLabelFold(string(d.Source[n.Start:n.End]))
-	if folded {
+
+	raw, _, _ := mindLabelFolds(string(d.Source[n.Start:n.End]))
+	if fold {
 		raw += " [isFold]"
+	}
+	if foldKid {
+		raw += " [isFoldKid]"
 	}
 	source := string(d.Source[:n.Start]) + raw + string(d.Source[n.End:])
 	if len(source) > MaxBytes {
@@ -42,7 +69,8 @@ func (d *Document) WithFold(id string, folded bool) (*Document, error) {
 		}
 		if c.ID == id {
 			c.End += delta
-			c.Fold = folded
+			c.Fold = fold
+			c.FoldKid = foldKid
 		} else if c.Start >= n.End && c.Start >= 0 {
 			c.Start += delta
 			c.End += delta

@@ -181,7 +181,7 @@ try{
   const beforeDelete=nodes().length;
   await selectNode(find('新增细分').id);await deleteNode();await settle();
   assert(!find('新增细分')&&nodes().length===beforeDelete-1,'Deleting a leaf must retain every other node');
-  await selectNode(find('第二主题').id);map.toggleSelected();await settle();
+  await selectNode(find('第二主题').id);await map.toggleSelected();await settle();
   assert(!map.layout.positions.some(p=>p.id===find('独立细分').id),'Collapsing must hide the correct subtree');
   $('canvas').dispatchEvent(new KeyboardEvent('keydown',{key:'f',metaKey:true,bubbles:true,cancelable:true}));await settle();
   $('document-search-input').value='独立细分';$('document-search-input').dispatchEvent(new InputEvent('input',{bubbles:true}));await settle();
@@ -542,9 +542,9 @@ try{
   await toggleSource(false);await settle();
   const processonChoice=$('setting-mindStyle-processon'),mindnodeChoice=$('setting-mindStyle-mindnode');
   assert(processonChoice.checked&&!mindnodeChoice.checked&&map.style==='processon','Existing settings must default to processon');
-  const styleSource=state.snapshot.source;
   const styleBranch=map.layout.positions.find(p=>p.depth===1&&p.node.children.length).node;
-  await selectNode(styleBranch.id);map.toggleSelected();await toggleFocusMode(styleBranch.id);await settle();
+  await selectNode(styleBranch.id);await map.toggleSelected();await toggleFocusMode(styleBranch.id);await settle();
+  const styleSource=state.snapshot.source;
   const anchorScreen=()=>{const p=map.layout.positions.find(p=>p.id===map.focusedId);return {x:map.x+p.x*map.scale,y:map.y+(p.y+p.height/2)*map.scale}};
   const beforeStyle=anchorScreen(),beforeScale=map.scale,previousRenderer=map.renderer;
   const checkStyleIsolation=async inactiveStyle=>{
@@ -577,7 +577,7 @@ try{
   const folded=map.elements.get(styleBranch.id).querySelector('.node-fold-count');
   assert(folded&&folded.textContent!=='0','MindNode must retain the folded descendant count');
   await checkStyleIsolation('processon');
-  await toggleFocusMode(styleBranch.id);map.toggleSelected(styleBranch.id);map.fit();map.render();await settle();
+  await toggleFocusMode(styleBranch.id);await map.toggleSelected(styleBranch.id);map.fit();map.render();await settle();
   assert(getComputedStyle($('canvas')).backgroundColor==='rgb(238, 238, 241)','MindNode must use the reference gray canvas');
   for(const p of map.layout.positions.filter(p=>p.depth>0&&map.elements.has(p.id))){
     const element=map.elements.get(p.id),style=getComputedStyle(element),edge=map.edgeElements.get(p.id);

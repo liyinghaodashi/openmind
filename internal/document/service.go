@@ -180,6 +180,8 @@ func (s *Service) Apply(edit Edit) (*Snapshot, error) {
 	switch edit.Kind {
 	case "label":
 		next, err = s.doc.WithLabel(edit.NodeID, edit.Text)
+	case "node-fold-kid":
+		next, err = s.doc.WithFoldKid(edit.NodeID, edit.Text == "true")
 	case "node-fold":
 		next, err = s.doc.WithFold(edit.NodeID, edit.Text == "true")
 	case "node-color":
@@ -324,10 +326,12 @@ func (s *Service) PreserveDraft(session, kind, nodeID, value string) (string, er
 		return "", fmt.Errorf("恢复内容超过 2MB")
 	}
 	data := markdown.PreserveLineEndings(doc.Source, value)
-	if kind == "label" || kind == "node-color" || kind == "node-fold" {
+	if kind == "label" || kind == "node-color" || kind == "node-fold" || kind == "node-fold-kid" {
 		var d *markdown.Document
 		var err error
-		if kind == "node-fold" {
+		if kind == "node-fold-kid" {
+			d, err = doc.WithFoldKid(nodeID, value == "true")
+		} else if kind == "node-fold" {
 			d, err = doc.WithFold(nodeID, value == "true")
 		} else if kind == "node-color" {
 			d, err = doc.WithColor(nodeID, value)
