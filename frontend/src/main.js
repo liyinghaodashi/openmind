@@ -1068,6 +1068,13 @@ $('markdown-editor').addEventListener('click',event=>{
   }catch{toast('当前链接无法打开。')}
 },true);
 $('zoom-in').onclick=()=>map.zoom(1.15);$('zoom-out').onclick=()=>map.zoom(1/1.15);$('fit-map').onclick=()=>map.fit();
+document.addEventListener('keydown',event=>{
+  if(event.defaultPrevented||event.isComposing||state.composing||event.keyCode===229||!event.metaKey||event.ctrlKey||event.altKey||!state.snapshot||!isMindMapPath(state.snapshot.path)||state.nodeDragging||document.body.classList.contains('settings-open')||document.querySelector('dialog[open]'))return;
+  const step=(event.key==='+'||event.key==='=') ? .05 : event.key==='-'&&!event.shiftKey ? -.05 : 0;
+  if(!step)return;
+  event.preventDefault();
+  map.zoom((map.scale+step)/map.scale);
+});
 $('dismiss-error').onclick=()=>{if(state.blocked)toast('写入已暂停，请先保留草稿并重新读取。');else $('error-banner').hidden=true};
 $('document-title').ondblclick=()=>{if(state.snapshot&&!compactWindow)void call('RevealDocument',state.snapshot.path).catch(e=>toast(errorText(e)))};
 $('reload-document').onclick=async()=>{
