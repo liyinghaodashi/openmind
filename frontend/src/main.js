@@ -1143,8 +1143,16 @@ async function closeApp(windowOnly=false){
   if(state.nodeDragging||addingChild||deletingNode||movingNode){toast('正在处理节点，请稍后再退出。');return}
   if(state.closing)return;state.closing=true;
   await markdown.imageTask;
-  try{document.activeElement?.blur();await new Promise(resolve=>setTimeout(resolve,0));if(state.composing){state.closing=false;toast('请先确认输入法中的文字再退出。');return}if(state.snapshot&&!isMindMapPath(state.snapshot.path)&&!state.sourceOpen)markdown.flush();setEditorsReadOnly();await settings.flush();await state.queue.drain();if(state.blocked||state.queue.failed)await preserveDraft();await call(windowOnly?'FinishWindowClose':'FinishClose');if(windowOnly){state.closing=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||!!state.editor}}
-  catch(error){state.closing=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||!!state.editor;banner('暂时无法退出：'+errorText(error)+'。请保留窗口并处理错误。',state.blocked)}
+  const selection=window.getSelection();
+  const markdownSelection=windowOnly&&document.activeElement===markdown.editable&&selection?.rangeCount&&markdown.editable.contains(selection.anchorNode)&&markdown.editable.contains(selection.focusNode)?selection.getRangeAt(0).cloneRange():null;
+  const restoreMarkdownSelection=()=>{
+    if(!markdownSelection||markdown.readOnly||!markdown.editable.contains(markdownSelection.startContainer)||!markdown.editable.contains(markdownSelection.endContainer))return;
+    const scroll=markdown.scrollElement.scrollTop;
+    markdown.editable.focus({preventScroll:true});selection.removeAllRanges();selection.addRange(markdownSelection);
+    markdown.scrollElement.scrollTop=scroll;
+  };
+  try{document.activeElement?.blur();await new Promise(resolve=>setTimeout(resolve,0));if(state.composing){state.closing=false;toast('请先确认输入法中的文字再退出。');return}if(state.snapshot&&!isMindMapPath(state.snapshot.path)&&!state.sourceOpen)markdown.flush();setEditorsReadOnly();await settings.flush();await state.queue.drain();if(state.blocked||state.queue.failed)await preserveDraft();await call(windowOnly?'FinishWindowClose':'FinishClose');if(windowOnly){state.closing=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||!!state.editor;restoreMarkdownSelection()}}
+  catch(error){state.closing=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||!!state.editor;restoreMarkdownSelection();banner('暂时无法退出：'+errorText(error)+'。请保留窗口并处理错误。',state.blocked)}
 }
 
 await Promise.all([settings.ready,markdown.ready]);

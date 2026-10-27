@@ -3,8 +3,9 @@
 
 int om_set_compact_window(int enabled);
 void om_toggle_window_maximise(void);
+void om_hide_window(void);
 
-@interface CompactProbe : NSObject <WKScriptMessageHandler>
+@interface CompactProbe : NSObject <WKScriptMessageHandler, NSApplicationDelegate>
 @property(retain) NSWindow *window;
 @property NSRect originalFrame;
 @property NSSize originalMinSize;
@@ -41,6 +42,17 @@ void om_toggle_window_maximise(void);
                     [self.window standardWindowButton:NSWindowCloseButton].hidden) failure = @"Original window state was not restored";
             }
             self.compact = enabled;
+        } else if ([action isEqual:@"close"]) {
+            om_hide_window();
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (self.window.visible) { fprintf(stderr, "Window must be hidden\n"); exit(1); }
+                [message.webView evaluateJavaScript:@"window.__compactResolve(null)" completionHandler:nil];
+            });
+            return;
+        } else if ([action isEqual:@"reopen"]) {
+            SEL reopen = @selector(applicationShouldHandleReopen:hasVisibleWindows:);
+            BOOL (*handleReopen)(id, SEL, NSApplication *, BOOL) = (void *)[self methodForSelector:reopen];
+            handleReopen(self, reopen, NSApp, NO);
         } else if ([action isEqual:@"pin"]) {
             self.window.level = [data[@"enabled"] boolValue] ? NSFloatingWindowLevel : NSNormalWindowLevel;
         } else if ([action isEqual:@"check-pin"]) {
@@ -77,6 +89,7 @@ int main(int argc, const char *argv[]) {
         [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
         [NSApp finishLaunching];
         CompactProbe *probe = [CompactProbe new];
+        NSApp.delegate = probe;
         probe.output = [NSString stringWithUTF8String:argv[2]];
         NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable | NSWindowStyleMaskFullSizeContentView;
         probe.window = [[NSWindow alloc] initWithContentRect:NSMakeRect(100, 100, 1100, 760) styleMask:style backing:NSBackingStoreBuffered defer:NO];

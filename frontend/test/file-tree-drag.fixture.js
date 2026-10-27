@@ -2,7 +2,7 @@
   const fail=message=>window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+message});
   window.addEventListener('error',event=>fail(event.message+' '+event.filename+':'+event.lineno));
   window.addEventListener('unhandledrejection',event=>fail(String(event.reason?.stack||event.reason)));
-  window.addEventListener('blur',event=>{if(event.isTrusted)event.stopImmediatePropagation()},true);
+  window.addEventListener('blur',event=>{if(event.isTrusted&&!window.__allowNativeBlur)event.stopImmediatePropagation()},true);
   const fixture={directories:new Set(['源','源/子','目标','目标/内部','目标/同名目录']),documents:new Map(),calls:[],listeners:new Map(),current:null};
   for(const path of ['源/笔记.md','源/子/想法.mind.md','目标/笔记.md','根.md']){
     const source='# '+path+'\n\n'+Array.from({length:45},(_,i)=>'内容 '+i+'\n\n').join('');

@@ -253,3 +253,10 @@ macOS 实现独立放在 `internal/globalshortcut`，使用 Carbon `RegisterEven
 光标位于有序列表项末尾、紧接代码块的空段落时，Enter 在同一列表中插入下一个列表项并移入光标，编号沿用原列表；避免 WebKit 默认只在当前列表项内增加空段落而无法续号。通过 `beforeinput` 的 `insertParagraph` 处理，保留代码区内换行、Shift+Enter、输入法及空列表项回车退出的原有行为，沿用自动保存和一步撤销重做。
 
 `node scripts/test-markdown-shortcuts.mjs markdown-list-code-enter` 重放离开代码块及原生回车，覆盖 ⌘K 连续操作、跨位数编号、嵌套及已有后续项目、保存、撤销重做、重新载入与输入保护。
+
+
+## 2026-10-27：关闭窗口保留 md 正文选区（0.9.36）
+
+⌘W 的保存流程会让编辑器失焦并临时切为只读，WebKit 会清除正文选区。关闭窗口前仅在 md 正文获得焦点时保存 DOM Range；保存完成、恢复可编辑状态后还原焦点和选区，保持滚动位置，避免重新唤起时空列表项显示错位的原生光标。关闭失败时同样恢复；从工具栏关闭时不抢正文焦点，退出应用流程不恢复。
+
+`node scripts/test-compact-window.mjs markdown-window-close` 使用真实 macOS 窗口隐藏与 Dock 重开入口验证重复关闭、空列表项、普通段落、滚动位置、文本选区、继续输入及自动保存。
