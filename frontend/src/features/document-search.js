@@ -51,6 +51,20 @@ export function documentMatchRange(index,match) {
   range.setEnd(end.node,end.offset+match.end-end.start);return range;
 }
 
+function documentMatchRects(index,match) {
+  const rects=[];
+  for(const segment of index.segments){
+    if(segment.end<=match.start)continue;
+    if(segment.start>=match.end)break;
+    if(!segment.node.isConnected)continue;
+    const range=document.createRange();
+    range.setStart(segment.node,segment.offset+Math.max(match.start,segment.start)-segment.start);
+    range.setEnd(segment.node,segment.offset+Math.min(match.end,segment.end)-segment.start);
+    rects.push(...range.getClientRects());
+  }
+  return rects;
+}
+
 const mirrorProperties=['fontFamily','fontSize','fontWeight','fontStyle','fontVariant','fontStretch','fontFeatureSettings','fontKerning','lineHeight','letterSpacing','wordSpacing','textAlign','textIndent','textTransform','direction','tabSize','whiteSpace','overflowWrap','wordBreak','paddingTop','paddingRight','paddingBottom','paddingLeft','borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth'];
 
 export function textareaMatchRect(element,match,mirror) {
@@ -83,7 +97,7 @@ export function mountDocumentSearch({bar,input,count,previous,next,closeButton,g
     frame=0;overlay.replaceChildren();
     if(bar.hidden||!target||current<0||!canOpen())return;
     const clip=target.element.getBoundingClientRect();
-    const rects=target.type==='textarea'?textareaMatchRect(target.element,matches[current],mirror):range&&range.startContainer.isConnected?[...range.getClientRects()]:[];
+    const rects=target.type==='textarea'?textareaMatchRect(target.element,matches[current],mirror):target.type==='markdown'?documentMatchRects(index,matches[current]):range&&range.startContainer.isConnected?[...range.getClientRects()]:[];
     const fragment=document.createDocumentFragment();
     for(const rect of rects){
       const left=Math.max(rect.left,clip.left+target.element.clientLeft),top=Math.max(rect.top,clip.top+target.element.clientTop);

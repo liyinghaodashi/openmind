@@ -8,6 +8,27 @@ try{
   const counter=()=>$('document-search-count').textContent;
   const marks=()=>[...document.querySelectorAll('.document-search-mark')];
   await document.fonts.ready;
+  const escapedQuery='oof_mae_percentage_points';
+  const jsonFixture='# temp\n\n{"oof_rmse_percentage_points":1.0705316352537915,"fold_count":3,"group_count":3,"added_rows":0,"training_rows":57,"validation_method":"按材料分组OOF验证","oof_r2":0.2553637957522835,"oof_mae_percentage_points":0.7605760739057313}\n';
+  const assertVisibleHighlight=()=>{
+    const index=indexDocumentText(markdown.editable),start=index.text.indexOf(escapedQuery);
+    const glyphs=Array.from({length:escapedQuery.length},(_,i)=>documentMatchRange(index,{start:start+i,end:start+i+1}).getBoundingClientRect());
+    const highlights=marks().map(mark=>mark.getBoundingClientRect());
+    assert(highlights.length>0&&highlights.every(rect=>glyphs.some(glyph=>Math.abs(glyph.top-rect.top)<.5&&Math.abs(glyph.bottom-rect.bottom)<.5)),'Search must not draw invisible escape markers below the text');
+    assert(glyphs.every(glyph=>highlights.some(rect=>rect.left<=glyph.left+1&&rect.right>=glyph.right-1&&Math.abs(glyph.top-rect.top)<.5)),'Search must highlight every visible character');
+    assert(new Set(highlights.map(rect=>[rect.left,rect.top,rect.right,rect.bottom].join(','))).size===highlights.length,'Search must not draw duplicate highlights');
+    return new Set(glyphs.map(rect=>Math.round(rect.top))).size;
+  };
+  for(const [source,lines] of [['# temp\n\noof\\_mae\\_percentage\\_points\n',1],[jsonFixture.replaceAll('_','\\_'),2]]){
+    applySnapshot({session:'search-escape-check',version:1,path:'temp.md',source,root:{id:'r',label:'temp',children:[]}},{resetView:true});
+    await settle();
+    const original=markdown.editable.innerHTML;
+    markdown.editable.focus();key('f',{metaKey:true});await settle();await search(escapedQuery);
+    assert(counter()==='1 / 1','Escaped JSON field must count as one occurrence');
+    assert(assertVisibleHighlight()===lines,'Search fixture must exercise '+lines+' visible text lines');
+    documentSearch.close(false);
+    assert(markdown.editable.innerHTML===original&&markdown.editor.getValue()===source,'Searching escaped fields must preserve editor DOM and Markdown');
+  }
   const fixture='# 搜索验证\n\n中文 **Java** Java\n\n'+Array.from({length:75},(_,i)=>'段落 '+i+'：保持原有内容。\n\n').join('')+'末尾 Java 目标\n\n```java\nString target = "code needle";\n```\n\n| A | B |\n| --- | --- |\n| table needle | value |\n';
   applySnapshot({session:'search-check',version:1,path:'搜索验证.md',source:fixture,root:{id:'r',label:'搜索验证',children:[]}},{resetView:true});
   await settle();
