@@ -12,6 +12,7 @@ export class MarkdownEditor {
     container.addEventListener('compositionend',()=>{this.composing=false;this.onComposition(false);this.flush()});
     container.addEventListener('beforeinput',event=>{
       if(this.readOnly||!this.onBeforeInput(this.source,event)){event.preventDefault();return}
+      this.handleListCodeContinuation(event);
       this.handleHeadingContinuation(event);
     },true);
     container.addEventListener('input',event=>{if(event.inputType==='insertParagraph'&&this.headingContinuation)this.headingContinuation.source=this.editor.getValue();if(!event.isComposing)this.flush()});
@@ -46,6 +47,18 @@ export class MarkdownEditor {
         after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.editor.disabled();resolve()}
       });
     });
+  }
+  handleListCodeContinuation(event) {
+    if(event.inputType!=='insertParagraph'||event.defaultPrevented||this.composing||event.isComposing||!this.loaded)return;
+    const selection=window.getSelection();
+    if(!selection?.rangeCount||!selection.isCollapsed||!this.editable?.contains(selection.anchorNode))return;
+    const range=selection.getRangeAt(0),start=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
+    const paragraph=start.closest('p'),item=paragraph?.parentElement;
+    if(item?.tagName!=='LI'||item.parentElement.tagName!=='OL'||paragraph.previousElementSibling?.getAttribute('data-type')!=='code-block'||paragraph.nextElementSibling||paragraph.textContent.replace(/\u200B/g,'').trim()||paragraph.querySelector('img,input,pre,ul,ol,table,hr'))return;
+    event.preventDefault();
+    range.setStartAfter(item);range.collapse(true);paragraph.remove();
+    selection.removeAllRanges();selection.addRange(range);
+    this.editor.insertValue('<li><wbr>\n</li>');this.flush();
   }
   handleHeadingContinuation(event) {
     const pending=this.headingContinuation;this.headingContinuation=null;

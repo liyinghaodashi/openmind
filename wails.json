@@ -8,7 +8,7 @@
   "frontend:dev:watcher": "",
   "author": { "name": "OpenMind" },
   "info": {
-    "productName": "OpenMind", "productVersion": "0.9.34", "comments": "Markdown-native mind mapping",
+    "productName": "OpenMind", "productVersion": "0.9.35", "comments": "Markdown-native mind mapping",
     "fileAssociations": [
       { "ext": "md", "name": "Markdown", "role": "Editor", "iconName": "appicon" },
       { "ext": "markdown", "name": "Markdown", "role": "Editor", "iconName": "appicon" }

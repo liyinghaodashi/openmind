@@ -247,3 +247,9 @@ macOS 实现独立放在 `internal/globalshortcut`，使用 Carbon `RegisterEven
 列表内的 ⌘K 由编辑器适配层通过 Vditor 的结构化插入接口生成一个代码块，避免默认按钮插入原始围栏后重新解析而同时生成列表内、列表外两个代码块。空白列表项有上一项时移除空编号，将代码块放在上一项正文下方；其他情况保留当前列表项，选中文字转为代码，光标进入代码正文。沿用自动保存和一步撤销重做，不修改内置第三方资源。
 
 `node scripts/test-markdown-shortcuts.mjs markdown-list-code` 使用原生 WebKit 验证有序、无序及嵌套列表、原生回车后的空编号、选区、代码块对齐、光标、保存、撤销重做及重新载入。
+
+## 2026-10-27：md 列表内代码块下方回车续号（0.9.35）
+
+光标位于有序列表项末尾、紧接代码块的空段落时，Enter 在同一列表中插入下一个列表项并移入光标，编号沿用原列表；避免 WebKit 默认只在当前列表项内增加空段落而无法续号。通过 `beforeinput` 的 `insertParagraph` 处理，保留代码区内换行、Shift+Enter、输入法及空列表项回车退出的原有行为，沿用自动保存和一步撤销重做。
+
+`node scripts/test-markdown-shortcuts.mjs markdown-list-code-enter` 重放离开代码块及原生回车，覆盖 ⌘K 连续操作、跨位数编号、嵌套及已有后续项目、保存、撤销重做、重新载入与输入保护。
