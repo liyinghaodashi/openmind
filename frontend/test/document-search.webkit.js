@@ -7,6 +7,17 @@ try{
   const search=async value=>{$('document-search-input').value=value;$('document-search-input').dispatchEvent(new InputEvent('input',{bubbles:true}));await settle()};
   const counter=()=>$('document-search-count').textContent;
   const marks=()=>[...document.querySelectorAll('.document-search-mark')];
+  const toggleSearch=async focus=>{
+    const query=$('document-search-input').value;
+    const command=key('f',{metaKey:true});await settle();
+    assert(command.defaultPrevented&&$('document-search').hidden&&marks().length===0&&document.activeElement===focus,'Command+F must close search, clear highlights and restore document focus');
+    key('f',{metaKey:true,repeat:true});await settle();
+    assert($('document-search').hidden,'Holding Command+F must not reopen search');
+    key('f',{metaKey:true});await settle();
+    assert(!$('document-search').hidden&&document.activeElement===$('document-search-input')&&$('document-search-input').value===query,'Command+F must reopen search with the previous query');
+    key('f',{metaKey:true,repeat:true});await settle();
+    assert(!$('document-search').hidden,'Holding Command+F must not close search');
+  };
   await document.fonts.ready;
   const escapedQuery='oof_mae_percentage_points';
   const jsonFixture='# temp\n\n{"oof_rmse_percentage_points":1.0705316352537915,"fold_count":3,"group_count":3,"added_rows":0,"training_rows":57,"validation_method":"按材料分组OOF验证","oof_r2":0.2553637957522835,"oof_mae_percentage_points":0.7605760739057313}\n';
@@ -42,6 +53,7 @@ try{
   await search('JAVA');
   assert(counter()==='1 / 3','Body search must count visible text without fenced-code language markers: '+counter());
   assert(marks().length>0,'Body search must highlight a match');
+  await toggleSearch(markdown.editable);
   key('Enter');await settle();assert(counter()==='2 / 3','Enter must jump to the next occurrence');
   key('Enter');await settle();assert(counter()==='3 / 3'&&markdown.editable.scrollTop>600,'Last occurrence must scroll into view');
   assert(marks().every(mark=>{const rect=mark.getBoundingClientRect(),clip=markdown.editable.getBoundingClientRect();return rect.top>=clip.top&&rect.bottom<=clip.bottom}),'Highlight must be clipped inside the editor');
@@ -62,7 +74,7 @@ try{
   await search('末尾');assert($('source-editor').scrollTop>600&&marks().length>0,'Textarea match must scroll and remain highlighted while search field has focus');
   assert($('source-editor').value===fixture,'Source search must preserve bytes');
   key('Escape');await settle();
-  const source=$('source-editor');source.focus();key('f',{metaKey:true});await settle();await search('Java');key('Escape');await settle();
+  const source=$('source-editor');source.focus();key('f',{metaKey:true});await settle();await search('Java');await toggleSearch(source);key('Escape');await settle();
   assert(document.activeElement===source&&source.value.slice(source.selectionStart,source.selectionEnd)==='Java','Closing source search must preserve the selected occurrence');
   key('f',{metaKey:true});await settle();
   source.value+='\nJava';source.dispatchEvent(new InputEvent('input',{bubbles:true}));await settle();
@@ -90,6 +102,7 @@ try{
   assert(map.scale===.75&&marks().length>0,'Mind map search must retain zoom and highlight text');
   const node=map.elements.get(map.selected).getBoundingClientRect(),canvas=$('canvas').getBoundingClientRect();
   assert(Math.abs((node.left+node.right)/2-(canvas.left+canvas.right)/2)<2,'Matched mind map node must be centered');
+  await toggleSearch($('canvas'));
   key('Enter');await settle();assert(map.selected==='c121'&&counter()==='2 / 2','Next occurrence must locate the other node');
   key('Enter');await settle();assert(map.selected==='c11'&&counter()==='1 / 2','Mind map navigation must wrap');
   state.snapshot.root.children[0].label='Java Java';map.setRoot(state.snapshot.root);documentSearch.refresh();await search('Java');

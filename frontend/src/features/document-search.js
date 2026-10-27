@@ -203,7 +203,9 @@ export function mountDocumentSearch({bar,input,count,previous,next,closeButton,g
     if(event.isComposing||event.keyCode===229)return;
     if(event.metaKey&&!event.ctrlKey&&!event.altKey&&!event.shiftKey&&event.key.toLowerCase()==='f'){
       if(!canOpen())return;
-      event.preventDefault();event.stopImmediatePropagation();void open();return;
+      event.preventDefault();event.stopImmediatePropagation();
+      if(!event.repeat){if(bar.hidden)void open();else close()}
+      return;
     }
     if(bar.hidden||document.querySelector('dialog[open]'))return;
     if(event.key==='Escape'&&!event.metaKey&&!event.ctrlKey&&!event.altKey){event.preventDefault();event.stopImmediatePropagation();close()}
