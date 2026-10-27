@@ -83,15 +83,29 @@ export class MarkdownEditor {
     }
     if(!this.onBeforeInput(this.currentSource(),event))return;
     if(command==='table'){void this.insertTable(range.cloneRange());return}
+    const start=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
+    const item=command==='code'?start.closest('li'):null;
+    if(item&&item.contains(range.endContainer)){this.insertListCode(range,item);return}
     const toolbar=this.editor.vditor.toolbar.elements[command];
     if(toolbar.firstElementChild.classList.contains('vditor-menu--disabled'))return;
-    const start=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
     const currentHeading=heading?start.closest('h'+key):null;
     const toggleOff=currentHeading&&currentHeading.contains(range.endContainer);
     const button=heading&&!toggleOff?toolbar.querySelector('[data-tag="h'+key+'"]'):toolbar.firstElementChild;
     if(toggleOff)button.classList.add('vditor-menu--current');
     button.click();
     this.flush();
+  }
+  insertListCode(range,item) {
+    const block=document.createElement('div');
+    block.innerHTML=this.editor.vditor.lute.Md2VditorIRDOM('```\n\n```\n');
+    const code=block.querySelector('pre code');
+    const text=range.toString();code.textContent=text;code.append(document.createElement('wbr'));
+    if(!text)code.append('\n');
+    if(range.collapsed&&!item.textContent.replace(/\u200B/g,'').trim()&&!item.querySelector('img,input,pre,ul,ol,table,hr')&&item.previousElementSibling?.matches('li')){
+      range.selectNodeContents(item.previousElementSibling);range.collapse(false);item.remove();
+    }else range.deleteContents();
+    const selection=window.getSelection();selection.removeAllRanges();selection.addRange(range);
+    this.editor.insertValue(block.innerHTML);this.flush();
   }
   async insertTable(range) {
     if(this.tableDialog?.element.open)return;
