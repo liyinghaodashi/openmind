@@ -8,7 +8,7 @@ export class MarkdownEditor {
     this.loaded=false;this.composing=false;this.readOnly=true;this.source='';this.normalized='';
     this.imageGeneration=0;
     if(images)bindImageImport(this,images);
-    container.addEventListener('compositionstart',()=>{this.headingContinuation=null;this.composing=true;this.onComposition(true)},true);
+    container.addEventListener('compositionstart',()=>{this.headingContinuation=null;this.ensureEmptyHeadingLines();this.composing=true;this.onComposition(true)},true);
     container.addEventListener('compositionend',()=>{this.composing=false;this.onComposition(false);this.flush()});
     container.addEventListener('beforeinput',event=>{
       if(this.readOnly||!this.onBeforeInput(this.source,event)){event.preventDefault();return}
@@ -211,11 +211,16 @@ export class MarkdownEditor {
   ensureEmptyHeadingLines() {
     for(const heading of this.editable.querySelectorAll('h1,h2,h3,h4,h5,h6')){
       const content=[...heading.childNodes].filter(node=>!(node.nodeType===Node.ELEMENT_NODE&&node.matches('.vditor-ir__marker--heading')));
-      if(content.some(node=>node.nodeType!==Node.TEXT_NODE||node.textContent.replace(/\u200B/g,'').trim()))continue;
+      if(content.some(node=>node.nodeType===Node.TEXT_NODE?node.textContent.replace(/\u200B/g,'').trim():node.nodeType!==Node.ELEMENT_NODE||!node.matches('br')))continue;
       const selection=window.getSelection(),range=selection?.rangeCount?selection.getRangeAt(0):null;
       const restore=range?.collapsed&&heading.contains(range.startContainer);
-      const placeholder=document.createElement('br');heading.append(placeholder);
-      if(restore){range.setStartBefore(placeholder);range.collapse(true);selection.removeAllRanges();selection.addRange(range)}
+      let placeholder=heading.querySelector('br');
+      if(!placeholder){placeholder=document.createElement('br');heading.append(placeholder)}
+      if(restore){
+        let text=content.find(node=>node.nodeType===Node.TEXT_NODE&&node.textContent.includes('\u200B'));
+        if(!text){text=document.createTextNode('\u200B');placeholder.before(text)}
+        range.setStart(text,text.length);range.collapse(true);selection.removeAllRanges();selection.addRange(range);
+      }
     }
   }
   currentSource(){const value=this.editor.getValue();return value===this.normalized?this.source:(this.bom?'\uFEFF':'')+value}

@@ -264,3 +264,9 @@ macOS 实现独立放在 `internal/globalshortcut`，使用 Carbon `RegisterEven
 ⌘W 的保存流程会让编辑器失焦并临时切为只读，WebKit 会清除正文选区。关闭窗口前仅在 md 正文获得焦点时保存 DOM Range；保存完成、恢复可编辑状态后还原焦点和选区，保持滚动位置，避免重新唤起时空列表项显示错位的原生光标。关闭失败时同样恢复；从工具栏关闭时不抢正文焦点，退出应用流程不恢复。
 
 `node scripts/test-compact-window.mjs markdown-window-close` 使用真实 macOS 窗口隐藏与 Dock 重开入口验证重复关闭、空列表项、普通段落、滚动位置、文本选区、继续输入及自动保存。
+
+## 2026-10-28：md 空标题首次输入法组词定位（0.9.40）
+
+空标题仅保留 br 时，macOS WebKit 会把首次组词文字放进零字号的隐藏标题标记，导致拼音和候选窗位置异常。空标题行占位检查同时处理已有 br 的情况，在标题标记外使用编辑器支持的零宽文本放置折叠光标；组词开始前再次校正，覆盖重新加载或鼠标重新定位的空标题。保留 br 的行高占位和标题标记的零字号规则，零宽文本不写入 Markdown，不改变非空标题或非折叠选区。
+
+`node scripts/test-markdown-shortcuts.mjs markdown-heading-ime` 通过原生 WebKit 组合文本接口，检查 H1–H6 首次与后续组词的文字尺寸、光标位置、快捷键与 Markdown 语法建标题、重新加载、删除后重输、保存及撤销重做。
