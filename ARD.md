@@ -270,3 +270,9 @@ macOS 实现独立放在 `internal/globalshortcut`，使用 Carbon `RegisterEven
 空标题仅保留 br 时，macOS WebKit 会把首次组词文字放进零字号的隐藏标题标记，导致拼音和候选窗位置异常。空标题行占位检查同时处理已有 br 的情况，在标题标记外使用编辑器支持的零宽文本放置折叠光标；组词开始前再次校正，覆盖重新加载或鼠标重新定位的空标题。保留 br 的行高占位和标题标记的零字号规则，零宽文本不写入 Markdown，不改变非空标题或非折叠选区。
 
 `node scripts/test-markdown-shortcuts.mjs markdown-heading-ime` 通过原生 WebKit 组合文本接口，检查 H1–H6 首次与后续组词的文字尺寸、光标位置、快捷键与 Markdown 语法建标题、重新加载、删除后重输、保存及撤销重做。
+
+## 2026-10-28：mind 平移按物理像素对齐（0.9.41）
+
+两种 mind 渲染器绘制时按当前 `devicePixelRatio` 对齐场景平移，避免小数位移导致 WebKit 对文字和连线重新采样。控制层继续保留原始小数坐标，缩放和布局坐标不变，裁剪使用对齐后的绘制坐标。不得在输入阶段取整，否则连续的小幅触控板移动会丢失。
+
+`node scripts/test-compact-window.mjs mind-pan` 使用原生 WebKit 与 ScreenCaptureKit 比较同一节点平移前后的实际屏幕像素，覆盖两种风格、三档缩放、左上与右下小数平移；渲染器单测补充普通屏与 Retina 的坐标对齐及内部状态不变检查。

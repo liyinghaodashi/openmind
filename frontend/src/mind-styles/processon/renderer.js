@@ -71,6 +71,9 @@ export class ProcessonRenderer {
   }
 
   render({layout, x, y, scale, selected, editing, editor, collapsed, drag}) {
+    const pixelRatio = this.document.defaultView?.devicePixelRatio || 1;
+    x = Math.round(x * pixelRatio) / pixelRatio;
+    y = Math.round(y * pixelRatio) / pixelRatio;
     this.scene.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
     const view = {x: (-x - 150) / scale, y: (-y - 100) / scale, width: (this.canvas.clientWidth + 300) / scale, height: (this.canvas.clientHeight + 200) / scale};
     const keep = new Set();

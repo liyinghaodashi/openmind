@@ -36,7 +36,7 @@ const server=http.createServer(async(req,res)=>{
 try{
   await mkdir(output,{recursive:true});
   const executable=path.join(temporary,'probe');
-  const build=spawnSync('clang',['-fobjc-arc','-framework','Cocoa','-framework','WebKit',...(process.argv[2]==='window-pin'?['-framework','ScreenCaptureKit']:[]),path.join(project,process.argv[2]==='window-pin'?'scripts/test-window-pin.m':'scripts/test-compact-window.m'),path.join(project,'internal/window/window_darwin.m'),'-o',executable],{stdio:'inherit'});
+  const build=spawnSync('clang',['-fobjc-arc','-framework','Cocoa','-framework','WebKit',...(['window-pin','mind-pan'].includes(process.argv[2])?['-framework','ScreenCaptureKit']:[]),path.join(project,['window-pin','mind-pan'].includes(process.argv[2])?'scripts/test-window-pin.m':'scripts/test-compact-window.m'),path.join(project,'internal/window/window_darwin.m'),'-o',executable],{stdio:'inherit'});
   if(build.status!==0)throw new Error('Cannot compile compact window probe');
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   process.exitCode=await new Promise((resolve,reject)=>{

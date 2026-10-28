@@ -139,3 +139,20 @@ for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
     assert.match(renderer.elements.get('second').className,/\bbranch\b/);
   });
 }
+
+for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
+  test(Renderer.name + ' 平移按当前屏幕物理像素对齐，保留缩放和内部坐标精度', () => {
+    const {renderer,state,options}=setup(Renderer);
+    for (const pixelRatio of [1,2]) for (const scale of [.65,1,1.25]) {
+      options.canvas.ownerDocument.defaultView={devicePixelRatio:pixelRatio};
+      Object.assign(state,{x:-170.25,y:-60.25,scale});
+      const before=JSON.stringify(state);
+      renderer.render(state);
+      assert.equal(options.scene.style.transform,`translate(-170px,-60px) scale(${scale})`);
+      assert.equal(JSON.stringify(state),before);
+      state.x=-170.6;state.y=60.6;
+      renderer.render(state);
+      assert.equal(options.scene.style.transform,(pixelRatio===1?'translate(-171px,61px)':'translate(-170.5px,60.5px)')+` scale(${scale})`);
+    }
+  });
+}
