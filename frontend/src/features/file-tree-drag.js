@@ -10,7 +10,6 @@ export function canDropEntry(entry,directory) {
 
 export function mountFileTreeDrag({tree,rootTarget,rootLabel,canDrag,beforeDrag,move,onState,onError}) {
   let drag=null,ghost=null,highlight=null,frame=null,suppressClick=false;
-  const label=rootLabel.textContent;
 
   function targetAt(x,y) {
     const hit=document.elementFromPoint(x,y);
@@ -51,7 +50,7 @@ export function mountFileTreeDrag({tree,rootTarget,rootLabel,canDrag,beforeDrag,
     cancelAnimationFrame(frame);frame=null;
     highlight?.classList.remove('file-drop-target');highlight=null;
     ghost?.remove();ghost=null;
-    tree.classList.remove('file-dragging');rootTarget.classList.remove('file-root-target');rootLabel.textContent=label;
+    tree.classList.remove('file-dragging');rootTarget.classList.remove('file-root-target');rootLabel.textContent=completed.label;
     tree.querySelectorAll('.file-drag-source').forEach(row=>row.classList.remove('file-drag-source'));
     if(tree.hasPointerCapture(completed.pointer))tree.releasePointerCapture(completed.pointer);
     if(completed.active){
@@ -63,7 +62,7 @@ export function mountFileTreeDrag({tree,rootTarget,rootLabel,canDrag,beforeDrag,
   tree.addEventListener('pointerdown',event=>{
     if(drag||event.button!==0||!event.isPrimary||!canDrag())return;
     const row=event.target.closest('.tree-row');if(!row||!tree.contains(row))return;
-    drag={pointer:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,active:false,target:null,
+    drag={label:rootLabel.textContent,pointer:event.pointerId,startX:event.clientX,startY:event.clientY,x:event.clientX,y:event.clientY,active:false,target:null,
       entry:{path:row.dataset.path,name:row.dataset.name,directory:row.dataset.directory==='true'},row};
   });
   document.addEventListener('pointermove',event=>{

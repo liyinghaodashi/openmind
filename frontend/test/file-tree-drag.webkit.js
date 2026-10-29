@@ -63,7 +63,7 @@ try{
   assert(markdown.scrollElement.scrollTop>200,'Move must preserve document scroll');
   assert(row('目标/内部/笔记.md').classList.contains('selected')&&!row('源/笔记.md'),'File tree selection must follow moved file');
   assert(state.expanded.has('目标')&&state.expanded.has('目标/内部'),'Drop must keep expanded destination folders expanded');
-  assert(!state.fileDragging&&!state.navigating&&!document.querySelector('.file-drag-ghost')&&$('sidebar-title').textContent==='文件','Completed move must clean drag state');
+  assert(!state.fileDragging&&!state.navigating&&!document.querySelector('.file-drag-ghost')&&$('sidebar-title').textContent===state.workspace.name,'Completed move must clean drag state');
   enqueue('source',source+'\n移动后的编辑\n');await state.queue.drain();
   assert(fixture.calls.at(-1)[0]==='save'&&fixture.calls.at(-1)[1]==='目标/内部/笔记.md','Later edits must save to moved path');
 

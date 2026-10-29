@@ -29,6 +29,7 @@ try {
   window.__fileDragFixture.listeners.get('workspace:changed')();
   for(let i=0;i<30&&$('workspace-name').textContent!=='Z 新名称';i++)await new Promise(resolve=>setTimeout(resolve,10));
   assert($('workspace-name').textContent==='Z 新名称','目录变更事件未更新菜单');
+  assert($('sidebar-title').textContent==='Z 新名称','目录改名未更新侧栏标题');
   assert(document.activeElement.dataset.workspaceKey==='current','菜单刷新丢失键盘焦点');
   records=records.map(info=>info.id==='other'?{...info,root:'/renamed-again',name:'A 新名称'}:info);
   $('toggle-outline').click();
@@ -39,7 +40,7 @@ try {
   assert(state.workspace.root==='/renamed-again'&&$('workspace-name').textContent==='A 新名称','菜单打开后再次改名导致切换失败');
   assert($('workspace-menu').hidden,'切换后菜单未关闭');
   assert(!outlineMode&&!$('file-tree').hidden&&$('document-outline').hidden&&!$('file-actions').hidden,'切换文件夹后未显示文件树');
-  assert($('sidebar-title').textContent==='文件'&&$('toggle-outline').getAttribute('aria-pressed')==='false'&&$('toggle-outline').getAttribute('aria-label')==='切换到大纲','切换后侧栏标题或按钮状态错误');
+  assert($('sidebar-title').textContent==='A 新名称'&&$('toggle-outline').getAttribute('aria-pressed')==='false'&&$('toggle-outline').getAttribute('aria-label')==='切换到大纲','切换后侧栏标题或按钮状态错误');
   $('toggle-outline').click();
   native.SelectWorkspace=async()=>null;
   await chooseWorkspace();

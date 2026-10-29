@@ -158,3 +158,6 @@
 .setting-shortcut-control button:focus-visible,.setting-shortcut-control select:focus-visible{outline:2px solid #333;outline-offset:3px}
 .setting-shortcut-status{margin:8px 0 0;font-size:12px;line-height:20px;color:#a3422b}
 .setting-shortcut-status:empty{display:none}
+
+#sidebar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+.section-label>.sidebar-actions{flex-shrink:0}

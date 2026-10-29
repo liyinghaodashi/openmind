@@ -736,6 +736,7 @@ async function refreshRecentWorkspaces(){
   const current=recentWorkspaces.find(info=>!info.unavailable&&info.id&&info.id===state.workspace?.id);
   if(current){
     state.workspace=current;
+    if(!state.fileDragging)updateSidebarTitle();
     $('workspace-name').textContent=current.name;$('workspace-detail').textContent=current.root;$('workspace-detail').title=current.root;
   }
   if(unchanged&&$('recent-workspaces').childNodes.length)return;
@@ -1039,11 +1040,15 @@ const settings=mountSettings({
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value),shortcutStatus:()=>call('GetGlobalShortcutStatus')}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;
+function updateSidebarTitle(){
+  const title=outlineMode?'大纲':state.workspace?.name||'文件';
+  $('sidebar-title').textContent=title;$('sidebar-title').title=title;
+}
 function setOutlineMode(enabled){
   fileTreeDrag.cancel();
   map.closeNodeMenu();
   closeWorkspaceMenu();outlineMode=enabled;
-  $('file-tree').hidden=outlineMode;$('document-outline').hidden=!outlineMode;$('file-actions').hidden=outlineMode;$('sidebar-title').textContent=outlineMode?'大纲':'文件';
+  $('file-tree').hidden=outlineMode;$('document-outline').hidden=!outlineMode;$('file-actions').hidden=outlineMode;updateSidebarTitle();
   const button=$('toggle-outline'),label=outlineMode?'切换到文件':'切换到大纲';button.setAttribute('aria-pressed',String(outlineMode));button.setAttribute('aria-label',label);button.title=label+'（⌥⌘L）';
   sidebarCollapse.expand();
 }
