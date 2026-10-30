@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
+import {createMindSelection} from '../src/mind/selection.js';
 import {MindMap} from '../src/mindmap.js';
 import {nodeDropTarget} from '../src/node-drop.js';
 
@@ -81,13 +80,9 @@ test('聚焦入口删除后自动恢复整图，避免空白画布',()=>{
 });
 
 test('方向键停在聚焦入口，同层导航只访问当前分支',async()=>{
-  const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-  const navigation=source.slice(source.indexOf('function nodePath('),source.indexOf('\n',source.indexOf('function nodeAtPath(')));
-  const move=source.slice(source.indexOf('async function moveSelection('),source.indexOf('\nfunction copyNodeText('));
   const map=setup();map.toggleFocus('A3');
   const state={snapshot:{root:map.root},queue:{drain:async()=>true},editor:null};
-  const context=vm.createContext({state,map,preview:false,addingChild:false,deletingNode:false,movingNode:false,editRequest:0,finishNode:async()=>true,$:()=>({}),banner:message=>assert.fail(message),errorText:String});
-  vm.runInContext(navigation+'\n'+move,context);
+  const context={moveSelection:createMindSelection({state,map,preview:false,operations:{busy:false,begin(){},end(){}},finishNode:async()=>true,sourceEditor:{},onError:error=>assert.fail(String(error))})};
   await context.moveSelection('ArrowLeft');assert.equal(map.selected,'A3');
   await context.moveSelection('ArrowDown');assert.equal(map.selected,'A3');
   await context.moveSelection('ArrowRight');assert.equal(map.selected,'two');

@@ -1,26 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
+import {createOutline} from '../src/outline/controller.js';
 import {layoutTree} from '../src/layout.js';
 import {MindMap} from '../src/mindmap.js';
-
-const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-const navigation=source.slice(source.indexOf('function nodePath('),source.indexOf('\n',source.indexOf('function nodeAtPath(')));
-const sync=source.slice(source.indexOf('function updateOutlineCollapseButtons('),source.indexOf('async function focusMarkdownOutline('));
-const focus=source.slice(source.indexOf('async function focusOutline('),source.indexOf('\nfunction renderTree('));
 
 function setup(collapsed=[]) {
   const node=(id,children=[])=>({id,label:id,children});
   const root=node('root',[node('a',[node('inner',[node('leaf'),node('leaf2')])]),node('b',[node('other')]),node('empty')]);
   const attributes=new Map();
   const button={dataset:{id:'root'},setAttribute:(key,value)=>attributes.set(key,value),removeAttribute:key=>attributes.delete(key)};
-  const map={root,collapsed:new Set(collapsed),scale:1.25,x:24,y:80,canvas:{clientWidth:800,clientHeight:600},schedule(){},focusBranch(id){MindMap.prototype.focusBranch.call(this,id)},setRoot(root){this.root=root;this.layout=layoutTree(root,this.collapsed,()=>({width:100,height:40}));context.updateOutlineCollapseButtons()}};
+  const map={root,collapsed:new Set(collapsed),scale:1.25,x:24,y:80,canvas:{clientWidth:800,clientHeight:600},schedule(){},focusBranch(id){MindMap.prototype.focusBranch.call(this,id)},setRoot(root){this.root=root;this.layout=layoutTree(root,this.collapsed,()=>({width:100,height:40}));context.syncCollapse()}};
   const state={snapshot:{root},navigating:false};
-  const context=vm.createContext({state,map,readyToNavigate:async()=>true,updateDocumentView(){},preview:true,banner:message=>assert.fail(message),errorText:String,$:()=>({querySelectorAll:selector=>selector==='.outline-collapse'?[button]:[]})});
-  vm.runInContext(navigation+'\n'+sync+'\n'+focus,context);
+  const context=createOutline({state,map,readyToNavigate:async()=>true,updateDocumentView(){},preview:true,banner:message=>assert.fail(message),errorText:String,$:()=>({querySelectorAll:selector=>selector==='.outline-collapse'?[button]:[]})});
   map.setRoot(root);
-  return {map,state,expanded:()=>attributes.get('aria-expanded'),toggle:id=>{map.selected=id;MindMap.prototype.toggleSelected.call(map)},click:(id='root')=>context.focusOutline(id,{collapseChildren:true}),focus:id=>context.focusOutline(id),visible:()=>map.layout.positions.map(p=>p.id)};
+  return {map,state,expanded:()=>attributes.get('aria-expanded'),toggle:id=>{map.selected=id;MindMap.prototype.toggleSelected.call(map)},click:(id='root')=>context.focus(id,{collapseChildren:true}),focus:id=>context.focus(id),visible:()=>map.layout.positions.map(p=>p.id)};
 }
 
 test('大纲折叠按钮再次点击展开，再次点击仍可折叠',async()=>{

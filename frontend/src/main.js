@@ -1,3 +1,8 @@
+import {createWorkspaceMenu} from './workspace/menu.js';
+import {createDocumentCommands} from './document/commands.js';
+import {createOutline} from './outline/controller.js';
+import {createMindSelection} from './mind/selection.js';
+import {nodePath,nodeAtPath} from './mind/tree-navigation.js';
 import {EditQueue} from './queue.js';
 import {MindMap} from './mindmap.js';
 import {createSidebarCollapse} from './features/sidebar-collapse.js';
@@ -58,16 +63,13 @@ document.querySelector('.toolbar-actions').addEventListener('keydown',event=>{
   buttons[(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length].focus();
 });
 bindToolbarMaximise(document.querySelector('.toolbar'),native?()=>{if(!compactWindow&&!switchingCompactWindow)void native.ToggleWindowMaximise().catch(error=>toast(errorText(error)))}:undefined);
-const state={workspace:null,snapshot:null,expanded:new Set(['']),directories:new Map(),selectedDir:'',queue:null,blocked:false,sourceOpen:false,editor:null,composing:false,lastInput:null,checking:false,closing:false,treeGeneration:0,opSeq:0,clientID:crypto.randomUUID(),draft:null};
+const state={workspace:null,snapshot:null,expanded:new Set(['']),directories:new Map(),selectedDir:'',queue:null,blocked:false,sourceOpen:false,editor:null,composing:false,lastInput:null,checking:false,closing:false,treeGeneration:0,draft:null};
 const mindHistory=new MindHistory();
-let restoringMindHistory=false;
 const call=async(name,...args)=>{
   if(!native)throw new Error('这是只读界面预览，请启动 macOS 应用使用文件读写。');
-  const before=name==='ApplyEdit'&&!restoringMindHistory&&state.snapshot&&isMindMapPath(state.snapshot.path)?captureMindHistory():null;
-  const reply=await native[name](...args);
-  if(before)mindHistory.record(before,reply.source,args[0].kind==='label'?args[0].session+':'+args[0].nodeId:null);
-  return reply;
+  return native[name](...args);
 };
+const commands=createDocumentCommands({write:edit=>call('ApplyEdit',edit),getSnapshot:()=>state.snapshot,captureHistory:captureMindHistory,history:mindHistory});
 $('enter-compact-window').onclick=()=>void setCompactWindow(true);
 $('return-main-window').onclick=()=>void setCompactWindow(false);
 
@@ -285,7 +287,7 @@ function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=fal
 }
 
 state.queue=new EditQueue({
-  write:edit=>call('ApplyEdit',{...edit,session:state.snapshot.session,version:state.snapshot.version}),
+  write:commands.apply,
   onCommit:(reply,edit)=>{
     if(edit.kind==='node-fold-kid'){
       if(edit.text==='true')map.collapsed.add(edit.nodeId);else map.collapsed.delete(edit.nodeId);
@@ -300,7 +302,7 @@ function enqueue(kind,text,nodeId=''){
   if(preview||!state.snapshot||state.blocked)return;
   if(kind==='source'&&map.focusedId){map.focusedId=null;map.setRoot(state.snapshot.root);renderOutline();documentSearch.refresh({reset:true})}
   state.draft={kind,nodeId,text};
-  try{state.queue.push({kind,text,nodeId,opId:state.clientID+':'+(++state.opSeq)})}
+  try{state.queue.push(commands.prepare({kind,text,nodeId}))}
   catch(error){state.blocked=true;setEditorsReadOnly();banner(errorText(error),true);void preserveDraft().catch(e=>banner(errorText(error)+' 恢复副本失败：'+errorText(e),true));}
 }
 async function preserveDraft(){
@@ -326,8 +328,10 @@ let editRequest=0;
 let addingChild=false;
 let deletingNode=false;
 let movingNode=false;
-function nodePath(node,id,path=[]){if(node.id===id)return path;for(let i=0;i<node.children.length;i++){const found=nodePath(node.children[i],id,[...path,i]);if(found)return found}return null}
-function nodeAtPath(root,path){return path?.reduce((node,index)=>node?.children[index],root)}
+const moveSelection=createMindSelection({state,map,preview,
+  operations:{get busy(){return addingChild||deletingNode||movingNode},begin(){movingNode=true;++editRequest},end(){movingNode=false}},
+  finishNode,sourceEditor:$('source-editor'),onError:error=>banner(errorText(error))
+});
 function captureMindHistory(){
   const root=state.snapshot.root;
   return {source:state.snapshot.source,selected:nodePath(root,map.selected),focused:nodePath(root,map.focusedId),collapsed:[...map.collapsed].map(id=>nodePath(root,id)).filter(Boolean)};
@@ -339,8 +343,7 @@ async function restoreMindHistory(direction){
     if(!await finishNode()||!await state.queue.drain())return;
     const target=mindHistory.target(direction);if(!target)return;
     const current=captureMindHistory();
-    restoringMindHistory=true;
-    const snapshot=await call('ApplyEdit',{kind:'restore-mind',text:target.source,session:state.snapshot.session,version:state.snapshot.version,opId:state.clientID+':'+(++state.opSeq)});
+    const snapshot=await commands.apply(commands.prepare({kind:'restore-mind',text:target.source}));
     mindHistory.commit(direction,current);
     map.focusedId=null;applySnapshot(snapshot);resetSourceInput();state.draft=null;
     map.selected=nodeAtPath(snapshot.root,target.selected)?.id||null;
@@ -349,7 +352,7 @@ async function restoreMindHistory(direction){
     map.setRoot(snapshot.root);map.reveal(map.selected);map.render();renderOutline();documentSearch.refresh({reset:true,preserveView:true});
     (map.elements.get(map.selected)||map.canvas).focus({preventScroll:true});
   }catch(error){banner(errorText(error),true)}finally{
-    restoringMindHistory=false;movingNode=false;
+    movingNode=false;
     if(state.editor)state.editor.readOnly=state.blocked||state.closing;
     $('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
   }
@@ -430,7 +433,7 @@ async function relocateNode(id,targetID,placement){
     const node=nodeAtPath(state.snapshot.root,sourcePath),target=nodeAtPath(state.snapshot.root,targetPath);
     if(!node||!target)return;
     const collapsed=folded.map(path=>nodeAtPath(state.snapshot.root,path)?.id).filter(Boolean);
-    const snapshot=await call('ApplyEdit',{kind:'move-node',nodeId:node.id,targetId:target.id,placement,text:'',session:state.snapshot.session,version:state.snapshot.version,opId:state.clientID+':'+(++state.opSeq)});
+    const snapshot=await commands.apply(commands.prepare({kind:'move-node',nodeId:node.id,targetId:target.id,placement,text:''}));
     map.collapsed=new Set(collapsed.map(id=>snapshot.nodeIdMap?.[id]).filter(Boolean));
     map.selected=snapshot.focusNodeId;
     const movedPath=nodePath(snapshot.root,map.selected);
@@ -442,41 +445,7 @@ async function relocateNode(id,targetID,placement){
     $('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
   }
 }
-async function moveSelection(direction){
-  if(state.fileDragging||state.nodeDragging||addingChild||deletingNode||movingNode||state.checking||state.blocked||state.closing||state.composing||state.navigating||!state.snapshot||!map.selected)return;
-  const path=nodePath(state.snapshot.root,map.selected);
-  if(!path)return;
-  let targetPath;
-  if(direction==='ArrowLeft'){if(!path.length||map.selected===map.focusedId||state.snapshot.root.kind==='file'&&path.length===1)return;targetPath=path.slice(0,-1)}
-  else if(direction==='ArrowRight'){
-    const node=nodeAtPath(state.snapshot.root,path);
-    if(!node.children.length)return;
-    targetPath=[...path,node.children.length-1];
-  }else{
-    if(!path.length)return;
-    const peers=map.layout.positions.filter(node=>(node.pathDepth??node.depth)===path.length);
-    const index=peers.findIndex(node=>node.id===map.selected)+(direction==='ArrowUp'?-1:1);
-    if(index<0||index>=peers.length)return;
-    targetPath=nodePath(state.snapshot.root,peers[index].id);
-  }
-  movingNode=true;++editRequest;
-  const folded=[...map.collapsed].map(id=>nodePath(state.snapshot.root,id)).filter(Boolean);
-  if(state.editor)state.editor.readOnly=true;
-  $('source-editor').readOnly=true;
-  try{
-    if(!await finishNode()||!await state.queue.drain())return;
-    const target=nodeAtPath(state.snapshot.root,targetPath);
-    if(!target)return;
-    map.collapsed=new Set(folded.map(path=>nodeAtPath(state.snapshot.root,path)?.id).filter(Boolean));
-    if(direction==='ArrowRight')map.collapsed.delete(nodeAtPath(state.snapshot.root,path)?.id);
-    map.selected=target.id;map.setRoot(state.snapshot.root);map.reveal(target.id);map.render();
-    map.elements.get(target.id)?.focus({preventScroll:true});
-  }catch(error){banner(errorText(error))}finally{
-    movingNode=false;
-    if(state.editor)state.editor.readOnly=state.blocked||state.closing;
-    $('source-editor').readOnly=preview||state.blocked||!!state.editor;
-  }
-}
+
 function copyNodeText(event){
   if(!state.snapshot||!isMindMapPath(state.snapshot.path)||!map.selected||state.composing||event.isComposing)return;
   if(state.editor&&event.target===state.editor&&state.editor.selectionStart!==state.editor.selectionEnd)return;
@@ -517,7 +486,7 @@ async function addNode({sibling=false,main=false}={}){
     const parent=nodeAtPath(state.snapshot.root,path);
     if(!parent)return;
     const folded=[...map.collapsed].map(id=>nodePath(state.snapshot.root,id)).filter(Boolean);
-    const snapshot=await call('ApplyEdit',{kind:sibling?'insert-sibling':'insert-child',nodeId:parent.id,text:'',session:state.snapshot.session,version:state.snapshot.version,opId:state.clientID+':'+(++state.opSeq)});
+    const snapshot=await commands.apply(commands.prepare({kind:sibling?'insert-sibling':'insert-child',nodeId:parent.id,text:''}));
     map.collapsed=new Set(folded.map(foldedPath=>{
       const nextPath=[...foldedPath];
       if(sibling&&nextPath.length>=path.length&&path.slice(0,-1).every((value,index)=>nextPath[index]===value)&&nextPath[path.length-1]>path[path.length-1])nextPath[path.length-1]++;
@@ -566,7 +535,7 @@ async function deleteNode(){
       const confirmed=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue==='delete'),{once:true}));
       dialog.showModal();dialog.querySelector('button[value="cancel"]').focus();if(!await confirmed)return;
     }
-    const snapshot=await call('ApplyEdit',{kind:'delete-node',nodeId:target.id,text:'',session:state.snapshot.session,version:state.snapshot.version,opId:state.clientID+':'+(++state.opSeq)});
+    const snapshot=await commands.apply(commands.prepare({kind:'delete-node',nodeId:target.id,text:''}));
     map.collapsed=new Set([...map.collapsed].map(id=>snapshot.nodeIdMap?.[id]).filter(Boolean));
     map.selected=snapshot.focusNodeId;restoreID=null;
     applySnapshot(snapshot);resetSourceInput();map.reveal(map.selected);map.render();
@@ -655,111 +624,14 @@ async function readyToNavigate(){
   if(!await finishNode())return false;
   return state.queue.drain();
 }
-let recentWorkspaces=[];
-let recentWorkspaceTarget=null;
-function closeWorkspaceContextMenu(restoreFocus=false){
-  $('workspace-context-menu').hidden=true;
-  const target=recentWorkspaceTarget;recentWorkspaceTarget=null;
-  if(restoreFocus&&target?.row.isConnected)(target.row.querySelector('button:not(:disabled)')||target.row).focus({preventScroll:true});
-}
-function showWorkspaceContextMenu(event,info,row){
-  event.preventDefault();event.stopPropagation();
-  closeWorkspaceContextMenu();fileActions.closeMenu();
-  recentWorkspaceTarget={key:info.id||info.root,row};
-  const menu=$('workspace-context-menu');menu.hidden=false;menu.style.left='0px';menu.style.top='0px';
-  const bounds=menu.getBoundingClientRect(),rowBounds=row.getBoundingClientRect();
-  const keyboard=event.type==='keydown'||event.clientX===0&&event.clientY===0;
-  menu.style.left=Math.max(8,Math.min(keyboard?rowBounds.left+24:event.clientX,window.innerWidth-bounds.width-8))+'px';
-  menu.style.top=Math.max(8,Math.min(keyboard?rowBounds.bottom:event.clientY,window.innerHeight-bounds.height-8))+'px';
-  $('remove-recent-workspace').focus({preventScroll:true});
-}
-$('remove-recent-workspace').onclick=async()=>{
-  const target=recentWorkspaceTarget;if(!target)return;
-  closeWorkspaceContextMenu(true);
-  try{await call('RemoveRecentWorkspace',target.key);await refreshRecentWorkspaces()}
-  catch(error){toast('移除快捷文件夹失败：'+errorText(error))}
-};
-$('workspace-context-menu').addEventListener('keydown',event=>{
-  if(event.key==='Escape'||event.key==='Tab'){
-    if(event.key==='Escape')event.preventDefault();
-    event.stopPropagation();closeWorkspaceContextMenu(true);
-  }else if(['ArrowDown','ArrowUp','ArrowLeft','ArrowRight','Home','End'].includes(event.key)){
-    event.preventDefault();event.stopPropagation();
-  }
+const workspaceMenu=createWorkspaceMenu({$,preview,call,getWorkspace:()=>state.workspace,isNavigating:()=>state.navigating,
+  onWorkspaceRefresh:workspace=>{state.workspace=workspace;if(!state.fileDragging)updateSidebarTitle();$('workspace-name').textContent=workspace.name;$('workspace-detail').textContent=workspace.root;$('workspace-detail').title=workspace.root},
+  chooseWorkspace,closeFileMenu:()=>fileActions.closeMenu(),toast,errorText
 });
-document.addEventListener('pointerdown',event=>{if(!$('workspace-context-menu').contains(event.target))closeWorkspaceContextMenu()});
-document.addEventListener('focusin',event=>{if(!$('workspace-context-menu').contains(event.target))closeWorkspaceContextMenu()});
-window.addEventListener('resize',()=>closeWorkspaceContextMenu());
-document.addEventListener('scroll',()=>closeWorkspaceContextMenu(),true);
-function closeWorkspaceMenu(restoreFocus=false){
-  closeWorkspaceContextMenu();
-  $('workspace-menu').hidden=true;$('choose-workspace').setAttribute('aria-expanded','false');
-  if(restoreFocus)$('choose-workspace').focus();
-}
-function renderRecentWorkspaces(){
-  const items=document.createDocumentFragment();
-  const nameOrder=new Intl.Collator('zh-CN',{numeric:true,sensitivity:'base'});
-  const sortedWorkspaces=[...recentWorkspaces].sort((a,b)=>nameOrder.compare(a.name,b.name)||nameOrder.compare(a.root,b.root));
-  for(const info of sortedWorkspaces){
-    const row=document.createElement('div');row.className='recent-workspace-row';
-    row.tabIndex=-1;row.dataset.workspaceKey=info.id||info.root;row.setAttribute('aria-haspopup','menu');
-    row.oncontextmenu=event=>showWorkspaceContextMenu(event,info,row);
-    const button=document.createElement('button');button.className='recent-workspace';button.title=info.root;
-    button.dataset.workspaceKey=info.id||info.root;
-    button.disabled=!!info.unavailable;
-    if(info.unavailable)button.title=info.root+'（文件夹不可用，请重新添加）';
-    const current=info.root===state.workspace?.root||!!info.id&&info.id===state.workspace?.id;
-    if(current){button.setAttribute('aria-current','true');row.classList.add('current')}
-    const name=document.createElement('strong');name.textContent=info.name+(current?' ✓':'');
-    const path=document.createElement('small');path.textContent=info.unavailable?'文件夹不可用，请重新添加':info.root;
-    button.append(name,path);button.onclick=()=>void chooseWorkspace(info.root,info.id);
-    const finder=document.createElement('button');finder.className='recent-workspace-finder';finder.type='button';
-    finder.dataset.workspaceKey=info.id||info.root;
-    finder.disabled=!!info.unavailable;
-    finder.title='在访达中打开';finder.setAttribute('aria-label','在访达中打开“'+info.name+'”');
-    finder.innerHTML='<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7V5a1 1 0 0 1 1-1h5l2 3h9a1 1 0 0 1 1 1v3"/><path d="M3 7v12a1 1 0 0 0 1 1h15l3-10H7L4 20"/></svg>';
-    finder.onclick=()=>void call('OpenRecentWorkspaceInFinder',info.id||info.root).catch(error=>toast(errorText(error)));
-    row.onkeydown=event=>{
-      if(event.key==='ContextMenu'||event.shiftKey&&event.key==='F10'){showWorkspaceContextMenu(event,info,row);return}
-      if(event.isComposing||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey||!['ArrowLeft','ArrowRight'].includes(event.key))return;
-      event.preventDefault();(event.target===button?finder:button).focus();
-    };
-    row.append(button,finder);items.append(row);
-  }
-  if(!recentWorkspaces.length){const empty=document.createElement('p');empty.className='workspace-menu-empty';empty.textContent='还没有添加文件夹';items.append(empty)}
-  $('recent-workspaces').replaceChildren(items);
-}
-async function refreshRecentWorkspaces(){
-  const next=preview?(state.workspace?[state.workspace]:[]):await call('RecentWorkspaces');
-  const unchanged=JSON.stringify(next)===JSON.stringify(recentWorkspaces);
-  recentWorkspaces=next;
-  const current=recentWorkspaces.find(info=>!info.unavailable&&info.id&&info.id===state.workspace?.id);
-  if(current){
-    state.workspace=current;
-    if(!state.fileDragging)updateSidebarTitle();
-    $('workspace-name').textContent=current.name;$('workspace-detail').textContent=current.root;$('workspace-detail').title=current.root;
-  }
-  if(unchanged&&$('recent-workspaces').childNodes.length)return;
-  closeWorkspaceContextMenu(true);
-  const focused=document.activeElement,focusKey=focused?.dataset.workspaceKey,focusClass=focused?.className;
-  renderRecentWorkspaces();
-  if(focusKey&&!$('workspace-menu').hidden){
-    const replacement=[...$('workspace-menu').querySelectorAll('button:not(:disabled)')].find(button=>button.dataset.workspaceKey===focusKey&&button.className===focusClass);
-    (replacement||$('workspace-menu').querySelector('button:not(:disabled)'))?.focus();
-  }
-}
-function refreshVisibleWorkspaceMenu(){
-  if(!$('workspace-menu').hidden&&!state.navigating)void refreshRecentWorkspaces().catch(error=>toast('更新快捷文件夹失败：'+errorText(error)));
-}
-async function toggleWorkspaceMenu(){
-  if(state.navigating)return;
-  const open=$('workspace-menu').hidden;
-  $('workspace-menu').hidden=!open;$('choose-workspace').setAttribute('aria-expanded',String(open));
-  if(open){
-    try{await refreshRecentWorkspaces()}catch(error){toast('更新快捷文件夹失败：'+errorText(error))}
-    if(!$('workspace-menu').hidden)$('workspace-menu').querySelector('button:not(:disabled)')?.focus();
-  }
-}
+function closeWorkspaceMenu(...args){return workspaceMenu.close(...args)}
+function refreshRecentWorkspaces(){return workspaceMenu.refresh()}
+function refreshVisibleWorkspaceMenu(){return workspaceMenu.refreshVisible()}
+function toggleWorkspaceMenu(){return workspaceMenu.toggle()}
 async function chooseWorkspace(root,id){
   closeWorkspaceMenu(true);
   if(typeof root==='string'&&root===state.workspace?.root)return;
@@ -775,18 +647,6 @@ async function chooseWorkspace(root,id){
     state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
   }
 }
-$('add-workspace').onclick=()=>void chooseWorkspace();
-document.addEventListener('pointerdown',event=>{if(!$('workspace-picker').contains(event.target))closeWorkspaceMenu()});
-document.addEventListener('focusin',event=>{if(!$('workspace-picker').contains(event.target))closeWorkspaceMenu()});
-$('workspace-picker').addEventListener('keydown',event=>{
-  if(event.key==='Escape'){event.preventDefault();closeWorkspaceMenu(true);return}
-  if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
-  event.preventDefault();
-  if($('workspace-menu').hidden){toggleWorkspaceMenu();return}
-  const buttons=[...$('workspace-menu').querySelectorAll('button:not(:disabled)')],index=buttons.indexOf(document.activeElement);
-  const next=event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length;
-  buttons[next].focus();
-});
 async function setWorkspace(workspace){
   mindHistory.clear();
   state.workspace=workspace;state.snapshot=null;state.selectedDir='';state.expanded=new Set(['']);state.directories.clear();state.queue.reset();state.draft=null;state.sourceOpen=false;map.clear();markdown.clear();updateDocumentView();
@@ -803,86 +663,11 @@ async function refreshTree({duringDrag=false,afterMove=false}={}){
   if(generation===state.treeGeneration&&(before!==JSON.stringify([...state.directories])||state.treeExpansionChanged)){state.treeExpansionChanged=false;renderTree();}
 }
 let outlineMode=false;
-const mindOutlineActions={focus:true,collapse:true};
-function renderOutline(){
-  if(map.menuFromOutline)map.closeNodeMenu();
-  const outline=$('document-outline'),fragment=document.createDocumentFragment();
-  if(state.snapshot&&!isMindMapPath(state.snapshot.path)){
-    for(const heading of markdown.headings()){
-      const row=document.createElement('button');row.className='outline-row level-'+heading.level;row.textContent=heading.label||'空标题';row.title=heading.label;row.dataset.id=heading.id;
-      row.onclick=()=>void focusMarkdownOutline(heading.id);fragment.append(row);
-    }
-    if(!fragment.childNodes.length){const hint=document.createElement('p');hint.className='tree-placeholder';hint.textContent='当前文档没有标题。';fragment.append(hint)}
-    outline.replaceChildren(fragment);return;
-  }
-  function add(node,depth=1){
-    if(depth>2)return;
-    const level=depth;
-    if(node.kind!=='file'){
-      const row=document.createElement('button');row.className='outline-row level-'+level;row.textContent=node.label||'空标题';row.title=node.label;row.dataset.id=node.id;
-      const item=document.createElement('div');item.className='outline-item';
-      const focus=document.createElement('button');focus.type='button';focus.className='outline-focus';focus.dataset.id=node.id;focus.setAttribute('aria-pressed',String(map.focusedId===node.id));focus.setAttribute('aria-label',(map.focusedId===node.id?'退出':'进入')+'“'+(node.label||'空标题')+'”聚焦模式');focus.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 10 7-7"/><path d="M20 10h-6V4"/><path d="m3 21 7-7"/><path d="M4 14h6v6"/></svg>';
-      focus.onclick=()=>void toggleFocusMode(node.id,{fromOutline:true});
-      focus.hidden=!mindOutlineActions.focus;
-      const collapse=document.createElement('button');collapse.className='outline-collapse';collapse.dataset.id=node.id;collapse.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg>';collapse.setAttribute('aria-label','折叠或展开“'+(node.label||'空标题')+'”下一层节点的子节点');collapse.disabled=!node.children.some(child=>child.children.length);
-      collapse.onclick=()=>void focusOutline(node.id,{collapseChildren:true});
-      collapse.hidden=!mindOutlineActions.collapse;
-      row.onclick=()=>void focusOutline(node.id);
-      item.addEventListener('click',event=>event.target.closest('button:not(:disabled)')?.focus({preventScroll:true}));
-      item.addEventListener('keydown',event=>{
-        if(event.isComposing||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey||!['ArrowLeft','ArrowRight'].includes(event.key))return;
-        const buttons=[...item.querySelectorAll('button:not(:disabled):not([hidden])')],index=buttons.indexOf(event.target);
-        if(index<0)return;
-        event.preventDefault();event.stopPropagation();
-        buttons[(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length].focus({preventScroll:true});
-      });
-      item.append(row,focus,collapse);fragment.append(item);
-    }
-    for(const child of node.children)add(child,depth+1);
-  }
-  if(state.snapshot)add(map.focusedId?map.viewRoot:state.snapshot.root,map.focusedId?1:0);
-  if(!fragment.childNodes.length){const hint=document.createElement('p');hint.className='tree-placeholder';hint.textContent=state.snapshot?(map.focusedId?'当前分支没有节点。':'当前文档没有节点。'):'打开一份 Markdown 查看大纲。';fragment.append(hint)}
-  outline.replaceChildren(fragment);updateOutlineCollapseButtons();
-}
-function updateOutlineCollapseButtons(){
-  const nodes=new Map();
-  function add(node){if(!node)return;nodes.set(node.id,node);for(const child of node.children)add(child)}
-  add(map.root);
-  for(const button of $('document-outline').querySelectorAll('.outline-collapse')){
-    const node=nodes.get(button.dataset.id),children=node?.children.filter(child=>child.children.length)||[];
-    if(!children.length){button.removeAttribute('aria-expanded');continue}
-    button.setAttribute('aria-expanded',String(!children.every(child=>map.collapsed.has(child.id))));
-  }
-}
-async function focusMarkdownOutline(id){
-  if(state.navigating||!state.snapshot)return;
-  if(state.sourceOpen&&!await toggleSource(false))return;
-  if(!markdown.focusHeading(id))return;
-  for(const row of $('document-outline').querySelectorAll('.outline-row')){const selected=row.dataset.id===id;row.classList.toggle('selected',selected);if(selected)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current')}
-}
-async function focusOutline(id,{collapseChildren=false}={}){
-  if(state.navigating||!state.snapshot)return;
-  const path=nodePath(state.snapshot.root,id);if(!path)return;
-  state.navigating=true;
-  try{
-    if(!await readyToNavigate())return;
-    const node=nodeAtPath(state.snapshot.root,path);if(!node)return;
-    const before=collapseChildren?map.layout?.positions.find(p=>p.id===node.id):null;
-    for(let depth=0;depth<path.length;depth++)map.collapsed.delete(nodeAtPath(state.snapshot.root,path.slice(0,depth))?.id);
-    if(collapseChildren){
-      const children=node.children.filter(child=>child.children.length);
-      const expand=children.every(child=>map.collapsed.has(child.id));
-      map.collapsed.delete(node.id);
-      for(const child of children)if(expand)map.collapsed.delete(child.id);else map.collapsed.add(child.id);
-    }
-    map.selected=node.id;map.setRoot(state.snapshot.root);
-    const position=map.layout.positions.find(p=>p.id===node.id);if(!position)return;
-    if(collapseChildren){
-      if(before){map.x+=(before.x-position.x)*map.scale;map.y+=(before.y-position.y)*map.scale;map.schedule()}
-    }else map.focusBranch(node.id);
-    for(const row of $('document-outline').querySelectorAll('.outline-row')){const selected=row.dataset.id===node.id;row.classList.toggle('selected',selected);if(selected)row.setAttribute('aria-current','true');else row.removeAttribute('aria-current')}
-  }catch(error){banner(errorText(error))}finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
-}
+const outline=createOutline({state,map,markdown,preview,$,readyToNavigate,toggleSource,toggleFocusMode,updateDocumentView,banner,errorText});
+const mindOutlineActions=outline.actions;
+function renderOutline(){outline.render()}
+function updateOutlineCollapseButtons(){outline.syncCollapse()}
+function focusOutline(...args){return outline.focus(...args)}
 function renderTree(){
   fileTreeHover.hide();
   fileActions.closeMenu();
