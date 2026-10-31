@@ -14,7 +14,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"openmind/internal/appicon"
 	"openmind/internal/document"
-	"openmind/internal/globalshortcut"
 	"openmind/internal/watcher"
 	"openmind/internal/workspace"
 )
@@ -39,11 +38,6 @@ type App struct {
 	frontendReady atomic.Bool
 	fileOpenMu    sync.Mutex
 	pendingFiles  []string
-
-	shortcut            globalshortcut.Manager
-	shortcutInitialized bool
-	shortcutRequested   string
-	shortcutWarning     string
 }
 
 func NewApp() (*App, error) {
@@ -83,7 +77,6 @@ func (a *App) shutdown(ctx context.Context) {
 	close(a.done)
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	a.shortcut.Close()
 	if a.watcher != nil {
 		a.watcher.Close()
 	}

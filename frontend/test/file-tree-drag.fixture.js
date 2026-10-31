@@ -13,7 +13,6 @@
   window.__fileDragFixture=fixture;
   window.runtime={EventsOn:(name,callback)=>fixture.listeners.set(name,callback),WindowShow:()=>{}};
   window.go={main:{App:{
-    GetGlobalShortcutStatus:async()=>'',
     ToggleWindowMaximise:async()=>{},FrontendReady:async()=>{},GetSettings:async()=>({mdCompactWindow:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true}),SaveSettings:async()=>{},RecentWorkspaces:async()=>[],
     TakePendingFileOpens:async()=>[],RestoreWorkspace:async()=>({root:'/fixture-only',name:'拖动验证'}),CheckDocument:async()=>null,
     ListDirectory:async directory=>{

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -186,5 +187,31 @@ func TestMindNodeMaxWidthPersistenceAndValidation(t *testing.T) {
 		if _, err := a.GetSettings(); err == nil {
 			t.Fatalf("accepted %s", input)
 		}
+	}
+}
+
+func TestSettingsUpgradeDropsRetiredWakeShortcut(t *testing.T) {
+	app := &App{stateDir: t.TempDir()}
+	path := filepath.Join(app.stateDir, "settings.json")
+	if err := os.WriteFile(path, []byte(`{"globalWakeShortcut":"Ctrl+F1","mindStyle":"mindnode"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := app.GetSettings()
+	if err != nil || settings.MindStyle != "mindnode" {
+		t.Fatalf("load previous settings: %+v, %v", settings, err)
+	}
+	if err := app.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		t.Fatal(err)
+	}
+	if _, present := fields["globalWakeShortcut"]; present || string(fields["mindStyle"]) != `"mindnode"` {
+		t.Fatalf("unexpected settings after upgrade: %s", data)
 	}
 }

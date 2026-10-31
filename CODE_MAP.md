@@ -1,12 +1,12 @@
 # OpenMind 代码地图
 
-> 2026-10-31，基于当前工作区。本文描述实际结构及尚存耦合，不代表所有重构都已完成。
+> 2026-10-31，版本 0.9.45，基于当前工作区。本文描述实际结构及尚存耦合，不代表所有重构都已完成。
 
 ## 为什么改动容易牵连
 
 | 问题 | 具体证据 | 本轮处理 |
 | --- | --- | --- |
-| 前端入口承担过多责任 | main.js 原有 1188 行，包含保存、导图操作、大纲、工作区菜单、窗口、关闭流程 | 分离命令、大纲、导航和工作区菜单；入口降至约 973 行，仍需继续收敛 |
+| 前端入口承担过多责任 | main.js 原有 1188 行，包含保存、导图操作、大纲、工作区菜单、窗口、关闭流程 | 分离命令、大纲、导航和工作区菜单；入口降至约 970 行，仍需继续收敛 |
 | 通用桥接隐藏业务副作用 | 原 call() 调用 ApplyEdit 时暗中记录导图历史 | 桥接只转发；命令模块显式处理历史与版本 |
 | 保存协议散落 | 文字队列和新增、移动、删除、撤销分别拼 session/version/opId | commands 统一命令编号和发送时版本绑定 |
 | 测试依赖函数摆放位置 | 三份测试用字符串切片从 main.js 提取函数并在 VM 执行 | 改为直接调用导出的模块接口 |
@@ -31,6 +31,9 @@ flowchart TD
   Main --> Queue["queue.js · 串行文字编辑"]
   Queue --> Cmd
   Cmd --> App
+  Main --> SettingsUI["settings.js · 设置表单"]
+  SettingsUI -->|GetSettings / SaveSettings| App
+  App --> Config["settings.go · 校验并持久化 settings.json"]
   Main --> Map["mindmap.js · 导图交互与视口"]
   Map --> Layout["layout.js · 树布局"]
   Map --> Styles["mind-styles/ · 独立渲染器"]
@@ -80,7 +83,7 @@ flowchart TD
 | [internal/workspace/](internal/workspace/) | 工作区身份、路径边界、目录树和排序 |
 | [internal/filestore/](internal/filestore/) | 文件校验、并发修改检测、恢复副本和原子替换 |
 | [internal/watcher/](internal/watcher/)、[internal/bookmark/](internal/bookmark/) | macOS 文件变化通知与目录引用 |
-| [internal/window/](internal/window/)、[internal/globalshortcut/](internal/globalshortcut/)、[internal/appicon/](internal/appicon/) | macOS 窗口、快捷键和图标 |
+| [internal/window/](internal/window/)、[internal/appicon/](internal/appicon/) | macOS 窗口和图标 |
 
 本轮未调整 Go 包结构；其解析、文档协调和存储分层已存在，当前主要耦合集中在前端。
 
@@ -132,7 +135,7 @@ main.js 仍拥有共享状态、节点操作互斥、快照应用、窗口与退
 
 产品原则：[examples/灵感.mind.md](examples/灵感.mind.md)；架构决策：[ARD.md](ARD.md)。
 
-## 本轮验证记录
+## 0.9.44 重构验证记录
 
 - 通过：98 个前端单元测试、版本一致性测试、Go 测试及 race 检查。
 - 通过：WebKit 搜索 64 项、真实文档服务的导图历史 35 项、最近工作区菜单回归、两种风格多行编辑 38 项。
