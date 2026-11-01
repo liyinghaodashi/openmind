@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="OpenMind-macOS-arm64">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/build/bin/OpenMind-macOS-arm64.zip!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>

@@ -16,7 +16,7 @@ import (
 func TestMindWebKitBridge(t *testing.T) {
 	addressFile := os.Getenv("OPENMIND_MIND_TEST_ADDRESS")
 	if addressFile == "" {
-		t.Skip("run with node scripts/test-mind-rules.mjs")
+		t.Skip("run with node tests/macos/test-mind-rules.mjs")
 	}
 	root := t.TempDir()
 	for name, source := range map[string]string{

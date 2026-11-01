@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMindSelection} from '../src/mind/selection.js';
-import {MindMap} from '../src/mindmap.js';
-import {nodeDropTarget} from '../src/node-drop.js';
+import {MindMap} from '../src/mind/mindmap.js';
+import {nodeDropTarget} from '../src/mind/node-drop.js';
 
 const node=(id,children=[])=>({id,label:id,kind:'heading',children});
 const forest=()=>({id:'file',kind:'file',children:[node('A',[node('A2',[node('A3',[node('one'),node('two')])])]),node('B',[node('B2')])]});

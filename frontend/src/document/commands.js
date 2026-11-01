@@ -1,4 +1,4 @@
-import {isMindMapPath} from '../document-mode.js';
+import {isMindMapPath} from './document-mode.js';
 
 export function createDocumentCommands({write,getSnapshot,captureHistory,history,clientID=crypto.randomUUID()}) {
   let sequence=0;

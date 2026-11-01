@@ -1,4 +1,4 @@
-import {isMindMapPath} from '../document-mode.js';
+import {isMindMapPath} from '../document/document-mode.js';
 import {nodePath,nodeAtPath} from '../mind/tree-navigation.js';
 
 export function createOutline({state,map,markdown,preview,$,readyToNavigate,toggleSource,toggleFocusMode,updateDocumentView,banner,errorText}) {

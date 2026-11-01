@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {layoutTree} from '../src/layout.js';
-import {nodeColors} from '../src/node-colors.js';
-import {MindMap} from '../src/mindmap.js';
+import {layoutTree} from '../src/mind/layout.js';
+import {nodeColors} from '../src/mind/node-colors.js';
+import {MindMap} from '../src/mind/mindmap.js';
 
 for(const [name,parentColor,ownColor,expected] of [
   ['继承父节点','#DC6A5E','','#DC6A5E'],

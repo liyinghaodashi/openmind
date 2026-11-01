@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createOutline} from '../src/outline/controller.js';
-import {layoutTree} from '../src/layout.js';
-import {MindMap} from '../src/mindmap.js';
+import {layoutTree} from '../src/mind/layout.js';
+import {MindMap} from '../src/mind/mindmap.js';
 
 function setup(collapsed=[]) {
   const node=(id,children=[])=>({id,label:id,children});

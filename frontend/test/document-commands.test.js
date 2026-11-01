@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDocumentCommands} from '../src/document/commands.js';
-import {EditQueue} from '../src/queue.js';
-import {MindHistory} from '../src/features/mind-history.js';
+import {EditQueue} from '../src/document/queue.js';
+import {MindHistory} from '../src/mind/mind-history.js';
 
 function setup(path='test.mind.md') {
   let snapshot={session:'a',version:1,path,source:'A'};

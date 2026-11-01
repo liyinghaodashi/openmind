@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountFileActions} from '../src/features/file-actions.js';
+import {mountFileActions} from '../src/workspace/file-actions.js';
 
 class Element extends EventTarget {
   constructor(){super();this.hidden=true;this.isConnected=true;this.disabled=false;this.value='';this.textContent='';this.style={};this.dataset={};this.attributes=new Map();this.queries=new Map();this.classes=new Set();this.classList={add:value=>this.classes.add(value),remove:value=>this.classes.delete(value)}}

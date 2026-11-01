@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createMindSelection} from '../src/mind/selection.js';
-import {layoutTree} from '../src/layout.js';
-import {MindMap} from '../src/mindmap.js';
-import {findNodeMatches} from '../src/features/document-search.js';
-import {nodeDropTarget} from '../src/node-drop.js';
+import {layoutTree} from '../src/mind/layout.js';
+import {MindMap} from '../src/mind/mindmap.js';
+import {findNodeMatches} from '../src/document/document-search.js';
+import {nodeDropTarget} from '../src/mind/node-drop.js';
 
 const node=(id,children=[])=>({id,label:id,kind:'heading',children});
 const forest={id:'root',label:'文件名',kind:'file',children:[node('A',[node('A2',[node('A3',[node('Detail')])])]),node('B',[node('B2')])]};

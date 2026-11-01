@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bindToolbarMaximise} from '../src/features/toolbar-maximise.js';
+import {bindToolbarMaximise} from '../src/ui/toolbar-maximise.js';
 
 function setup(runtimeEnabled=true) {
   const toolbar=new EventTarget();let maximised=false,calls=0;

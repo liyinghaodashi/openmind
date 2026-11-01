@@ -88,9 +88,7 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 - 收集第一次反馈
 ```
 
-导图遵循 **`# → ## → ### → 嵌套的 - 列表`**，不跳过层级。一个文件可以包含多个 `#` 主节点；三级标题下的 `-` 列表继续展开为更深的节点。
-
-普通段落、代码块、前置元数据、四至六级标题、有序列表及 `+` / `*` 列表不会生成导图节点，但仍保留在原文中。这些约束只作用于 Mind 模式，普通 Markdown 模式支持常规正文语法。
+导图支持一至六级标题和嵌套的 `-` 列表。标题归入最近的较低级别标题，列表按缩进归入父列表或当前标题。允许跳级、多个主节点和纯列表。节点也可包含多行文字。
 
 <details>
 <summary>给分支一点颜色</summary>
@@ -209,9 +207,9 @@ node --test frontend/test/*.test.js
 涉及搜索、节点交互或导图语法时，可运行对应的 macOS WebKit 回归脚本：
 
 ```sh
-node scripts/test-document-search.mjs
-node scripts/test-node-modes.mjs
-node scripts/test-mind-rules.mjs
+node tests/macos/test-document-search.mjs
+node tests/macos/test-node-modes.mjs
+node tests/macos/test-mind-rules.mjs
 ```
 
 功能修改后重新构建应用，在原生窗口中确认行为，并检查包签名完整性：
@@ -221,25 +219,7 @@ sh scripts/build-macos.sh
 codesign --verify --deep --strict build/bin/OpenMind.app
 ```
 
-<details>
-<summary>代码地图</summary>
-
-
-| 路径                                                    | 职责                                           |
-| ------------------------------------------------------- | ---------------------------------------------- |
-| `main.go` / `app.go`                                    | Wails 启动、Go / JavaScript 桥接与应用生命周期 |
-| `internal/markdown/`                                    | Markdown 解析、导图投影与源文本修改            |
-| `internal/document/`                                    | 文档会话、保存协调、文件和图片操作             |
-| `internal/filestore/`                                   | 文件校验、原子替换与恢复副本                   |
-| `internal/workspace/` / `internal/watcher/`             | 工作区边界、目录树与 macOS 文件监听            |
-| `frontend/src/mindmap.js` / `frontend/src/mind-styles/` | 导图交互与两套独立渲染器                       |
-| `frontend/src/markdown-editor.js`                       | Markdown 即时渲染编辑器                        |
-| `frontend/src/queue.js`                                 | 前端串行保存队列                               |
-| `scripts/` / `frontend/test/`                           | 构建、预览及回归验证                           |
-
-产品思路见 [灵感.mind.md](examples/灵感.mind.md)，架构决策及其演进见 [ARD.md](ARD.md)。[原始技术方案](TECHNICAL_DESIGN.md) 供了解背景，当前行为以代码及后续决策为准。
-
-</details>
+模块入口与测试位置见[代码地图](CODE_MAP.md)。设计演进见[架构决策](ARD.md)。
 
 <a id="contributing"></a>
 

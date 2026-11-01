@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountSettings} from '../src/settings.js';
-import {createSidebarCollapse} from '../src/features/sidebar-collapse.js';
+import {mountSettings} from '../src/ui/settings.js';
+import {createSidebarCollapse} from '../src/workspace/sidebar-collapse.js';
 
 class Element extends EventTarget {
   children = [];

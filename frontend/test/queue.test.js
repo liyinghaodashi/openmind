@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {EditQueue} from '../src/queue.js';
-import {layoutTree} from '../src/layout.js';
+import {EditQueue} from '../src/document/queue.js';
+import {layoutTree} from '../src/mind/layout.js';
 
 test('每次输入依次提交，慢写入不会合并中间版本', async()=>{
   const writes=[],commits=[];let release;

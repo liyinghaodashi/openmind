@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MarkdownEditor} from '../src/markdown-editor.js';
+import {MarkdownEditor} from '../src/markdown/markdown-editor.js';
 
 class Element {
   constructor(){this.listeners=new Map();this.attributes=new Map();this.scrollTop=40}

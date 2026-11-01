@@ -1,31 +1,32 @@
+import {createFileTree} from './workspace/file-tree.js';
+import {preferenceFields} from './ui/preferences.js';
 import {createWorkspaceMenu} from './workspace/menu.js';
 import {createDocumentCommands} from './document/commands.js';
 import {createOutline} from './outline/controller.js';
 import {createMindSelection} from './mind/selection.js';
 import {nodePath,nodeAtPath} from './mind/tree-navigation.js';
-import {EditQueue} from './queue.js';
-import {MindMap} from './mindmap.js';
-import {createSidebarCollapse} from './features/sidebar-collapse.js';
-import {mountSettings} from './settings.js';
-import {bindToolbarMaximise} from './features/toolbar-maximise.js';
-import {mountFileActions} from './features/file-actions.js';
-import {MarkdownEditor} from './markdown-editor.js';
-import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from './document-mode.js';
-import {mountGlobalCaret} from './features/global-caret.js';
-import {mountDocumentSearch} from './features/document-search.js';
-import {mountFileTreeDrag,movedTreePath} from './features/file-tree-drag.js';
-import {TableActions} from './features/table-actions.js';
-import {mountFileTreeHover} from './features/file-tree-hover.js';
-import {MindHistory} from './features/mind-history.js';
+import {EditQueue} from './document/queue.js';
+import {MindMap} from './mind/mindmap.js';
+import {createSidebarCollapse} from './workspace/sidebar-collapse.js';
+import {mountSettings} from './ui/settings.js';
+import {bindToolbarMaximise} from './ui/toolbar-maximise.js';
+import {mountFileActions} from './workspace/file-actions.js';
+import {MarkdownEditor} from './markdown/markdown-editor.js';
+import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from './document/document-mode.js';
+import {mountGlobalCaret} from './ui/global-caret.js';
+import {mountDocumentSearch} from './document/document-search.js';
+import {mountFileTreeDrag,movedTreePath} from './workspace/file-tree-drag.js';
+import {TableActions} from './markdown/table-actions.js';
+import {mountFileTreeHover} from './workspace/file-tree-hover.js';
+import {MindHistory} from './mind/mind-history.js';
 
 mountGlobalCaret();
 
 const $=id=>document.getElementById(id);
 const fileTreeHover=mountFileTreeHover($('file-tree'));
-const native=window.go?.main?.App;
+const native=window.go?.desktop?.App;
 const preview=!native;
 let sourceViewEnabled=true;
-let hideFileExtensions=false;
 let mindZoomControlsEnabled=true;
 let alwaysOnTop=false;
 let compactWindow=false;
@@ -63,7 +64,7 @@ document.querySelector('.toolbar-actions').addEventListener('keydown',event=>{
   buttons[(index+(event.key==='ArrowRight'?1:-1)+buttons.length)%buttons.length].focus();
 });
 bindToolbarMaximise(document.querySelector('.toolbar'),native?()=>{if(!compactWindow&&!switchingCompactWindow)void native.ToggleWindowMaximise().catch(error=>toast(errorText(error)))}:undefined);
-const state={workspace:null,snapshot:null,expanded:new Set(['']),directories:new Map(),selectedDir:'',queue:null,blocked:false,sourceOpen:false,editor:null,composing:false,lastInput:null,checking:false,closing:false,treeGeneration:0,draft:null};
+const state={workspace:null,snapshot:null,expanded:new Set(['']),selectedDir:'',queue:null,blocked:false,sourceOpen:false,editor:null,composing:false,lastInput:null,checking:false,closing:false,draft:null};
 const mindHistory=new MindHistory();
 const call=async(name,...args)=>{
   if(!native)throw new Error('这是只读界面预览，请启动 macOS 应用使用文件读写。');
@@ -122,7 +123,7 @@ const fileActions=mountFileActions({
     if(entry.directory){
       state.expanded=new Set([...state.expanded].map(path=>movedTreePath(path,entry.path,result.path)));
       state.selectedDir=movedTreePath(state.selectedDir,entry.path,result.path);
-      state.directories.clear();state.treeExpansionChanged=true;
+      fileTree.invalidate();
     }
     if(result.snapshot){
       const sourceOpen=state.sourceOpen,modeChanged=isMindMapPath(state.snapshot.path)!==isMindMapPath(result.snapshot.path);
@@ -138,7 +139,7 @@ const fileActions=mountFileActions({
     if(entry.directory){
       state.expanded=new Set([...state.expanded].filter(path=>!within(path)));
       if(within(state.selectedDir))state.selectedDir=entry.path.includes('/')?entry.path.slice(0,entry.path.lastIndexOf('/')):'';
-      state.directories.clear();state.treeExpansionChanged=true;
+      fileTree.invalidate();
     }
     await refreshTree();renderTree();
   },
@@ -160,7 +161,7 @@ const fileTreeDrag=mountFileTreeDrag({
   move:relocateEntry,
   onState:active=>{
     state.fileDragging=active;
-    if(active){state.treeGeneration++;setEditorsReadOnly()}
+    if(active){fileTree.cancelRefresh();setEditorsReadOnly()}
     else {
       if(state.editor)state.editor.readOnly=state.blocked||state.closing;
       updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
@@ -169,6 +170,13 @@ const fileTreeDrag=mountFileTreeDrag({
   },
   onError:error=>toast(errorText(error))
 });
+const fileTree=createFileTree({
+  tree:$('file-tree'),state,preview,fileActions,fileTreeHover,fileTreeDrag,openDocument,
+  listDirectory:path=>call('ListDirectory',path),
+  report:error=>banner('工作区暂时不可用：'+errorText(error))
+});
+const {refresh:refreshTree,render:renderTree}=fileTree;
+
 async function relocateEntry(entry,parent){
   if(state.navigating||state.closing)return;
   state.navigating=true;state.fileMoving=true;
@@ -183,7 +191,7 @@ async function relocateEntry(entry,parent){
       applySnapshot(result.snapshot);state.sourceOpen=sourceOpen;updateDocumentView();resetSourceInput();
       markdown.scrollElement.scrollTop=scroll;
     }
-    state.directories.clear();state.treeExpansionChanged=true;
+    fileTree.invalidate();
   }catch(error){toast(errorText(error))}
   finally{
     try{await refreshTree({afterMove:true});renderTree()}
@@ -649,18 +657,10 @@ async function chooseWorkspace(root,id){
 }
 async function setWorkspace(workspace){
   mindHistory.clear();
-  state.workspace=workspace;state.snapshot=null;state.selectedDir='';state.expanded=new Set(['']);state.directories.clear();state.queue.reset();state.draft=null;state.sourceOpen=false;map.clear();markdown.clear();updateDocumentView();
+  state.workspace=workspace;state.snapshot=null;state.selectedDir='';state.expanded=new Set(['']);fileTree.invalidate();state.queue.reset();state.draft=null;state.sourceOpen=false;map.clear();markdown.clear();updateDocumentView();
   $('workspace-name').textContent=workspace.name;$('workspace-detail').textContent=workspace.root;$('workspace-detail').title=workspace.root;
   $('welcome').hidden=false;$('zoom-controls').hidden=true;$('source-editor').value='';$('document-title').textContent='选择一份 Markdown';$('error-banner').hidden=true;
   setOutlineMode(false);renderOutline();await refreshTree();
-}
-async function refreshTree({duringDrag=false,afterMove=false}={}){
-  if(!state.workspace||preview||state.fileDragging&&!duringDrag||state.fileMoving&&!afterMove)return;
-  const generation=++state.treeGeneration;
-  const dirs=[...state.expanded];
-  const before=JSON.stringify([...state.directories]);
-  await Promise.all(dirs.map(async dir=>{try{const entries=await call('ListDirectory',dir);if(generation===state.treeGeneration)state.directories.set(dir,entries)}catch(error){if(generation===state.treeGeneration){if(dir==='')banner('工作区暂时不可用：'+errorText(error));else {state.expanded.delete(dir);state.directories.delete(dir)}}}}));
-  if(generation===state.treeGeneration&&(before!==JSON.stringify([...state.directories])||state.treeExpansionChanged)){state.treeExpansionChanged=false;renderTree();}
 }
 let outlineMode=false;
 const outline=createOutline({state,map,markdown,preview,$,readyToNavigate,toggleSource,toggleFocusMode,updateDocumentView,banner,errorText});
@@ -668,26 +668,6 @@ const mindOutlineActions=outline.actions;
 function renderOutline(){outline.render()}
 function updateOutlineCollapseButtons(){outline.syncCollapse()}
 function focusOutline(...args){return outline.focus(...args)}
-function renderTree(){
-  fileTreeHover.hide();
-  fileActions.closeMenu();
-  const tree=$('file-tree');if(!state.workspace)return;const fragment=document.createDocumentFragment();
-  function add(dir,depth){for(const entry of state.directories.get(dir)||[]){
-    const row=document.createElement('button');row.className='tree-row'+(state.snapshot?.path===entry.path?' selected':'')+(entry.directory&&state.selectedDir===entry.path?' dir-selected':'');row.style.paddingLeft=(9+depth*16)+'px';
-    row.dataset.path=entry.path;row.dataset.name=entry.name;row.dataset.directory=String(entry.directory);
-    if(fileTreeDrag.source===entry.path)row.classList.add('file-drag-source');
-    const arrow=document.createElement('span');arrow.className='tree-arrow';arrow.setAttribute('aria-hidden','true');
-    if(entry.directory){arrow.classList.toggle('expanded',state.expanded.has(entry.path));arrow.innerHTML='<svg viewBox="0 0 9 9" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2 6 4.5 3 7"/></svg>';}
-    const symbol=document.createElement('span');symbol.className='tree-symbol';symbol.textContent=entry.directory?'▱':isMindMapPath(entry.path)?'⋈':'≡';
-    const name=document.createElement('span');name.className='tree-name';name.textContent=entry.directory?entry.name:hideFileExtensions?entry.name.replace(/\.(mind\.md|md|markdown)$/i,''):isMindMapPath(entry.path)?entry.name.replace(/\.md$/i,''):entry.name;
-    row.append(arrow,symbol,name);fragment.append(row);
-    fileActions.bindRow(row,entry);
-    row.addEventListener('click',async()=>{fileActions.closeMenu();if(state.navigating||state.closing)return;if(entry.directory){state.selectedDir=entry.path;if(state.expanded.has(entry.path))state.expanded.delete(entry.path);else state.expanded.add(entry.path);state.treeExpansionChanged=true;await refreshTree();}else await openDocument(entry.path)});
-    if(entry.directory&&state.expanded.has(entry.path))add(entry.path,depth+1);
-  }}
-  add('',0);if(!fragment.childNodes.length){const p=document.createElement('p');p.className='tree-placeholder';p.textContent='这里还没有 Markdown。点击 + 创建第一份。';fragment.append(p)}
-  tree.replaceChildren(fragment);
-}
 async function openDocument(path){
   if(compactWindow&&isMindMapPath(path)){toast('请先通过右上角按钮返回主窗口，再打开思维导图。');return}
   if(preview){const {previewDocuments}=await import('./preview.js');const snapshot=previewDocuments.find(snapshot=>snapshot.path===path);if(snapshot){map.collapsed.clear();map.selected=null;applySnapshot(snapshot,{resetView:true});resetSourceInput()}return}
@@ -776,47 +756,12 @@ function setSourceViewEnabled(enabled){
 const sidebarCollapse=createSidebarCollapse({sidebar:$('sidebar'),button:$('toggle-sidebar'),root:document.body,beforeChange:()=>{fileTreeDrag.cancel();closeWorkspaceMenu()}});
 const settings=mountSettings({
   container:$('settings-options'),
-  features:[sidebarCollapse,{
-    id:'hideFileExtensions',group:'通用设置',label:'隐藏文件后缀',description:'文件树隐藏 .md、.markdown 和 .mind.md 后缀。',
-    enable:()=>{hideFileExtensions=true;renderTree()},disable:()=>{hideFileExtensions=false;renderTree()}
-  },{
-    id:'expandFileNameOnHover',group:'通用设置',label:'悬停展开文件名',description:'名称显示省略号时，悬停可让文字和背景向右展开，适用于文件和文件夹。',
-    enable:()=>fileTreeHover.setEnabled(true),disable:()=>fileTreeHover.setEnabled(false)
-  },{
-    id:'sourceView',group:'通用设置',label:'启用原文功能',description:'在 mind 和 md 模式中显示「原文」按钮，关闭后返回导图或正文。',
-    enable:()=>setSourceViewEnabled(true),disable:()=>setSourceViewEnabled(false)
-  },{
-    id:'mindStyle',group:'mind模式',label:'渲染风格',description:'选择导图外观。',
-    options:[{value:'processon',label:'processon'},{value:'mindnode',label:'MindNode'}],
-    select:value=>map.setStyle(value)
-  },{
-    id:'mindNodeMaxWidth',group:'mind模式',label:'节点最大宽度',description:'文本换行宽度，默认 340px；数值越大，每行可显示的文字越多。',
-    type:'number',min:160,max:1600,default:340,select:value=>map.setNodeMaxWidth(value)
-  },{
-    id:'mindMainNodeMark',group:'mind模式',label:'主节点标记',description:'显示主节点背景，关闭后保留特殊字体。',
-    enable:()=>map.setNodeMark('main',true),disable:()=>map.setNodeMark('main',false)
-  },{
-    id:'mindSecondNodeMark',group:'mind模式',label:'二级节点标记',description:'显示二级节点背景，关闭后保留特殊字体。',
-    enable:()=>map.setNodeMark('second',true),disable:()=>map.setNodeMark('second',false)
-  },{
-    id:'mindZoomControls',group:'mind模式',label:'显示缩放控件',description:'在 mind 模式的右下角显示缩小、缩放比例、放大和适应窗口控件。',
-    enable:()=>{mindZoomControlsEnabled=true;updateDocumentView()},disable:()=>{mindZoomControlsEnabled=false;updateDocumentView()}
-  },{
-    id:'mindCopyTree',group:'mind模式',label:'启用复制树',description:'在节点右键菜单中显示「复制树」，复制当前节点及全部子节点的 Markdown。⌘C 仅复制当前节点文本。',
-    enable:()=>{map.copyTreeEnabled=true},disable:()=>{map.copyTreeEnabled=false;map.closeNodeMenu()}
-  },{
-    id:'mindOutlineFocus',group:'mind模式',label:'显示大纲聚焦按钮',description:'在 mind 模式的侧面大纲中显示聚焦按钮。',
-    enable:()=>{mindOutlineActions.focus=true;renderOutline()},disable:()=>{mindOutlineActions.focus=false;renderOutline()}
-  },{
-    id:'mindOutlineCollapse',group:'mind模式',label:'显示大纲折叠按钮',description:'在 mind 模式的侧面大纲中显示折叠按钮。',
-    enable:()=>{mindOutlineActions.collapse=true;renderOutline()},disable:()=>{mindOutlineActions.collapse=false;renderOutline()}
-  },{
-    id:'mindDoubleClickCreateMain',group:'mind模式',label:'双击新建一级节点',description:'在 mind 模式中双击画布空白处新建一级节点。',
-    enable:()=>{map.doubleClickCreateMain=true},disable:()=>{map.doubleClickCreateMain=false}
-  },{
-    id:'mdCompactWindow',group:'md模式',label:'启用便签小窗',description:'在 md 模式中显示便签小窗入口，可在置顶小窗中编辑文档。',
-    enable:()=>{mdCompactWindowEnabled=true;updateDocumentView()},disable:()=>{mdCompactWindowEnabled=false;updateDocumentView()}
-  }],
+  features:preferenceFields({
+    sidebarCollapse,map,fileTreeHover,mindOutlineActions,renderOutline,setSourceViewEnabled,
+    setHideExtensions:fileTree.setHideExtensions,
+    setZoomControls(enabled){mindZoomControlsEnabled=enabled;updateDocumentView()},
+    setCompactWindowEnabled(enabled){mdCompactWindowEnabled=enabled;updateDocumentView()}
+  }),
   storage:preview
     ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindStyle:'processon',mindNodeMaxWidth:340,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
@@ -962,7 +907,7 @@ if(native){
 }else{
   const {previewSnapshot,previewDocuments}=await import('./preview.js');
   state.workspace={root:'只读界面预览',name:'我的知识库'};
-  state.directories.set('',previewDocuments.map(snapshot=>({path:snapshot.path,name:snapshot.path,directory:false})));
+  fileTree.setPreviewEntries(previewDocuments.map(snapshot=>({path:snapshot.path,name:snapshot.path,directory:false})));
   $('workspace-name').textContent='我的知识库';$('workspace-detail').textContent='界面预览 · 不读写磁盘';
   applySnapshot(previewSnapshot,{resetView:true});resetSourceInput();
 }

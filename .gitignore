@@ -1,4 +1,8 @@
-build/bin/
 frontend/wailsjs/
 .DS_Store
 .tools/
+/.idea/
+/output/
+/build/*
+!/build/appicon.png
+!/build/darwin/

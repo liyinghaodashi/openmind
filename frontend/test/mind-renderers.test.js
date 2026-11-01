@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {ProcessonRenderer} from '../src/mind-styles/processon/renderer.js';
-import {MindNodeRenderer} from '../src/mind-styles/mindnode/renderer.js';
-import {createMindRenderer} from '../src/mind-styles/index.js';
-import {layoutTree} from '../src/layout.js';
+import {ProcessonRenderer} from '../src/mind/styles/processon/renderer.js';
+import {MindNodeRenderer} from '../src/mind/styles/mindnode/renderer.js';
+import {createMindRenderer} from '../src/mind/styles/index.js';
+import {layoutTree} from '../src/mind/layout.js';
 
 class Element extends EventTarget {
   constructor(document) {
@@ -93,12 +93,12 @@ for (const Renderer of [ProcessonRenderer, MindNodeRenderer]) {
 
   test(Renderer.name + ' 只依赖自身目录，共用控制层没有节点或连线绘制', () => {
     const directory = Renderer === ProcessonRenderer ? 'processon' : 'mindnode';
-    const source = readFileSync(new URL(`../src/mind-styles/${directory}/renderer.js`, import.meta.url), 'utf8');
+    const source = readFileSync(new URL(`../src/mind/styles/${directory}/renderer.js`, import.meta.url), 'utf8');
     assert.doesNotMatch(source, /\bimport\b|\bextends\b/);
-    const css = readFileSync(new URL(`../src/mind-styles/${directory}/style.css`, import.meta.url), 'utf8');
+    const css = readFileSync(new URL(`../src/mind/styles/${directory}/style.css`, import.meta.url), 'utf8');
     assert.doesNotMatch(css, /@import/);
     assert.doesNotMatch(css, new RegExp(directory === 'processon' ? 'mindnode' : 'processon'));
-    const controller = readFileSync(new URL('../src/mindmap.js', import.meta.url), 'utf8');
+    const controller = readFileSync(new URL('../src/mind/mindmap.js', import.meta.url), 'utf8');
     assert.doesNotMatch(controller, /measureText|createElementNS|stroke-width|colorTint|className='node-editor/);
     const commonCSS = readFileSync(new URL('../styles/app.css', import.meta.url), 'utf8');
     assert.doesNotMatch(commonCSS, /\.mind-node|\.node-editor|\.node-fold-count|\.node-drag-ghost|data-mind-style/);

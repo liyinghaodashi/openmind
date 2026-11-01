@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {nodeDropTarget} from '../src/node-drop.js';
-import {MindMap} from '../src/mindmap.js';
-import {layoutTree} from '../src/layout.js';
+import {nodeDropTarget} from '../src/mind/node-drop.js';
+import {MindMap} from '../src/mind/mindmap.js';
+import {layoutTree} from '../src/mind/layout.js';
 
 const node=(id,children=[])=>({id,label:id,children});
 const root=node('root',[node('a',[node('child')]),node('b')]);
