@@ -23,6 +23,13 @@ try{
     markdown.load(source,{session:'shortcuts',path:'快捷键.md',reset:true});markdown.setReadOnly(false);
     await select(selector,all);writes.length=0;
   };
+  await load();
+  assert(key('/').defaultPrevented,'Command+/ in Markdown must open source');await settle();
+  assert(state.sourceOpen&&!$('source-panel').hidden&&$('source-editor').value===state.snapshot.source,'Source must show the current Markdown');
+  key('/',{repeat:true},$('source-editor'));await settle();
+  assert(state.sourceOpen,'Holding Command+/ must keep source open');
+  key('/',{},$('source-editor'));await settle();
+  assert(!state.sourceOpen&&!$('markdown-page').hidden,'Command+/ in source must return to the Markdown body');
   for(const [source,selector,readOnly] of [['正文\n','p',false],['正文\n','p',true],['```\nplain code\n```\n','pre code',false],['| A | B |\n| --- | --- |\n| C | D |\n','td',false]]){
     await load(source,selector);markdown.setReadOnly(readOnly);
     const before=markdown.editor.getValue(),tables=markdown.editable.querySelectorAll('table').length;

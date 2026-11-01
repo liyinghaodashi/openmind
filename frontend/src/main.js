@@ -266,11 +266,14 @@ function updateDocumentView(){
   $('markdown-page').hidden=!opened||mind||state.sourceOpen;
   $('source-panel').hidden=!opened||!state.sourceOpen;
   $('zoom-controls').hidden=!mind||!mindZoomControlsEnabled;
-  $('toggle-source').hidden=!sourceViewEnabled;
-  $('toggle-source').disabled=!opened||!sourceViewEnabled;
-  $('toggle-source').setAttribute('aria-pressed',String(opened&&state.sourceOpen));
+  const sourceButton=$('toggle-source');
+  sourceButton.hidden=!sourceViewEnabled;
+  sourceButton.disabled=!opened||!sourceViewEnabled;
+  sourceButton.setAttribute('aria-pressed',String(opened&&state.sourceOpen));
   $('source-toggle-label').textContent=opened&&!mind&&state.sourceOpen?'正文':'原文';
-  $('toggle-source').title=opened&&!mind?(state.sourceOpen?'返回正文编辑':'切换到 Markdown 原文'):'显示 Markdown 原文';
+  sourceButton.title=opened&&!mind?(state.sourceOpen?'返回正文编辑（⌘/）':'切换到 Markdown 原文（⌘/）'):'显示 Markdown 原文';
+  if(opened&&!mind)sourceButton.setAttribute('aria-keyshortcuts','Meta+/');
+  else sourceButton.removeAttribute('aria-keyshortcuts');
   markdown.setReadOnly(preview||!opened||mind||state.blocked||state.closing||state.navigating||state.fileDragging||state.sourceOpen);
   if(!opened)documentSearch.close(false);
 }
@@ -797,6 +800,15 @@ document.addEventListener('keydown',event=>{
   if(!event.repeat)$('toggle-outline').click();
 },true);
 $('toggle-source').onclick=()=>void toggleSource();
+document.addEventListener('keydown',event=>{
+  if(!event.metaKey||event.ctrlKey||event.altKey||event.shiftKey||event.key!=='/')return;
+  if(event.defaultPrevented||event.isComposing||event.keyCode===229||state.composing)return;
+  if(!state.snapshot||isMindMapPath(state.snapshot.path)||!sourceViewEnabled||compactWindow||switchingCompactWindow)return;
+  if(document.body.classList.contains('settings-open')||document.querySelector('dialog[open]'))return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  if(!event.repeat)void toggleSource();
+},true);
 $('markdown-editor').addEventListener('click',event=>{
   const link=event.target.closest('a'),inline=event.target.closest('[data-type="a"]');
   if(!link&&(!inline||!event.metaKey&&!event.ctrlKey))return;
