@@ -33,6 +33,7 @@ let compactWindow=false;
 let mdCompactWindowEnabled=false;
 let switchingCompactWindow=false;
 let compactSourceOpen=false;
+let mainCanvasView=null;
 let mainWindowAlwaysOnTop=false;
 function updatePinButton(){
   $('toggle-always-on-top').setAttribute('aria-pressed',String(alwaysOnTop));
@@ -76,15 +77,17 @@ $('return-main-window').onclick=()=>void setCompactWindow(false);
 
 async function setCompactWindow(enabled){
   if(compactWindow===enabled||switchingCompactWindow||state.navigating||state.closing||state.checking||document.querySelector('dialog[open]'))return false;
-  if(enabled&&(!mdCompactWindowEnabled||!state.snapshot||isMindMapPath(state.snapshot.path)||document.body.classList.contains('settings-open')))return false;
+  const mind=state.snapshot&&isMindMapPath(state.snapshot.path);
+  if(enabled&&(!state.snapshot||(!mind&&!mdCompactWindowEnabled)||document.body.classList.contains('settings-open')))return false;
   switchingCompactWindow=true;state.navigating=true;
   try{
     if((enabled||!state.blocked)&&!await readyToNavigate())return false;
+    const previousView=enabled&&mind?{x:map.x,y:map.y,scale:map.scale}:null;
     await call('SetCompactWindow',enabled);
     if(enabled){
       mainWindowAlwaysOnTop=alwaysOnTop;alwaysOnTop=true;
       compactSourceOpen=state.sourceOpen;
-      if(state.sourceOpen)markdown.load(state.snapshot.source,{session:state.snapshot.session,path:state.snapshot.path});
+      if(state.sourceOpen&&!mind)markdown.load(state.snapshot.source,{session:state.snapshot.session,path:state.snapshot.path});
       state.sourceOpen=false;
       fileActions.closeMenu();closeWorkspaceMenu();documentSearch.close(false);
     }else{
@@ -93,6 +96,12 @@ async function setCompactWindow(enabled){
     }
     compactWindow=enabled;
     document.body.classList.toggle('compact-window',enabled);
+    updateDocumentView();
+    if(mind){
+      if(enabled){mainCanvasView=previousView;map.fit()}
+      else if(mainCanvasView){Object.assign(map,mainCanvasView);mainCanvasView=null;map.schedule()}
+      map.canvas.focus({preventScroll:true});
+    }
     updatePinButton();
     return true;
   }catch(error){toast(errorText(error));return false}
@@ -246,8 +255,9 @@ function canInputMarkdown(source,event){
 }
 function updateDocumentView(){
   const opened=!!state.snapshot,mind=opened&&isMindMapPath(state.snapshot.path);
-  $('enter-compact-window').hidden=!mdCompactWindowEnabled||!opened||mind||compactWindow;
-  $('enter-compact-window').disabled=!mdCompactWindowEnabled||preview||!opened||mind||state.navigating||state.closing;
+  const compactAvailable=opened&&(mind||mdCompactWindowEnabled);
+  $('enter-compact-window').hidden=!compactAvailable||compactWindow;
+  $('enter-compact-window').disabled=!compactAvailable||preview||state.navigating||state.closing;
   $('return-main-window').hidden=!compactWindow;
   $('return-main-window').disabled=state.navigating||state.closing;
   document.body.classList.toggle('markdown-mode',opened&&!mind);
