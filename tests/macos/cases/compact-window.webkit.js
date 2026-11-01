@@ -18,7 +18,12 @@ try{
   assert(await setCompactWindow(true),'Mind must enter compact window');
   await settle();
   assert($('canvas').clientHeight===innerHeight&&$('canvas').clientWidth===innerWidth,'Canvas must fill mind compact window');
-  assert(['sidebar','source-panel','document-title','toggle-always-on-top'].every(id=>!visible($(id))),'Mind compact must hide workspace chrome');
+  assert(['sidebar','source-panel','document-title'].every(id=>!visible($(id))),'Mind compact must hide workspace chrome');
+  assert(innerWidth===960&&innerHeight===580,'Mind compact must open at 960 × 580');
+  assert(visible($('toggle-always-on-top')),'Mind compact must offer the pin button');
+  await checkPin(true);
+  $('toggle-always-on-top').click();await checkPin(false);
+  $('toggle-always-on-top').click();await checkPin(true);
   const back=$('return-main-window').getBoundingClientRect();
   assert(back.width>0&&innerWidth-back.right<20&&back.top<20,'Return must appear at the top right');
   $('return-main-window').click();while(switchingCompactWindow)await settle();

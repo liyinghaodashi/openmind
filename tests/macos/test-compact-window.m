@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 
-int om_set_compact_window(int enabled);
+int om_set_compact_window(int enabled, int width);
 void om_toggle_window_maximise(void);
 void om_hide_window(void);
 
@@ -29,9 +29,10 @@ void om_hide_window(void);
                 self.originalLevel = self.window.level;
                 self.originalBehavior = self.window.collectionBehavior;
             }
-            if (om_set_compact_window(enabled)) failure = @"Native window transition failed";
+            int width = [data[@"mind"] boolValue] ? 960 : 440;
+            if (om_set_compact_window(enabled, width)) failure = @"Native window transition failed";
             else if (enabled) {
-                if (fabs(self.window.frame.size.width - 440) > 1 || fabs(self.window.frame.size.height - 580) > 1 ||
+                if (fabs(self.window.frame.size.width - width) > 1 || fabs(self.window.frame.size.height - 580) > 1 ||
                     self.window.level != NSFloatingWindowLevel || self.window.minSize.width != 320 ||
                     ![self.window standardWindowButton:NSWindowCloseButton].hidden ||
                     ![self.window standardWindowButton:NSWindowMiniaturizeButton].hidden ||

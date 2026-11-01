@@ -18,7 +18,7 @@ window.go.desktop.App.SaveSettings=async value=>{window.__compactSettings={...va
 window.__compactRequest=data=>new Promise(resolve=>{
   window.__compactResolve=resolve;window.webkit.messageHandlers.result.postMessage(data);
 });
-window.go.desktop.App.SetCompactWindow=enabled=>window.__compactRequest({action:'compact',enabled});
+window.go.desktop.App.SetCompactWindow=(enabled,mind)=>window.__compactRequest({action:'compact',enabled,mind});
 window.runtime.WindowSetAlwaysOnTop=enabled=>window.__pinTask=window.__compactRequest({action:'pin',enabled});
 `;
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};

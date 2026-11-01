@@ -9,5 +9,5 @@
 .compact-window .error-banner{flex-wrap:wrap}
 .compact-window .error-banner>span{flex-basis:100%}
 .compact-window:not(.markdown-mode) #workspace-page>.toolbar{position:absolute;inset:0 0 auto;height:40px;padding:0;background:transparent;z-index:2}
-.compact-window:not(.markdown-mode) .document-heading,.compact-window:not(.markdown-mode) #toggle-always-on-top{display:none}
-.compact-window:not(.markdown-mode) #return-main-window{background:#fff}
+.compact-window:not(.markdown-mode) .document-heading{display:none}
+.compact-window:not(.markdown-mode) #workspace-page .pin-toggle{background:#fff}

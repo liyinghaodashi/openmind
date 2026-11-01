@@ -83,7 +83,7 @@ async function setCompactWindow(enabled){
   try{
     if((enabled||!state.blocked)&&!await readyToNavigate())return false;
     const previousView=enabled&&mind?{x:map.x,y:map.y,scale:map.scale}:null;
-    await call('SetCompactWindow',enabled);
+    await call('SetCompactWindow',enabled,!!mind);
     if(enabled){
       mainWindowAlwaysOnTop=alwaysOnTop;alwaysOnTop=true;
       compactSourceOpen=state.sourceOpen;

@@ -10,6 +10,6 @@ func (a *App) FinishWindowClose() {
 	window.Hide()
 }
 
-func (a *App) SetCompactWindow(enabled bool) error {
-	return window.SetCompact(enabled)
+func (a *App) SetCompactWindow(enabled, mind bool) error {
+	return window.SetCompact(enabled, mind)
 }
