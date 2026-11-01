@@ -1,0 +1,60 @@
+try{
+  const assert=(value,message)=>{if(!value)throw new Error(message)};
+  applySnapshot(await call('OpenDocument','正文.md'),{resetView:true});
+  const findText=value=>{
+    const walker=document.createTreeWalker(markdown.editable,NodeFilter.SHOW_TEXT);
+    while(walker.nextNode())if(walker.currentNode.data.includes(value))return walker.currentNode;
+    throw new Error('Missing text: '+value);
+  };
+  const clickToggle=async()=>{
+    const rect=$('toggle-source').getBoundingClientRect();
+    await new Promise(resolve=>{
+      window.__nodePointerDone=resolve;
+      window.webkit.messageHandlers.pointer.postMessage({x:rect.x+rect.width/2,y:rect.y+rect.height/2,count:1});
+    });
+  };
+  const text=findText('有序列表');
+  const selection=window.getSelection(),source=$('source-editor');
+  markdown.editable.focus();selection.setPosition(text,2);
+  await toggleSource(true);
+  const expected=source.value.indexOf('有序列表')+2;
+  assert(source.selectionStart===expected&&source.selectionEnd===expected,'打开原文应保留列表项内的光标，预期 '+expected+'，实际 '+source.selectionStart);
+  source.setSelectionRange(expected-1,expected-1);
+  await toggleSource(false);
+  assert(document.activeElement===markdown.editable&&selection.focusNode===text&&selection.focusOffset===1,'返回正文应能从原文中移动后的位置继续编辑');
+  await toggleSource(true);
+  const fixture='\uFEFF前言\r\n\r\n* `motion-showreel`（推荐）\r\n* \r\n';
+  source.value=fixture;source.dispatchEvent(new Event('input',{bubbles:true}));
+  const codeStart=source.value.indexOf('motion-showreel');
+  source.setSelectionRange(codeStart+2,codeStart+7,'backward');
+  await toggleSource(false);
+  const code=findText('motion-showreel');
+  assert(selection.anchorNode===code&&selection.anchorOffset===7&&selection.focusOffset===2,'Pending source edit must restore the backward selection inside inline code');
+  await clickToggle();
+  assert(state.sourceOpen&&source.selectionStart===codeStart+2&&source.selectionEnd===codeStart+7&&source.selectionDirection==='backward','Toolbar click must carry the body selection to source');
+  source.setSelectionRange(source.value.lastIndexOf('* ')+2,source.value.lastIndexOf('* ')+2);
+  await clickToggle();
+  const empty=markdown.editable.querySelector('li:last-child');
+  assert(document.activeElement===markdown.editable&&empty.contains(selection.focusNode),'Returning to an empty list item must focus its insertion point');
+  await toggleSource(true);
+  assert(source.selectionStart===source.value.lastIndexOf('* ')+2,'Empty list item must map past its marker');
+  assert(source.value===fixture.replace(/\r\n/g,'\n'),'Switching must preserve source text');
+  const longDocument=Array.from({length:200},(_,i)=>'段落 '+i+' 🐱 重复的文字').join('\n\n');
+  source.value=longDocument;source.dispatchEvent(new Event('input',{bubbles:true}));
+  const last=source.value.lastIndexOf('重复')+1;
+  source.setSelectionRange(last,last);
+  await toggleSource(false);
+  const tail=findText('段落 199');
+  assert(selection.focusNode===tail&&selection.focusOffset===tail.data.indexOf('重复')+1,'Repeated text must resolve to the same paragraph');
+  await new Promise(requestAnimationFrame);
+  const caret=selection.getRangeAt(0).getBoundingClientRect(),view=markdown.editable.getBoundingClientRect();
+  assert(caret.top>=view.top&&caret.bottom<=view.bottom,'Body caret must be visible in a long document');
+  await toggleSource(true);await new Promise(requestAnimationFrame);
+  assert(source.selectionStart===last&&source.scrollTop>0,'Switching must reveal the same position in long source text');
+  source.dispatchEvent(new KeyboardEvent('keydown',{key:'/',metaKey:true,bubbles:true,cancelable:true}));
+  while(state.navigating)await new Promise(requestAnimationFrame);
+  document.execCommand('insertText',false,'✓');
+  await state.queue.drain();
+  assert(await window.__mindRules.request('ReadDisk','正文.md')===longDocument.slice(0,last)+'✓'+longDocument.slice(last)+'\n','Typing after Command+/ must save at the restored caret');
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: Markdown source caret'});
+}catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

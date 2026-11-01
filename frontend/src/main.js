@@ -11,6 +11,7 @@ import {createSidebarCollapse} from './workspace/sidebar-collapse.js';
 import {mountSettings} from './ui/settings.js';
 import {bindToolbarMaximise} from './ui/toolbar-maximise.js';
 import {mountFileActions} from './workspace/file-actions.js';
+import {sourceSelection,restoreBodySelection,restoreSourceSelection} from './markdown/source-selection.js';
 import {MarkdownEditor} from './markdown/markdown-editor.js';
 import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from './document/document-mode.js';
 import {mountGlobalCaret} from './ui/global-caret.js';
@@ -748,15 +749,28 @@ async function checkExternal(){
 async function toggleSource(open=!state.sourceOpen){
   if(compactWindow||switchingCompactWindow)return false;
   if(!state.snapshot||state.navigating||open&&!sourceViewEnabled)return false;
+  const isMarkdown=!isMindMapPath(state.snapshot.path),source=$('source-editor');
+  const selection=isMarkdown&&open?sourceSelection(markdown):null;
+  const {selectionStart,selectionEnd,selectionDirection}=source;
   state.navigating=true;
   try{
     if(!await readyToNavigate())return false;
     state.sourceOpen=open;updateDocumentView();
-    if(!isMindMapPath(state.snapshot.path)&&!open)markdown.load(state.snapshot.source,{session:state.snapshot.session,path:state.snapshot.path});
-    if(open){$('source-editor').value=state.snapshot.source;resetSourceInput();$('source-editor').focus()}
-    else if(!isMindMapPath(state.snapshot.path))markdown.focus();
-    return true;
-  }finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;map.schedule();documentSearch.refresh({jump:true})}
+    if(isMarkdown&&!open){
+      markdown.load(state.snapshot.source,{session:state.snapshot.session,path:state.snapshot.path});
+      // Vditor records its initial undo range on the next task after loading.
+      await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    if(open){
+      source.value=state.snapshot.source;resetSourceInput();source.focus();
+      if(selection)restoreSourceSelection(source,selection);
+    }
+  }finally{
+    state.navigating=false;updateDocumentView();source.readOnly=preview||state.blocked||state.closing||!!state.editor;
+    map.schedule();documentSearch.refresh({jump:true,preserveView:isMarkdown});
+  }
+  if(isMarkdown&&!open)restoreBodySelection(markdown,source.value,selectionStart,selectionEnd,selectionDirection);
+  return true;
 }
 function setSourceViewEnabled(enabled){
   sourceViewEnabled=enabled;
