@@ -78,8 +78,35 @@ function focusDocument(){
   const element=state.sourceOpen?$('source-editor'):state.snapshot&&!isMindMapPath(state.snapshot.path)?markdown.editable:$('canvas');
   element?.focus({preventScroll:true});
 }
+const sharedView={
+  busy(session){
+    return !!session&&state.snapshot?.session===session&&
+      !!(state.composing||state.queue.pending||finishing||addingChild||deletingNode||movingNode||state.nodeDragging||markdown.imageTask);
+  },
+  receive(previous,snapshot,restoreFolds){
+    if(state.snapshot?.session!==previous||state.snapshot.path!==snapshot.path||state.blocked)return;
+    if(state.composing||state.queue.pending){
+      state.blocked=true;setEditorsReadOnly();
+      banner('两栏同时产生了修改，请保留本栏草稿后重新读取。',true);
+      return;
+    }
+    if(state.editor){
+      state.editor.remove();state.editor=null;map.editor=null;map.editing=null;
+    }
+    if(map.selected){
+      const selected=nodePath(state.snapshot.root,map.selected);
+      map.selected=snapshot.nodeIdMap?snapshot.nodeIdMap[map.selected]||null:nodeAtPath(snapshot.root,selected)?.id||null;
+    }
+    const scroll=markdown.scrollElement.scrollTop;
+    mindHistory.clear();state.draft=null;
+    applySnapshot(snapshot,{fromPeer:true,restoreFolds});
+    resetSourceInput();markdown.scrollElement.scrollTop=scroll;
+  }
+};
+function peerView(){return paneHost?paneHost.sharedView:split.sharedView}
+function peerEditing(){return peerView()?.busy(state.snapshot?.session)}
 const split=createSplitView({
-  container:$('workspace-page'),closeSession:()=>native?.CloseRightDocument(),
+  sharedView,container:$('workspace-page'),closeSession:()=>native?.CloseRightDocument(),
   closeRequested:()=>split.withSaved(split.close).then(focusDocument).catch(error=>toast(errorText(error))),
   focusOther:path=>{if(state.snapshot?.path!==path)return false;focusDocument();return true},
   toggleSettings:()=>toggleSettings()
@@ -88,6 +115,12 @@ if(paneHost){
   $('close-right').hidden=false;
   $('close-right').onclick=()=>paneHost.closeRequested();
   $('toggle-always-on-top').disabled=true;
+}
+for(const type of ['beforeinput','paste','drop','compositionstart','keydown','click','dblclick']){
+  document.addEventListener(type,event=>{
+    if(!event.target.closest?.('.workbench,.node-context-menu')||!peerEditing())return;
+    event.preventDefault();event.stopImmediatePropagation();toast('另一栏正在保存，请稍后编辑。');
+  },true);
 }
 const commands=createDocumentCommands({write:edit=>call('ApplyEdit',edit),getSnapshot:()=>state.snapshot,captureHistory:captureMindHistory,history:mindHistory});
 $('enter-compact-window').onclick=()=>void setCompactWindow(true);
@@ -135,11 +168,14 @@ const fileActions=mountFileActions({
   menu:$('file-context-menu'),renameDialog:$('rename-file-dialog'),deleteDialog:$('delete-file-dialog'),
   openRight:async path=>{
     if(state.navigating||state.closing||compactWindow)return;
-    if(path===state.snapshot?.path){focusDocument();return}
     if(path===split.path){split.focus();return}
     state.navigating=true;
     const opening=!split.path;
     try {
+      if(path===state.snapshot?.path){
+        await externalCheck;
+        if(!await readyToNavigate())return;
+      }
       await split.open(path);
       if(opening&&state.snapshot&&isMindMapPath(state.snapshot.path))map.reveal(map.selected||map.layout?.positions[0]?.id);
     }
@@ -315,7 +351,8 @@ function updateDocumentView(){
   if(!opened)documentSearch.close(false);
 }
 
-function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=false}={}){
+function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=false,fromPeer=false}={}){
+  const previous=state.snapshot;
   if(snapshot.imageWarning)toast(snapshot.imageWarning);
   const pathChanged=state.snapshot?.path!==snapshot.path;
   if(resetView||pathChanged||external)mindHistory.clear();
@@ -339,9 +376,10 @@ function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=fal
   source.readOnly=preview||state.blocked||state.closing||state.navigating||state.fileDragging||addingChild||deletingNode||movingNode||!!state.editor;
   $('source-size').textContent=new TextEncoder().encode(snapshot.source).length.toLocaleString()+' 字节';
   if(isMindMapPath(snapshot.path)){map.setRoot(snapshot.root,{resetView})}
-  else if(resetView||pathChanged||external||state.sourceOpen&&!state.queue.pending&&!state.composing){markdown.load(snapshot.source,{session:snapshot.session,path:snapshot.path,reset:resetView||pathChanged})}
+  else if(resetView||pathChanged||external||fromPeer||state.sourceOpen&&!state.queue.pending&&!state.composing){markdown.load(snapshot.source,{session:snapshot.session,path:snapshot.path,reset:resetView||pathChanged})}
   renderOutline();if(pathChanged)renderTree();
   documentSearch.refresh({reset:pathChanged,jump:external});
+  if(previous&&!fromPeer&&!resetView&&!pathChanged)peerView()?.receive(previous.session,snapshot,restoreFolds||external);
 }
 
 state.queue=new EditQueue({
@@ -797,7 +835,7 @@ function checkExternal(){
   return externalCheck;
 }
 async function readExternalChanges(){
-  if(state.fileDragging||map.nodeDrag||preview||state.navigating||!state.snapshot||state.checking||addingChild||deletingNode||movingNode||state.queue.pending||state.blocked||state.composing||state.closing||finishing)return;
+  if(peerEditing()||state.fileDragging||map.nodeDrag||preview||state.navigating||!state.snapshot||state.checking||addingChild||deletingNode||movingNode||state.queue.pending||state.blocked||state.composing||state.closing||finishing)return;
   state.checking=true;
   try{
     const snapshot=await call(paneHost?'CheckRightDocument':'CheckDocument');
@@ -916,7 +954,7 @@ $('reload-document').onclick=async()=>{
   if(!state.snapshot)return;
   try{
     await state.queue.drain();const recovery=await preserveDraft();const path=state.snapshot.path;
-    const snapshot=await call(paneHost?'OpenRightDocument':'OpenDocument',path);
+    const snapshot=await call(paneHost?'ReloadRightDocument':'OpenDocument',path);
     state.editor?.remove();state.editor=null;map.editor=null;map.editing=null;state.blocked=false;state.queue.reset();state.draft=null;map.collapsed.clear();
     applySnapshot(snapshot,{external:true});resetSourceInput();$('error-banner').hidden=true;toast('已重新读取文件。本地草稿已保留到恢复目录。');state.recoveryPath=recovery;
   }catch(error){banner(errorText(error)+'；窗口中的本地内容仍被保留。',true)}
@@ -998,6 +1036,7 @@ const tableActions=markdown.tableActions=new TableActions(markdown);
 if(paneHost){
   let locked=false;
   paneHost.attachPane({
+    sharedView,
     get path(){return state.snapshot?.path},
     load:loadDocument,focus:focusDocument,check:checkExternal,refreshSettings:settings.reload,
     async lock(){

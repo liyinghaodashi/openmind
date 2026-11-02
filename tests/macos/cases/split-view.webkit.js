@@ -47,6 +47,20 @@ if(!paneHost){
     await until(()=>!document.querySelector('.right-document'));
     assert(fixture.documents.get('源/子/想法.mind.md').source==='# 导图编辑','关闭前应保存导图');
     assert(state.snapshot.path==='根.md','关闭右栏应保留左栏');
-    window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: 双栏菜单、正文与导图渲染、独立编辑保存、替换和关闭'});
+    document.querySelector('.tree-row[data-path="根.md"]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));
+    item.click();
+    await until(()=>split.path==='根.md'&&!state.navigating);
+    const shared=document.querySelector('.right-document').contentDocument;
+    const rightBody=shared.querySelector('.vditor-ir [contenteditable]');
+    rightBody.scrollTop=80;
+    const rightPosition=rightBody.scrollTop;
+    insert(document,'左改同步');
+    await until(()=>shared.querySelector('.vditor-ir').textContent.includes('左改同步'));
+    assert(rightPosition>0&&rightBody.scrollTop===rightPosition,'左侧输入应保留右栏的滚动位置');
+    assert(document.activeElement===markdown.editable,'同步右栏不能抢走左侧输入焦点');
+    insert(shared,'右改同步');
+    await until(()=>markdown.editable.textContent.includes('右改同步'));
+    assert(fixture.documents.get('根.md').source.includes('左改同步'),'右侧修改不能覆盖左侧输入');
+    window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: 双栏菜单、正文与导图渲染、独立编辑保存、替换和关闭、同文件双向同步和独立滚动'});
   } catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:String(error)+' '+error.stack+' '+document.querySelector('.right-document')?.contentDocument.getElementById('error-text').textContent})}
 }

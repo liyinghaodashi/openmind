@@ -91,6 +91,15 @@ func (s *Service) HasFile(path string) bool {
 	return errA == nil && errB == nil && os.SameFile(a, b)
 }
 
+func (s *Service) Current() *Snapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil {
+		return nil
+	}
+	return s.snapshot()
+}
+
 func (s *Service) archive() {
 	if s.doc == nil {
 		return

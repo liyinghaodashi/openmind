@@ -24,9 +24,6 @@ func TestSplitPaneWritesAndSessionIsolation(t *testing.T) {
 	if _, err = a.OpenDocument(right.Path); err == nil {
 		t.Fatal("right document opened twice")
 	}
-	if _, err = a.OpenRightDocument(left.Snapshot.Path); err == nil {
-		t.Fatal("left document opened twice")
-	}
 	edit := func(snapshot *document.Snapshot, text string) error {
 		_, err := a.ApplyEdit(document.Edit{Session: snapshot.Session, Version: snapshot.Version, Kind: "source", OpID: "save", Text: text})
 		return err
@@ -64,5 +61,55 @@ func TestSplitPaneWritesAndSessionIsolation(t *testing.T) {
 	}
 	if _, err = a.OpenDocument(right.Path); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestSameFileSplitSharesRevisionAndDetaches(t *testing.T) {
+	a := externalOpenApp(t)
+	root := t.TempDir()
+	path := externalOpenFile(t, root, "共享.md", []byte("# 开始"))
+	externalOpenFile(t, root, "第二份.md", []byte("# 第二份"))
+	opened, err := a.OpenExternalDocument(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	left := opened.Snapshot
+	for _, next := range []string{"第二份.md", "共享.md"} {
+		right, err := a.OpenRightDocument(left.Path)
+		if err != nil || right.Session != left.Session {
+			t.Fatalf("shared session: %+v %v", right, err)
+		}
+		edit := document.Edit{Session: right.Session, Version: right.Version, OpID: "right", Kind: "source", Text: "# 右侧修改"}
+		saved, err := a.ApplyEdit(edit)
+		if err != nil {
+			t.Fatal(err)
+		}
+		edit.OpID = "stale"
+		edit.Text = "stale"
+		if _, err = a.ApplyEdit(edit); err == nil {
+			t.Fatal("stale write accepted")
+		}
+		if _, err = a.OpenDocument("不存在.md"); err == nil {
+			t.Fatal("missing document accepted")
+		}
+		left, err = a.OpenDocument(next)
+		if err != nil || left.Session == right.Session {
+			t.Fatalf("detach: %+v %v", left, err)
+		}
+		edit.Version = saved.Version
+		edit.OpID = "detached"
+		edit.Text = "# 右栏保留原文档"
+		if _, err = a.ApplyEdit(edit); err != nil {
+			t.Fatal(err)
+		}
+		a.CloseRightDocument()
+		edit.Session = left.Session
+		edit.Version = left.Version
+		edit.OpID = "left"
+		edit.Text = "# 左侧修改"
+		left, err = a.ApplyEdit(edit)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
 }

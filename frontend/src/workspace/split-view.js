@@ -1,4 +1,4 @@
-export function createSplitView({container, closeSession, closeRequested, focusOther, toggleSettings}) {
+export function createSplitView({container, closeSession, closeRequested, focusOther, toggleSettings, sharedView}) {
   let frame=null, editor=null, busy=false;
   function remove() {
     frame?.remove();
@@ -9,7 +9,7 @@ export function createSplitView({container, closeSession, closeRequested, focusO
     frame=document.createElement('iframe');
     frame.title='右侧文档';
     frame.className='right-document';
-    Object.assign(frame,{closeRequested,focusOther,toggleSettings});
+    Object.assign(frame,{closeRequested,focusOther,toggleSettings,sharedView});
     const ready=new Promise((resolve,reject)=>{
       frame.attachPane=resolve;
       frame.failPane=reject;
@@ -40,6 +40,7 @@ export function createSplitView({container, closeSession, closeRequested, focusO
   }
   return {
     withSaved,close,
+    get sharedView(){return editor?.sharedView},
     get path(){return editor?.path},
     focus(){editor?.focus()},
     check(){if(!busy)void editor?.check()},

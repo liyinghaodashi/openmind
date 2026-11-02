@@ -29,6 +29,8 @@ type App struct {
 	ctx           context.Context
 	service       *document.Service
 	right         *document.Service
+	shared        bool
+	swapped       bool
 	stateDir      string
 	mu            sync.Mutex
 	watcher       *watcher.Watcher
@@ -242,11 +244,11 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 	}
 	var snapshot *document.Snapshot
 	if path != "" {
-		snapshot, err = a.service.OpenWorkspace(w, path, commit)
+		snapshot, err = a.primary().OpenWorkspace(w, path, commit)
 	} else {
 		err = commit()
 		if err == nil {
-			a.service.SetWorkspace(w)
+			a.primary().SetWorkspace(w)
 		}
 	}
 	if err != nil {
@@ -259,7 +261,8 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 	if a.right == nil {
 		a.right = document.NewRightPane(filepath.Join(a.stateDir, "recovery"))
 	}
-	a.right.SetWorkspace(w)
+	a.secondary().SetWorkspace(w)
+	a.shared = false
 	a.watcher = watch
 	a.workspace = w
 	info.Bookmark = ""
@@ -272,40 +275,83 @@ func (a *App) OpenDocument(path string) (*document.Snapshot, error) {
 	return a.openLeftDocument(path)
 }
 
+func (a *App) primary() *document.Service {
+	if a.swapped {
+		return a.right
+	}
+	return a.service
+}
+
+func (a *App) secondary() *document.Service {
+	if a.swapped {
+		return a.service
+	}
+	return a.right
+}
+
 func (a *App) openLeftDocument(path string) (*document.Snapshot, error) {
-	if a.right != nil && a.right.HasFile(path) {
+	left, right := a.primary(), a.secondary()
+	if a.shared && !left.HasFile(path) {
+		snapshot, err := right.Open(path)
+		if err == nil {
+			a.swapped = !a.swapped
+			a.shared = false
+		}
+		return snapshot, err
+	}
+	if !a.shared && right != nil && right.HasFile(path) {
 		return nil, fmt.Errorf("文档已在右侧打开")
 	}
-	return a.service.Open(path)
+	return left.Open(path)
 }
 
 func (a *App) OpenRightDocument(path string) (*document.Snapshot, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.right == nil {
+	left, right := a.primary(), a.secondary()
+	if right == nil {
 		return nil, fmt.Errorf("请先选择工作区")
 	}
-	if a.service.HasFile(path) {
-		return nil, fmt.Errorf("文档已在左侧打开")
+	if left.HasFile(path) {
+		right.SetWorkspace(a.workspace)
+		a.shared = true
+		return left.Current(), nil
 	}
-	return a.right.Open(path)
+	snapshot, err := right.Open(path)
+	if err == nil {
+		a.shared = false
+	}
+	return snapshot, err
+}
+
+func (a *App) ReloadRightDocument(path string) (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.shared {
+		return a.primary().Open(path)
+	}
+	if a.secondary() == nil {
+		return nil, fmt.Errorf("请先选择工作区")
+	}
+	return a.secondary().Open(path)
 }
 
 func (a *App) CloseRightDocument() {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.right != nil {
-		a.right.SetWorkspace(a.workspace)
+	if right := a.secondary(); right != nil {
+		right.SetWorkspace(a.workspace)
 	}
+	a.shared = false
 }
 
 func (a *App) CheckRightDocument() (*document.Snapshot, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.right == nil {
+	if a.shared || a.secondary() == nil {
 		return nil, nil
 	}
-	return a.right.Check()
+	return a.secondary().Check()
 }
 
 func (a *App) sessionService(session string) *document.Service {
@@ -340,7 +386,11 @@ func (a *App) CopyNodeMarkdown(session, nodeID string, label *string) error {
 	}
 	return runtime.ClipboardSetText(a.ctx, text)
 }
-func (a *App) CheckDocument() (*document.Snapshot, error) { return a.service.Check() }
+func (a *App) CheckDocument() (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.primary().Check()
+}
 func (a *App) ReparseDocument(session string) (*document.Snapshot, error) {
 	return a.sessionService(session).Reparse(session)
 }
@@ -351,10 +401,10 @@ func (a *App) CreateEntry(parent, name string, directory bool) (string, error) {
 	return a.service.Create(parent, name, directory)
 }
 func (a *App) validateRightEntry(path string) error {
-	if a.right == nil {
+	if a.shared || a.secondary() == nil {
 		return nil
 	}
-	return a.right.ValidateOpenEntry(path)
+	return a.secondary().ValidateOpenEntry(path)
 }
 func (a *App) RenameDocument(path, name string) (*document.RenameResult, error) {
 	a.mu.Lock()
@@ -362,7 +412,7 @@ func (a *App) RenameDocument(path, name string) (*document.RenameResult, error) 
 	if err := a.validateRightEntry(path); err != nil {
 		return nil, err
 	}
-	return a.service.Rename(path, name)
+	return a.primary().Rename(path, name)
 }
 func (a *App) MoveEntry(path, parent string) (*document.MoveResult, error) {
 	a.mu.Lock()
@@ -370,7 +420,7 @@ func (a *App) MoveEntry(path, parent string) (*document.MoveResult, error) {
 	if err := a.validateRightEntry(path); err != nil {
 		return nil, err
 	}
-	return a.service.MoveEntry(path, parent)
+	return a.primary().MoveEntry(path, parent)
 }
 func (a *App) DeleteDocument(path string) error {
 	a.mu.Lock()
@@ -378,7 +428,7 @@ func (a *App) DeleteDocument(path string) error {
 	if err := a.validateRightEntry(path); err != nil {
 		return err
 	}
-	return a.service.Delete(path)
+	return a.primary().Delete(path)
 }
 func (a *App) RevealDocument(path string) error {
 	a.mu.Lock()
