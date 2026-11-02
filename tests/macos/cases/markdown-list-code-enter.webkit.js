@@ -70,5 +70,15 @@ try{
   assert(markdown.editable.querySelectorAll('ol > li').length===2&&markdown.editable.querySelector('pre code').textContent.length>beforeCode.length,'Enter inside code must remain a code newline');
   await load('```\ncode\n```\n');await native('enter');await settle();
   assert(!markdown.editable.querySelector('ol'),'A standalone code block must not start a numbered list');
+  await load('```\ncode\n```\n',false);
+  const line=markdown.editable.querySelector('pre code').firstChild;
+  window.getSelection().collapse(line,4);
+  const caret=()=>window.getSelection().getRangeAt(0).getBoundingClientRect().top;
+  const firstTop=caret();
+  await native('enter');await settle();
+  assert(caret()>firstTop+5,'Caret must visibly move down: '+JSON.stringify([firstTop,caret(),markdown.editable.innerHTML,window.getSelection().anchorOffset]));
+  assert(markdown.currentSource()==='```\ncode\n\n```\n','Empty code line must save cleanly: '+JSON.stringify(markdown.currentSource()));
+  await native('commit','X');await settle();
+  assert(markdown.currentSource().includes('code\nX\n```'),'Typing after Enter must start on the next code line: '+JSON.stringify(markdown.currentSource()));
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit list-code Enter checks (numbering, nested lists, caret, saving, undo/redo, reload, list exit and input guards)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

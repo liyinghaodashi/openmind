@@ -33,7 +33,7 @@ export class MarkdownEditor {
     });
     container.addEventListener('paste',event=>{this.headingContinuation=null;const text=event.clipboardData?.getData('text')||'';if(this.readOnly||!this.onBeforeInput(this.source,{data:text})){event.preventDefault();event.stopImmediatePropagation()}},true);
     container.addEventListener('pointerdown',()=>{this.headingContinuation=null},true);
-    container.addEventListener('keydown',event=>{this.headingContinuation=null;this.handleHeadingShiftEnter(event);this.handleShortcut(event)},true);
+    container.addEventListener('keydown',event=>{this.headingContinuation=null;this.handleCodeEnter(event);this.handleHeadingShiftEnter(event);this.handleShortcut(event)},true);
     this.ready=new Promise(resolve=>{
       this.editor=new window.Vditor(container,{
         cdn:'/src/vendor/vditor',mode:'ir',lang:'zh_CN',height:'100%',
@@ -47,6 +47,22 @@ export class MarkdownEditor {
         after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.editor.disabled();resolve()}
       });
     });
+  }
+  handleCodeEnter(event) {
+    if(event.key!=='Enter'||event.shiftKey||event.metaKey||event.ctrlKey||event.altKey||event.defaultPrevented)return;
+    if(!this.loaded||this.readOnly||this.composing||event.isComposing||event.keyCode===229)return;
+    const selection=window.getSelection();
+    if(!selection?.rangeCount||!selection.isCollapsed||!this.editable.contains(event.target))return;
+    const range=selection.getRangeAt(0),node=range.startContainer;
+    const element=node.nodeType===Node.ELEMENT_NODE?node:node.parentElement;
+    const code=element.closest('pre code');
+    if(!code||!this.editable.contains(code))return;
+    const tail=range.cloneRange();tail.setEnd(code,code.childNodes.length);
+    if(!/^\n?$/.test(tail.toString()))return;
+    event.preventDefault();event.stopImmediatePropagation();
+    if(!this.onBeforeInput(this.currentSource(),event))return;
+    this.editor.insertValue('\n\u200B<wbr>');
+    this.flush();
   }
   handleHeadingShiftEnter(event) {
     if(event.key!=='Enter'||!event.shiftKey||event.metaKey||event.ctrlKey||event.altKey||event.defaultPrevented||!this.editable?.contains(event.target))return;
