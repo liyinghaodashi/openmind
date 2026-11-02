@@ -45,9 +45,20 @@ if(!paneHost){
     divider.focus();
     divider.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
     assert(Math.abs(left.clientWidth-total*0.26)<2,'方向键应微调分屏');
-    $('toggle-sidebar').click();
+    const sidebarKey=(target,options={})=>target.dispatchEvent(new KeyboardEvent('keydown',{
+      code:'KeyL',metaKey:true,bubbles:true,cancelable:true,...options
+    }));
+    const rightEditor=right.querySelector('.vditor-ir [contenteditable="true"]');
+    sidebarKey(rightEditor);
+    assert(outlineMode&&!$('sidebar').hidden,'右栏 ⌘L 应切换到共用大纲');
+    sidebarKey(rightEditor,{altKey:true});
+    sidebarKey(rightEditor,{altKey:true,repeat:true});
+    assert(outlineMode&&$('sidebar').hidden,'⌥⌘L 应收起整个侧栏，长按应只触发一次');
     assert(Math.abs(left.clientWidth/(left.clientWidth+frame.clientWidth)-0.26)<0.002,'收起侧栏应保持分屏比例');
-    $('toggle-sidebar').click();
+    sidebarKey(markdown.editable,{altKey:true});
+    assert(outlineMode&&!$('sidebar').hidden,'再次按 ⌥⌘L 应展开并保留大纲');
+    sidebarKey(markdown.editable);
+    assert(!outlineMode&&!$('sidebar').hidden,'左栏 ⌘L 应切回文件树');
     const insert=(doc,text)=>{
       const editor=doc.querySelector('.vditor-ir [contenteditable="true"]');
       assert(editor,'正文编辑器应可编辑');

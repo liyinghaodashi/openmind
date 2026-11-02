@@ -109,7 +109,7 @@ const split=createSplitView({
   sharedView,container:$('workspace-page'),divider:$('split-divider'),closeSession:()=>native?.CloseRightDocument(),
   closeRequested:()=>split.withSaved(split.close).then(focusDocument).catch(error=>toast(errorText(error))),
   focusOther:fullPath=>{if(!fullPath||workspacePath(state.workspace?.root,state.snapshot?.path)!==fullPath)return false;focusDocument();return true},
-  toggleSettings:()=>toggleSettings()
+  toggleSettings:()=>toggleSettings(),handleSidebarShortcut
 });
 if(paneHost){
   $('close-right').hidden=false;
@@ -908,15 +908,23 @@ function setOutlineMode(enabled){
   map.closeNodeMenu();
   closeWorkspaceMenu();outlineMode=enabled;
   $('file-tree').hidden=outlineMode;$('document-outline').hidden=!outlineMode;$('file-actions').hidden=outlineMode;updateSidebarTitle();
-  const button=$('toggle-outline'),label=outlineMode?'切换到文件':'切换到大纲';button.setAttribute('aria-pressed',String(outlineMode));button.setAttribute('aria-label',label);button.title=label+'（⌥⌘L）';
+  const button=$('toggle-outline'),label=outlineMode?'切换到文件':'切换到大纲';button.setAttribute('aria-pressed',String(outlineMode));button.setAttribute('aria-label',label);button.title=label+'（⌘L）';
   sidebarCollapse.expand();
 }
 $('toggle-outline').onclick=()=>{if(!paneHost&&!compactWindow&&!switchingCompactWindow)setOutlineMode(!outlineMode)};
-document.addEventListener('keydown',event=>{
-  if(event.isComposing||event.keyCode===229||!event.metaKey||!event.altKey||event.ctrlKey||event.shiftKey||event.code!=='KeyL'||$('toggle-outline').disabled)return;
+function handleSidebarShortcut(event){
+  if(compactWindow||switchingCompactWindow||document.body.classList.contains('settings-open')||document.querySelector('dialog[open]'))return;
+  const button=$(event.altKey?'toggle-sidebar':'toggle-outline');
+  if(button.disabled)return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  if(!event.repeat)$('toggle-outline').click();
+  if(!event.repeat)button.click();
+}
+document.addEventListener('keydown',event=>{
+  if(event.code!=='KeyL'||!event.metaKey||event.ctrlKey||event.shiftKey||event.defaultPrevented||event.isComposing||event.keyCode===229||state.composing)return;
+  if(paneHost){
+    if(!document.querySelector('dialog[open]'))paneHost.handleSidebarShortcut(event);
+  }else handleSidebarShortcut(event);
 },true);
 $('toggle-source').onclick=()=>void toggleSource();
 document.addEventListener('keydown',event=>{

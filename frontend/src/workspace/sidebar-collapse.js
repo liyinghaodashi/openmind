@@ -6,7 +6,7 @@ export function createSidebarCollapse({sidebar, button, root, beforeChange}) {
     const label = collapsed ? '展开侧边栏' : '收起侧边栏';
     button.setAttribute('aria-expanded', String(!collapsed));
     button.setAttribute('aria-label', label);
-    button.title = label;
+    button.title = label + '（⌥⌘L）';
   }
 
   function toggle() {

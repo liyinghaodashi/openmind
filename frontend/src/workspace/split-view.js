@@ -44,7 +44,7 @@ function bindSplitDivider(divider, container) {
   return stop;
 }
 
-export function createSplitView({container, divider, closeSession, closeRequested, focusOther, toggleSettings, sharedView}) {
+export function createSplitView({container, divider, closeSession, closeRequested, focusOther, toggleSettings, handleSidebarShortcut, sharedView}) {
   let frame=null, editor=null, busy=false;
   const stopResize=bindSplitDivider(divider,container);
   function remove() {
@@ -57,7 +57,7 @@ export function createSplitView({container, divider, closeSession, closeRequeste
     frame=document.createElement('iframe');
     frame.title='右侧文档';
     frame.className='right-document';
-    Object.assign(frame,{closeRequested,focusOther,toggleSettings,sharedView});
+    Object.assign(frame,{closeRequested,focusOther,toggleSettings,handleSidebarShortcut,sharedView});
     const ready=new Promise((resolve,reject)=>{
       frame.attachPane=resolve;
       frame.failPane=reject;
