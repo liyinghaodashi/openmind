@@ -21,9 +21,6 @@ func TestSplitPaneWritesAndSessionIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = a.OpenDocument(right.Path); err == nil {
-		t.Fatal("right document opened twice")
-	}
 	edit := func(snapshot *document.Snapshot, text string) error {
 		_, err := a.ApplyEdit(document.Edit{Session: snapshot.Session, Version: snapshot.Version, Kind: "source", OpID: "save", Text: text})
 		return err
@@ -110,6 +107,37 @@ func TestSameFileSplitSharesRevisionAndDetaches(t *testing.T) {
 		left, err = a.ApplyEdit(edit)
 		if err != nil {
 			t.Fatal(err)
+		}
+	}
+}
+
+func TestLeftReturnsToRightDocument(t *testing.T) {
+	a := externalOpenApp(t)
+	root := t.TempDir()
+	path := externalOpenFile(t, root, "共享.md", []byte("# 开始"))
+	externalOpenFile(t, root, "另一份.md", []byte("# 切换"))
+	if _, err := a.OpenExternalDocument(path); err != nil {
+		t.Fatal(err)
+	}
+	right, err := a.OpenRightDocument("共享.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, opID := range []string{"first", "second"} {
+		other, err := a.OpenDocument("另一份.md")
+		if err != nil {
+			t.Fatal(err)
+		}
+		right, err = a.ApplyEdit(document.Edit{Session: right.Session, Version: right.Version, Kind: "source", OpID: opID, Text: "# " + opID})
+		if err != nil {
+			t.Fatal(err)
+		}
+		left, err := a.OpenDocument(right.Path)
+		if err != nil || left.Session != right.Session || left.Version != right.Version || left.Source != right.Source {
+			t.Fatalf("rejoin: %+v %v", left, err)
+		}
+		if _, err := a.ApplyEdit(document.Edit{Session: other.Session, Version: other.Version, Kind: "source", OpID: "stale", Text: "过期写入"}); err == nil {
+			t.Fatal("previous left session still active")
 		}
 	}
 }

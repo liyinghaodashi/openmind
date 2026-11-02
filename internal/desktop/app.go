@@ -322,7 +322,14 @@ func (a *App) openLeftDocument(path string) (*document.Snapshot, error) {
 		return snapshot, err
 	}
 	if !a.shared && right != nil && right.HasFile(a.workspace, path) {
-		return nil, fmt.Errorf("文档已在右侧打开")
+		snapshot := right.Current()
+		if snapshot.WorkspaceRoot != a.workspace.Root || snapshot.Path != path {
+			return nil, fmt.Errorf("文档已在右侧打开")
+		}
+		left.SetWorkspace(a.workspace)
+		a.swapped = !a.swapped
+		a.shared = true
+		return snapshot, nil
 	}
 	return left.Open(path)
 }

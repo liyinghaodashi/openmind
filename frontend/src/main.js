@@ -770,13 +770,20 @@ async function loadDocument(path,method='OpenDocument'){
   state.selectedDir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
   applySnapshot(snapshot,{resetView:true});resetSourceInput();
 }
-async function openDocument(path){
+async function openDocument(path,{fromLink=false}={}){
   if(paneHost?.focusOther(workspacePath(state.snapshot?.workspaceRoot,path)))return;
-  if(split.path&&workspacePath(state.workspace?.root,path)===split.fullPath){split.focus();return}
+  const inRight=!!split.path&&workspacePath(state.workspace?.root,path)===split.fullPath;
+  if(inRight&&(fromLink||path!==split.path)){split.focus();return}
+  if(inRight&&state.snapshot?.path===path){focusDocument();return}
   if(compactWindow&&isMindMapPath(path)){toast('请先通过右上角按钮返回主窗口，再打开思维导图。');return}
   if(state.navigating||state.closing)return;
   state.navigating=true;
-  try{await externalCheck;if(await readyToNavigate())await loadDocument(path,paneHost?'OpenRightLink':'OpenDocument')}
+  try{
+    await externalCheck;
+    if(!await readyToNavigate())return;
+    if(inRight)await split.withSaved(()=>loadDocument(path));
+    else await loadDocument(path,paneHost?'OpenRightLink':'OpenDocument');
+  }
   catch(e){banner(errorText(e))}
   finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
 }
@@ -930,7 +937,7 @@ $('markdown-editor').addEventListener('click',event=>{
   try{
     const url=new URL(href,new URL(base,location.href));
     const target=markdownLinkTarget(href,base);
-    if(target){void openDocument(target).then(()=>{if(state.snapshot?.path===target&&!isMindMapPath(target))markdown.focusAnchor(url.hash)});return}
+    if(target){void openDocument(target,{fromLink:true}).then(()=>{if(state.snapshot?.path===target&&!isMindMapPath(target))markdown.focusAnchor(url.hash)});return}
     if(url.hash&&url.origin===location.origin){markdown.focusAnchor(url.hash);return}
     if(['http:','https:','mailto:'].includes(url.protocol)){if(native)(paneHost?parent:window).runtime.BrowserOpenURL(url.href);else window.open(url.href,'_blank','noopener');return}
     toast('当前链接无法打开。');

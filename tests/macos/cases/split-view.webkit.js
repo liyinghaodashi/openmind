@@ -52,6 +52,12 @@ if(!paneHost){
     item.click();
     await until(()=>split.path==='根.md'&&!state.navigating);
     const shared=document.querySelector('.right-document').contentDocument;
+    document.querySelector('.tree-row[data-path="源/笔记.md"]').click();
+    await until(()=>state.snapshot.path===rightPath&&!state.navigating);
+    insert(shared,'切回前的编辑');
+    document.querySelector('.tree-row[data-path="根.md"]').click();
+    await until(()=>state.snapshot.path==='根.md'&&!state.navigating);
+    assert(markdown.editable.textContent.includes('切回前的编辑'),'切回时应载入右栏最新内容');
     const rightBody=shared.querySelector('.vditor-ir [contenteditable]');
     rightBody.scrollTop=80;
     const rightPosition=rightBody.scrollTop;
