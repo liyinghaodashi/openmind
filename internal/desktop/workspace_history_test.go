@@ -8,7 +8,7 @@ import (
 	"openmind/internal/document"
 )
 
-func TestWorkspaceHistoryMigrationAndLimit(t *testing.T) {
+func TestWorkspaceHistoryMigrationAndUnlimitedFolders(t *testing.T) {
 	a := &App{stateDir: t.TempDir()}
 	empty, err := a.RecentWorkspaces()
 	if err != nil || empty == nil || len(empty) != 0 {
@@ -21,7 +21,7 @@ func TestWorkspaceHistoryMigrationAndLimit(t *testing.T) {
 	if err != nil || len(saved.Recent) != 1 || saved.Recent[0].Root != "/old" {
 		t.Fatalf("migration: %+v, %v", saved, err)
 	}
-	for _, root := range []string{"/a", "/b", "/c", "/d", "/b"} {
+	for _, root := range []string{"/a", "/b", "/c", "/d", "/e", "/f", "/b"} {
 		saved.WorkspaceInfo = WorkspaceInfo{Root: root}
 		saved.Recent = recentWorkspaces(saved.WorkspaceInfo, saved.Recent)
 		if err := a.writeWorkspaceState(saved); err != nil {
@@ -33,10 +33,10 @@ func TestWorkspaceHistoryMigrationAndLimit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(recent) != 4 {
-		t.Fatalf("got %d entries", len(recent))
+	if len(recent) != 7 {
+		t.Fatalf("got %d entries, want all 7 unique folders", len(recent))
 	}
-	for i, root := range []string{"/b", "/d", "/c", "/a"} {
+	for i, root := range []string{"/b", "/f", "/e", "/d", "/c", "/a", "/old"} {
 		if recent[i].Root != root {
 			t.Fatalf("entry %d: %+v", i, recent[i])
 		}

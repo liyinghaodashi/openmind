@@ -18,7 +18,7 @@ type workspaceState struct {
 }
 
 func recentWorkspaces(current WorkspaceInfo, previous []WorkspaceInfo) []WorkspaceInfo {
-	result := make([]WorkspaceInfo, 0, 4)
+	result := make([]WorkspaceInfo, 0, len(previous)+1)
 	seen := make(map[string]bool)
 	for _, info := range append([]WorkspaceInfo{current}, previous...) {
 		if info.Root == "" || seen[info.Root] {
@@ -27,9 +27,6 @@ func recentWorkspaces(current WorkspaceInfo, previous []WorkspaceInfo) []Workspa
 		seen[info.Root] = true
 		info.Name = filepath.Base(info.Root)
 		result = append(result, info)
-		if len(result) == 4 {
-			break
-		}
 	}
 	return result
 }
