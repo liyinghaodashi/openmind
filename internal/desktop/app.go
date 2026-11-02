@@ -242,13 +242,22 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 		}
 		return a.writeWorkspaceState(saved)
 	}
+	left := a.primary()
+	if a.shared {
+		left = a.secondary()
+	}
 	var snapshot *document.Snapshot
 	if path != "" {
-		snapshot, err = a.primary().OpenWorkspace(w, path, commit)
+		right := a.rightDocumentService()
+		if right != nil && right.HasFile(w, path) {
+			watch.Close()
+			return nil, nil, fmt.Errorf("文档已在右侧打开")
+		}
+		snapshot, err = left.OpenWorkspace(w, path, commit)
 	} else {
 		err = commit()
 		if err == nil {
-			a.primary().SetWorkspace(w)
+			left.SetWorkspace(w)
 		}
 	}
 	if err != nil {
@@ -261,14 +270,20 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 	if a.right == nil {
 		a.right = document.NewRightPane(filepath.Join(a.stateDir, "recovery"))
 	}
-	a.secondary().SetWorkspace(w)
-	a.shared = false
+	if a.shared {
+		a.swapped = !a.swapped
+		a.shared = false
+	}
 	a.watcher = watch
 	a.workspace = w
 	info.Bookmark = ""
 	return info, snapshot, nil
 }
-func (a *App) ListDirectory(path string) ([]workspace.Entry, error) { return a.service.List(path) }
+func (a *App) ListDirectory(path string) ([]workspace.Entry, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.primary().List(path)
+}
 func (a *App) OpenDocument(path string) (*document.Snapshot, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
@@ -289,17 +304,24 @@ func (a *App) secondary() *document.Service {
 	return a.right
 }
 
+func (a *App) rightDocumentService() *document.Service {
+	if a.shared {
+		return a.primary()
+	}
+	return a.secondary()
+}
+
 func (a *App) openLeftDocument(path string) (*document.Snapshot, error) {
 	left, right := a.primary(), a.secondary()
-	if a.shared && !left.HasFile(path) {
-		snapshot, err := right.Open(path)
+	if a.shared && !left.HasFile(a.workspace, path) {
+		snapshot, err := right.OpenWorkspace(a.workspace, path, nil)
 		if err == nil {
 			a.swapped = !a.swapped
 			a.shared = false
 		}
 		return snapshot, err
 	}
-	if !a.shared && right != nil && right.HasFile(path) {
+	if !a.shared && right != nil && right.HasFile(a.workspace, path) {
 		return nil, fmt.Errorf("文档已在右侧打开")
 	}
 	return left.Open(path)
@@ -308,16 +330,30 @@ func (a *App) openLeftDocument(path string) (*document.Snapshot, error) {
 func (a *App) OpenRightDocument(path string) (*document.Snapshot, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	return a.openRightDocument(a.workspace, path)
+}
+
+func (a *App) OpenRightLink(path string) (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	right := a.rightDocumentService()
+	if right == nil {
+		return nil, fmt.Errorf("请先打开右侧文档")
+	}
+	return a.openRightDocument(right.Workspace(), path)
+}
+
+func (a *App) openRightDocument(w *workspace.Workspace, path string) (*document.Snapshot, error) {
 	left, right := a.primary(), a.secondary()
 	if right == nil {
 		return nil, fmt.Errorf("请先选择工作区")
 	}
-	if left.HasFile(path) {
+	if left.HasFile(w, path) {
 		right.SetWorkspace(a.workspace)
 		a.shared = true
 		return left.Current(), nil
 	}
-	snapshot, err := right.Open(path)
+	snapshot, err := right.OpenWorkspace(w, path, nil)
 	if err == nil {
 		a.shared = false
 	}
@@ -398,13 +434,15 @@ func (a *App) PreserveDraft(session, kind, nodeID, value string) (string, error)
 	return a.sessionService(session).PreserveDraft(session, kind, nodeID, value)
 }
 func (a *App) CreateEntry(parent, name string, directory bool) (string, error) {
-	return a.service.Create(parent, name, directory)
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.primary().Create(parent, name, directory)
 }
 func (a *App) validateRightEntry(path string) error {
 	if a.shared || a.secondary() == nil {
 		return nil
 	}
-	return a.secondary().ValidateOpenEntry(path)
+	return a.secondary().ValidateOpenEntry(a.workspace, path)
 }
 func (a *App) RenameDocument(path, name string) (*document.RenameResult, error) {
 	a.mu.Lock()
@@ -433,10 +471,24 @@ func (a *App) DeleteDocument(path string) error {
 func (a *App) RevealDocument(path string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if a.workspace == nil {
+	return revealDocument(a.workspace, path)
+}
+
+func (a *App) RevealRightDocument(path string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	right := a.rightDocumentService()
+	if right == nil {
+		return fmt.Errorf("请先打开右侧文档")
+	}
+	return revealDocument(right.Workspace(), path)
+}
+
+func revealDocument(w *workspace.Workspace, path string) error {
+	if w == nil {
 		return fmt.Errorf("请先选择工作区")
 	}
-	full, err := a.workspace.Resolve(path, false)
+	full, err := w.Resolve(path, false)
 	if err != nil {
 		return err
 	}

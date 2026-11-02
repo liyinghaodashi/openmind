@@ -55,11 +55,15 @@ func (s *Service) fileOperationPath(path string) (string, string, error) {
 	return full, rel, nil
 }
 
-func (s *Service) ValidateOpenEntry(path string) error {
+func (s *Service) ValidateOpenEntry(w *workspace.Workspace, path string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	rel := filepath.ToSlash(filepath.Clean(path))
-	if s.doc == nil || (s.path != rel && !strings.HasPrefix(s.path, rel+"/")) {
+	if s.doc == nil {
+		return nil
+	}
+	entry := filepath.Join(w.Root, path)
+	current := filepath.Join(s.workspace.Root, s.path)
+	if current != entry && !strings.HasPrefix(current, entry+"/") {
 		return nil
 	}
 	_, _, err := s.fileOperationPath(s.path)

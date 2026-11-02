@@ -6,6 +6,7 @@ if(!paneHost){
       for(let i=0;i<300;i++){if(check())return;await new Promise(resolve=>setTimeout(resolve,20))}
       throw new Error('等待双栏状态超时：'+check);
     };
+    for(const snapshot of fixture.documents.values())snapshot.workspaceRoot=state.workspace.root;
     native.OpenRightDocument=async path=>structuredClone(fixture.documents.get(path));
     native.CheckRightDocument=async()=>null;
     native.CloseRightDocument=async()=>{};
@@ -61,6 +62,15 @@ if(!paneHost){
     insert(shared,'右改同步');
     await until(()=>markdown.editable.textContent.includes('右改同步'));
     assert(fixture.documents.get('根.md').source.includes('左改同步'),'右侧修改不能覆盖左侧输入');
+    native.OpenRecentWorkspace=async root=>({root,name:'新目录'});
+    await chooseWorkspace('/other');
+    assert(shared===document.querySelector('.right-document')?.contentDocument,'切换文件夹应保留右栏编辑器');
+    native.OpenDocument=async path=>({...fixture.documents.get(path),workspaceRoot:'/other',session:'other-note',source:'# 新目录的同名文件'});
+    await openDocument('根.md');
+    assert(state.snapshot?.session==='other-note','左栏应能打开新目录的同名文件');
+    insert(shared,'切换目录后保存');
+    await until(()=>fixture.documents.get('根.md').source.includes('切换目录后保存'));
+    assert(!markdown.editable.textContent.includes('切换目录后保存'),'右栏编辑不能写入左栏同名文件');
     window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: 双栏菜单、正文与导图渲染、独立编辑保存、替换和关闭、同文件双向同步和独立滚动'});
   } catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:String(error)+' '+error.stack+' '+document.querySelector('.right-document')?.contentDocument.getElementById('error-text').textContent})}
 }

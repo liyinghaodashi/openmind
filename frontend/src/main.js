@@ -1,4 +1,4 @@
-import {createSplitView} from './workspace/split-view.js';
+import {createSplitView,workspacePath} from './workspace/split-view.js';
 import {createFileTree} from './workspace/file-tree.js';
 import {preferenceFields} from './ui/preferences.js';
 import {createWorkspaceMenu} from './workspace/menu.js';
@@ -108,7 +108,7 @@ function peerEditing(){return peerView()?.busy(state.snapshot?.session)}
 const split=createSplitView({
   sharedView,container:$('workspace-page'),closeSession:()=>native?.CloseRightDocument(),
   closeRequested:()=>split.withSaved(split.close).then(focusDocument).catch(error=>toast(errorText(error))),
-  focusOther:path=>{if(state.snapshot?.path!==path)return false;focusDocument();return true},
+  focusOther:fullPath=>{if(!fullPath||workspacePath(state.workspace?.root,state.snapshot?.path)!==fullPath)return false;focusDocument();return true},
   toggleSettings:()=>toggleSettings()
 });
 if(paneHost){
@@ -168,7 +168,7 @@ const fileActions=mountFileActions({
   menu:$('file-context-menu'),renameDialog:$('rename-file-dialog'),deleteDialog:$('delete-file-dialog'),
   openRight:async path=>{
     if(state.navigating||state.closing||compactWindow)return;
-    if(path===split.path){split.focus();return}
+    if(split.path&&workspacePath(state.workspace?.root,path)===split.fullPath){split.focus();return}
     state.navigating=true;
     const opening=!split.path;
     try {
@@ -206,7 +206,7 @@ const fileActions=mountFileActions({
       applySnapshot(result.snapshot,{resetView:modeChanged});state.sourceOpen=sourceOpen;updateDocumentView();resetSourceInput();
     }else if(closed)clearCurrentDocument();
     await refreshTree();renderTree();
-    await split.relocated(entry.path,result.path);
+    await split.relocated(state.workspace.root,entry.path,result.path);
   }),
   remove:entry=>split.withSaved(async()=>{
     await call('DeleteDocument',entry.path);
@@ -218,7 +218,7 @@ const fileActions=mountFileActions({
       fileTree.invalidate();
     }
     await refreshTree();renderTree();
-    await split.relocated(entry.path,null);
+    await split.relocated(state.workspace.root,entry.path,null);
   }),
   onError:error=>toast(errorText(error))
 });
@@ -262,7 +262,7 @@ async function relocateEntry(entry,parent){
     if(!await readyToNavigate())return;
     const result=await split.withSaved(async()=>{
       const moved=await call('MoveEntry',entry.path,parent);
-      await split.relocated(entry.path,moved.path);
+      await split.relocated(state.workspace.root,entry.path,moved.path);
       return moved;
     });
     state.expanded=new Set([...state.expanded].map(path=>movedTreePath(path,entry.path,result.path)));
@@ -354,7 +354,7 @@ function updateDocumentView(){
 function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=false,fromPeer=false}={}){
   const previous=state.snapshot;
   if(snapshot.imageWarning)toast(snapshot.imageWarning);
-  const pathChanged=state.snapshot?.path!==snapshot.path;
+  const pathChanged=previous?.path!==snapshot.path||previous?.workspaceRoot!==snapshot.workspaceRoot;
   if(resetView||pathChanged||external)mindHistory.clear();
   if(resetView||pathChanged||external)map.focusedId=null;
   else if(map.focusedId){
@@ -739,7 +739,7 @@ async function chooseWorkspace(root,id){
     $('source-editor').readOnly=true;
     await split.withSaved(async()=>{
       const workspace=await (typeof root==='string'?call('OpenRecentWorkspace',id||root):call('SelectWorkspace'));
-      if(workspace){await split.close();await setWorkspace(workspace);await refreshRecentWorkspaces()}
+      if(workspace){await setWorkspace(workspace);await refreshRecentWorkspaces()}
     });
   }catch(e){banner(errorText(e))}finally{
     state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
@@ -758,25 +758,25 @@ const mindOutlineActions=outline.actions;
 function renderOutline(){outline.render()}
 function updateOutlineCollapseButtons(){outline.syncCollapse()}
 function focusOutline(...args){return outline.focus(...args)}
-async function loadDocument(path){
+async function loadDocument(path,method='OpenDocument'){
   let snapshot;
   if(preview){
     const {previewDocuments}=await import('./preview.js');
     snapshot=previewDocuments.find(item=>item.path===path);
     if(!snapshot)throw new Error('预览文档不存在');
-  }else snapshot=await call(paneHost?'OpenRightDocument':'OpenDocument',path);
+  }else snapshot=await call(method,path);
   state.queue.reset();state.draft=null;state.blocked=false;
   map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;
   state.selectedDir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
   applySnapshot(snapshot,{resetView:true});resetSourceInput();
 }
 async function openDocument(path){
-  if(paneHost?.focusOther(path))return;
-  if(path===split.path){split.focus();return}
+  if(paneHost?.focusOther(workspacePath(state.snapshot?.workspaceRoot,path)))return;
+  if(split.path&&workspacePath(state.workspace?.root,path)===split.fullPath){split.focus();return}
   if(compactWindow&&isMindMapPath(path)){toast('请先通过右上角按钮返回主窗口，再打开思维导图。');return}
   if(state.navigating||state.closing)return;
   state.navigating=true;
-  try{await externalCheck;if(await readyToNavigate())await loadDocument(path)}
+  try{await externalCheck;if(await readyToNavigate())await loadDocument(path,paneHost?'OpenRightLink':'OpenDocument')}
   catch(e){banner(errorText(e))}
   finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
 }
@@ -804,12 +804,8 @@ function processExternalFiles(){
       try{
         if(!await readyToNavigate())return;
         const path=externalFiles.shift();
-        if(split.path&&path===state.workspace?.root+'/'+split.path){split.focus();continue}
-        const result=await split.withSaved(async()=>{
-          const opened=await call('OpenExternalDocument',path);
-          if(state.workspace?.root!==opened.workspace.root)await split.close();
-          return opened;
-        });
+        if(path===split.fullPath){split.focus();continue}
+        const result=await split.withSaved(()=>call('OpenExternalDocument',path));
         if(state.workspace?.root!==result.workspace.root)await setWorkspace(result.workspace);
         state.queue.reset();state.draft=null;state.blocked=false;
         map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;
@@ -949,7 +945,7 @@ document.addEventListener('keydown',event=>{
   map.zoom((map.scale+step)/map.scale);
 });
 $('dismiss-error').onclick=()=>{if(state.blocked)toast('写入已暂停，请先保留草稿并重新读取。');else $('error-banner').hidden=true};
-$('document-title').ondblclick=()=>{if(state.snapshot&&!compactWindow)void call('RevealDocument',state.snapshot.path).catch(e=>toast(errorText(e)))};
+$('document-title').ondblclick=()=>{if(state.snapshot&&!compactWindow)void call(paneHost?'RevealRightDocument':'RevealDocument',state.snapshot.path).catch(e=>toast(errorText(e)))};
 $('reload-document').onclick=async()=>{
   if(!state.snapshot)return;
   try{
@@ -1038,7 +1034,8 @@ if(paneHost){
   paneHost.attachPane({
     sharedView,
     get path(){return state.snapshot?.path},
-    load:loadDocument,focus:focusDocument,check:checkExternal,refreshSettings:settings.reload,
+    get fullPath(){return workspacePath(state.snapshot?.workspaceRoot,state.snapshot?.path)},
+    load:path=>loadDocument(path,'OpenRightDocument'),focus:focusDocument,check:checkExternal,refreshSettings:settings.reload,
     async lock(){
       if(state.navigating||state.closing||document.querySelector('dialog[open]'))return false;
       locked=true;state.navigating=true;

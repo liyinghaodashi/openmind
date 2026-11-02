@@ -113,3 +113,66 @@ func TestSameFileSplitSharesRevisionAndDetaches(t *testing.T) {
 		}
 	}
 }
+
+func TestRightDocumentSurvivesWorkspaceSwitch(t *testing.T) {
+	for _, mode := range []string{"independent", "shared"} {
+		t.Run(mode, func(t *testing.T) {
+			a := externalOpenApp(t)
+			oldRoot, newRoot := t.TempDir(), t.TempDir()
+			const name = "笔记.md"
+			oldFile := externalOpenFile(t, oldRoot, name, []byte("# 原文件"))
+			newFile := externalOpenFile(t, newRoot, name, []byte("# 新文件"))
+			externalOpenFile(t, oldRoot, "链接.md", []byte("# 旧目录的链接"))
+			if mode == "shared" {
+				if _, err := a.OpenExternalDocument(oldFile); err != nil {
+					t.Fatal(err)
+				}
+			} else if _, err := a.openWorkspace(oldRoot); err != nil {
+				t.Fatal(err)
+			}
+			right, err := a.OpenRightDocument(name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if mode == "shared" {
+				if _, err := a.OpenExternalDocument(newFile); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := a.openWorkspace(newRoot); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := a.OpenDocument(name); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if _, err := a.ApplyEdit(document.Edit{Session: right.Session, Version: right.Version, Kind: "source", OpID: "save", Text: "# 跨目录保存"}); err != nil {
+				t.Fatal(err)
+			}
+			for path, want := range map[string]string{oldFile: "# 跨目录保存", newFile: "# 新文件"} {
+				if data, err := os.ReadFile(path); err != nil || string(data) != want {
+					t.Fatalf("%s = %q, %v", path, data, err)
+				}
+			}
+			if _, err := a.CreateEntry("", "新建.md", false); err != nil {
+				t.Fatal(err)
+			}
+			items, err := a.ListDirectory("")
+			if err != nil || len(items) != 2 {
+				t.Fatalf("new tree: %+v, %v", items, err)
+			}
+			if _, err := os.Stat(filepath.Join(newRoot, "新建.md")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := a.OpenRightDocument("不存在.md"); err == nil {
+				t.Fatal("missing replacement accepted")
+			}
+			if next, err := a.OpenRightLink("链接.md"); err != nil || next.Source != "# 旧目录的链接" {
+				t.Fatalf("right link: %+v, %v", next, err)
+			}
+			if next, err := a.OpenRightDocument(name); err != nil || next.Source != "# 新文件" {
+				t.Fatalf("right replacement: %+v, %v", next, err)
+			}
+		})
+	}
+}

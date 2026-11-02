@@ -1,3 +1,7 @@
+export function workspacePath(root,path) {
+  return root&&path ? root.replace(/\/$/,'')+'/'+path : null;
+}
+
 export function createSplitView({container, closeSession, closeRequested, focusOther, toggleSettings, sharedView}) {
   let frame=null, editor=null, busy=false;
   function remove() {
@@ -42,6 +46,7 @@ export function createSplitView({container, closeSession, closeRequested, focusO
     withSaved,close,
     get sharedView(){return editor?.sharedView},
     get path(){return editor?.path},
+    get fullPath(){return editor?.fullPath},
     focus(){editor?.focus()},
     check(){if(!busy)void editor?.check()},
     refreshSettings(){return editor?.refreshSettings()},
@@ -57,9 +62,11 @@ export function createSplitView({container, closeSession, closeRequested, focusO
         }
       });
     },
-    async relocated(previous,next) {
+    async relocated(root,previous,next) {
       if(!editor?.path)return;
-      const path=editor.path;
+      const path=editor.fullPath;
+      previous=workspacePath(root,previous);
+      if(!path||!previous)return;
       if(path!==previous&&!path.startsWith(previous+'/'))return;
       const target=next&&next+path.slice(previous.length);
       if(!target||!/[.](md|markdown)$/i.test(target)){await close();return}

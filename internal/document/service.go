@@ -16,6 +16,7 @@ import (
 )
 
 type Snapshot struct {
+	WorkspaceRoot string            `json:"workspaceRoot"`
 	Session       string            `json:"session"`
 	Version       int               `json:"version"`
 	Path          string            `json:"path"`
@@ -72,17 +73,23 @@ func NewRightPane(recovery string) *Service {
 	return s
 }
 
-func (s *Service) HasFile(path string) bool {
+func (s *Service) Workspace() *workspace.Workspace {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.doc == nil || s.workspace == nil {
+	return s.workspace
+}
+
+func (s *Service) HasFile(w *workspace.Workspace, path string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil || w == nil {
 		return false
 	}
 	current, err := s.workspace.Resolve(s.path, false)
 	if err != nil {
 		return false
 	}
-	target, err := s.workspace.Resolve(path, false)
+	target, err := w.Resolve(path, false)
 	if err != nil {
 		return false
 	}
@@ -182,7 +189,7 @@ func (s *Service) open(w *workspace.Workspace, path string, commit func() error)
 }
 
 func (s *Service) snapshot() *Snapshot {
-	return &Snapshot{Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, Hash: filestore.Hash(s.doc.Source)}
+	return &Snapshot{WorkspaceRoot: s.workspace.Root, Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, Hash: filestore.Hash(s.doc.Source)}
 }
 
 func (s *Service) Apply(edit Edit) (*Snapshot, error) {
