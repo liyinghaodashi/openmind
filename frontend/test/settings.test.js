@@ -142,7 +142,7 @@ test('离开设置等待期间新增的切换也必须保存完成', async () =>
   assert.equal(finished, true);
 });
 
-test('关闭功能会展开侧栏并移除折叠行为，反复启用不会重复绑定', async () => {
+test('隐藏和显示折叠按钮保留侧栏状态，按钮隐藏时仍可切换侧栏', async () => {
   const ui = setup({load: async () => ({sidebarCollapse: true}), save: async () => {}});
   await ui.settings.ready;
   ui.feature.enable();
@@ -150,10 +150,12 @@ test('关闭功能会展开侧栏并移除折叠行为，反复启用不会重�
   assert.equal(ui.sidebar.hidden, true);
   ui.change(false);
   await ui.settings.flush();
-  assert.equal(ui.sidebar.hidden, false);
-  assert.equal(ui.root.classes.has('sidebar-collapsed'), false);
+  assert.equal(ui.sidebar.hidden, true);
+  assert.equal(ui.root.classes.has('sidebar-collapsed'), true);
   assert.equal(ui.button.hidden, true);
   ui.click();
+  assert.equal(ui.sidebar.hidden, true);
+  ui.feature.toggle();
   assert.equal(ui.sidebar.hidden, false);
   for (let i = 0; i < 3; i++) {
     ui.change(true);
@@ -182,7 +184,7 @@ test('保存失败回退勾选，保留原功能和折叠状态，之后可以�
   fail = false;
   ui.change(false);
   await ui.settings.flush();
-  assert.equal(ui.sidebar.hidden, false);
+  assert.equal(ui.sidebar.hidden, true);
   assert.equal(ui.button.hidden, true);
   assert.equal(ui.status.textContent, '');
 });

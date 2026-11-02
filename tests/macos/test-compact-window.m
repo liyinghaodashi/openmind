@@ -59,6 +59,12 @@ void om_hide_window(void);
         } else if ([action isEqual:@"check-pin"]) {
             NSInteger expected = [data[@"enabled"] boolValue] ? NSFloatingWindowLevel : NSNormalWindowLevel;
             if (self.window.level != expected) failure = @"Pin button and native window level disagree";
+        } else if ([action isEqual:@"sidebar-shortcut"]) {
+            NSEventModifierFlags flags = NSEventModifierFlagCommand | NSEventModifierFlagOption;
+            for (NSNumber *type in @[@(NSEventTypeKeyDown), @(NSEventTypeKeyUp)]) {
+                NSEvent *event = [NSEvent keyEventWithType:type.unsignedIntegerValue location:NSZeroPoint modifierFlags:flags timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.window.windowNumber context:nil characters:@"¬" charactersIgnoringModifiers:@"l" isARepeat:NO keyCode:37];
+                [NSApp sendEvent:event];
+            }
         } else if ([action isEqual:@"drag-divider"]) {
             NSDictionary *types = @{@"down": @(NSEventTypeLeftMouseDown), @"move": @(NSEventTypeLeftMouseDragged), @"up": @(NSEventTypeLeftMouseUp)};
             NSEventType type = [types[data[@"phase"]] unsignedIntegerValue];

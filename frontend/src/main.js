@@ -914,11 +914,11 @@ function setOutlineMode(enabled){
 $('toggle-outline').onclick=()=>{if(!paneHost&&!compactWindow&&!switchingCompactWindow)setOutlineMode(!outlineMode)};
 function handleSidebarShortcut(event){
   if(compactWindow||switchingCompactWindow||document.body.classList.contains('settings-open')||document.querySelector('dialog[open]'))return;
-  const button=$(event.altKey?'toggle-sidebar':'toggle-outline');
-  if(button.disabled)return;
   event.preventDefault();
   event.stopImmediatePropagation();
-  if(!event.repeat)button.click();
+  if(event.repeat)return;
+  if(event.altKey)sidebarCollapse.toggle();
+  else setOutlineMode(!outlineMode);
 }
 document.addEventListener('keydown',event=>{
   if(event.code!=='KeyL'||!event.metaKey||event.ctrlKey||event.shiftKey||event.defaultPrevented||event.isComposing||event.keyCode===229||state.composing)return;

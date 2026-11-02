@@ -25,7 +25,6 @@ export function createSidebarCollapse({sidebar, button, root, beforeChange}) {
 
   function disable() {
     button.removeEventListener('click', toggle);
-    expand();
     button.hidden = true;
     button.disabled = true;
   }
@@ -34,10 +33,11 @@ export function createSidebarCollapse({sidebar, button, root, beforeChange}) {
   return {
     id: 'sidebarCollapse',
     group: '通用设置',
-    label: '启用侧边栏折叠',
-    description: '关闭后，侧边栏保持展开。',
+    label: '显示侧边栏折叠按钮',
+    description: '隐藏按钮后，仍可按 ⌥⌘L 收起或展开侧边栏。',
     enable,
     disable,
+    toggle,
     expand,
   };
 }

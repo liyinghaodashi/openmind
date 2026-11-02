@@ -49,13 +49,20 @@ if(!paneHost){
       code:'KeyL',metaKey:true,bubbles:true,cancelable:true,...options
     }));
     const rightEditor=right.querySelector('.vditor-ir [contenteditable="true"]');
+    $('setting-sidebarCollapse').click();
+    await settings.flush();
+    assert(!$('toggle-sidebar').getClientRects().length,'关闭按钮显示后，快捷键仍应可用');
     sidebarKey(rightEditor);
     assert(outlineMode&&!$('sidebar').hidden,'右栏 ⌘L 应切换到共用大纲');
-    sidebarKey(rightEditor,{altKey:true});
+    rightEditor.focus();
+    await window.__compactRequest({action:'sidebar-shortcut'});
+    await until(()=>$('sidebar').getBoundingClientRect().width===0);
     sidebarKey(rightEditor,{altKey:true,repeat:true});
     assert(outlineMode&&$('sidebar').hidden,'⌥⌘L 应收起整个侧栏，长按应只触发一次');
     assert(Math.abs(left.clientWidth/(left.clientWidth+frame.clientWidth)-0.26)<0.002,'收起侧栏应保持分屏比例');
-    sidebarKey(markdown.editable,{altKey:true});
+    markdown.editable.focus();
+    await window.__compactRequest({action:'sidebar-shortcut'});
+    await until(()=>$('sidebar').getBoundingClientRect().width>0);
     assert(outlineMode&&!$('sidebar').hidden,'再次按 ⌥⌘L 应展开并保留大纲');
     sidebarKey(markdown.editable);
     assert(!outlineMode&&!$('sidebar').hidden,'左栏 ⌘L 应切回文件树');
