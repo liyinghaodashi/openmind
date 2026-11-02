@@ -22,7 +22,6 @@ class Element extends EventTarget {
   removeAttribute(name) {this.attributes.delete(name);}
   querySelector(selector) {return this.children.find(child => child.className.split(' ').includes(selector.slice(1)));}
   remove() {if (this.parent) this.parent.children = this.parent.children.filter(child => child !== this);}
-  getContext() {return {measureText: text => ({width: text.length * 10})};}
 }
 
 function setup(Renderer) {
@@ -30,7 +29,11 @@ function setup(Renderer) {
   const canvas = new Element(document), scene = new Element(document), nodes = new Element(document), edges = new Element(document);
   canvas.className = 'mind-main-node-mark mind-second-node-mark';
   const calls = [];
-  const options = {canvas, scene, nodes, edges, onActivate: id => calls.push(['select', id]), onEdit: id => calls.push(['edit', id])};
+  const measureText = (text, font, maxWidth) => ({
+    width: Math.min(text.length * 10, maxWidth),
+    lines: Math.max(1, Math.ceil(text.length * 10 / maxWidth))
+  });
+  const options = {measureText, canvas, scene, nodes, edges, onActivate: id => calls.push(['select', id]), onEdit: id => calls.push(['edit', id])};
   const renderer = new Renderer(options);
   const root = {id: 'root', label: '根', children: [{id: 'branch', label: '分支', children: [{id: 'leaf', label: '内容', children: []}]}]};
   const state = {layout: layoutTree(root, new Set(), (...args) => renderer.measure(...args)), x: 24, y: 80, scale: 1, selected: 'branch', collapsed: new Set()};

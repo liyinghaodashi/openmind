@@ -13,10 +13,9 @@ function colorTint(color) {
 }
 
 export class ProcessonRenderer {
-  constructor({canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth = () => 340}) {
-    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, getNodeMaxWidth});
+  constructor({canvas, scene, nodes, edges, onActivate, onEdit, measureText, getNodeMaxWidth = () => 340}) {
+    Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, measureText, getNodeMaxWidth});
     this.document = canvas.ownerDocument;
-    this.context = this.document.createElement('canvas').getContext('2d');
     this.elements = new Map();
     this.edgeElements = new Map();
     this.measurements = new Map();
@@ -31,14 +30,10 @@ export class ProcessonRenderer {
     if (this.measurements.has(key)) return this.measurements.get(key);
     const font = depth === 0 ? 22 : depth === 1 ? 15 : 14;
     const line = depth === 0 ? 29 : 22, pad = compact ? 12 : depth === 0 ? 44 : 34;
-    this.context.font = `${depth === 0 ? 600 : depth === 1 ? 550 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
-    let row = 0, lines = 1, widest = 0;
-    for (const char of label) {
-      const width = this.context.measureText(char).width;
-      if (char === '\n' || row + width > max) {widest = Math.max(widest, row); row = char === '\n' ? 0 : width; lines++;}
-      else row += width;
-    }
-    const size = {lines, lineHeight: line, width: Math.max(compact ? 24 : depth === 0 ? 145 : 83, Math.min(max, Math.max(widest, row)) + pad + 8), height: line * lines + (compact ? 10 : depth === 0 ? 36 : 26)};
+    const textFont = `${depth === 0 ? 600 : depth === 1 ? 550 : 400} ${font}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
+    const {width, lines} = this.measureText(label, textFont, max, line);
+    const horizontalInset = pad + (lines === 1 ? 8 : 2);
+    const size = {lines, lineHeight: line, width: Math.max(compact ? 24 : depth === 0 ? 145 : 83, width + horizontalInset), height: line * lines + (compact ? 10 : depth === 0 ? 36 : 26)};
     if (this.measurements.size > 5000) this.measurements.clear();
     this.measurements.set(key, size);
     return size;

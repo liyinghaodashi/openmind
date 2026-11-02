@@ -1,5 +1,6 @@
 try {
   let checks = 0;
+  const rightInsets = [];
   const assert = (passed, message) => {checks++; if (!passed) throw new Error(message);};
   const frames = async () => {await new Promise(requestAnimationFrame); await new Promise(requestAnimationFrame);};
   applySnapshot(await call('OpenDocument', '颜色.mind.md'), {resetView: true});
@@ -13,6 +14,30 @@ try {
   const change = async value => {input.value = value; input.dispatchEvent(new Event('change', {bubbles: true})); await settings.flush(); await frames();};
   for (const style of ['processon', 'mindnode']) {
     map.setStyle(style);
+    const command = 'limit_req_zone $binary_remote_addr zone=my_limit:10m rate=1r/s;';
+    map.setNodeMaxWidth(340);
+    map.setRoot({id: 'command', kind: 'list', label: command, children: [node('argument')]}, {resetView: true});
+    map.scale = 1; map.x = 24; map.y = 80; map.render();
+    const element = map.elements.get('command');
+    const range = document.createRange();
+    range.selectNodeContents(element.firstChild.firstChild);
+    const rows = [...range.getClientRects()];
+    assert(rows.length === 2, style + ' must keep the command on two lines');
+    const slack = element.getBoundingClientRect().right - Math.max(...rows.map(row => row.right));
+    assert(slack >= 0 && slack <= 16, style + ' excess space after wrapped command: ' + slack + 'px');
+    rightInsets.push(style + ' ' + slack.toFixed(1) + 'px');
+    const argumentOffset = command.indexOf('zone=');
+    range.setStart(element.firstChild.firstChild, argumentOffset);
+    range.setEnd(element.firstChild.firstChild, argumentOffset + 'zone=my_limit:10m'.length);
+    assert(range.getClientRects().length === 1 && Math.abs(range.getBoundingClientRect().top - rows[1].top) < 0.5, style + ' must keep the zone argument together on line two');
+    const commandPosition = map.layout.positions.find(p => p.id === 'command');
+    const commandEditor = map.createEditor(commandPosition);
+    map.nodes.append(commandEditor);
+    const editSize = map.renderer.measureEditor(commandEditor, commandPosition.depth, commandPosition.node);
+    assert(editSize.width === commandPosition.width && editSize.height === commandPosition.height, style + ' must keep wrapped command bounds while editing');
+    commandEditor.remove();
+    const start = map.edgeElements.get('argument').getPointAtLength(0);
+    assert(Math.abs(start.x - commandPosition.x - commandPosition.width) < .01, style + ' must connect to the fitted command');
     map.setRoot(root, {resetView: true});
     await toggleSettings(true);
     await change('280');
@@ -61,7 +86,7 @@ try {
   }
   map.setStyle('processon');
   assert(map.renderer.getNodeMaxWidth() === 720, 'Style changes must retain the configured width');
-  window.webkit.messageHandlers.result.postMessage({passed: true, message: 'PASS: ' + checks + ' native WebKit node width checks'});
+  window.webkit.messageHandlers.result.postMessage({passed: true, message: 'PASS: ' + checks + ' native WebKit node width checks, wrapped command right inset = ' + rightInsets.join(', ')});
 } catch (error) {
   window.webkit.messageHandlers.result.postMessage({passed: false, message: 'FAIL: ' + error.message + '\n' + error.stack});
 }

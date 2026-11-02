@@ -32,8 +32,9 @@ try{
         assert(editor.scrollHeight<=editor.clientHeight+1&&editor.scrollWidth<=editor.clientWidth+1,message+' must fit the live text');
         assert(document.activeElement===editor&&state.editor===editor,message+' must retain editor focus and identity');
         assert(editor.selectionStart===editor.value.length&&editor.selectionEnd===editor.value.length,message+' must retain the caret');
+        const childGap=depth===0&&map.canvas.classList.contains('mind-main-node-mark')?64:30;
         for(const child of target().children){
-          assert(position(child.id).x*scale+map.x>=bounds.right-canvas.left+(depth===0?64:30)*scale-.5,message+' must move children beyond the live editor');
+          assert(position(child.id).x*scale+map.x>=bounds.right-canvas.left+childGap*scale-.5,message+' must move children beyond the live editor');
         }
         const positions=map.layout.positions;
         for(let i=0;i<positions.length;i++)for(let j=i+1;j<positions.length;j++){
