@@ -1,4 +1,4 @@
-export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,create,rename,remove,onError}) {
+export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,create,openRight,rename,remove,onError}) {
   const name=renameDialog.querySelector('input');
   const renameError=renameDialog.querySelector('[role="alert"]');
   const deleteError=deleteDialog.querySelector('[role="alert"]');
@@ -18,7 +18,7 @@ export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,cr
     closeMenu();target=entry;origin=row;
     row.classList.add('context-target');row.setAttribute('aria-expanded','true');
     menu.setAttribute('aria-label',entry?entry.name+'的文件操作':'工作区文件操作');
-    for(const button of buttons)button.hidden=!entry&&['rename','delete'].includes(button.dataset.action);
+    for(const button of buttons)button.hidden=button.dataset.action==='open-right'?(!entry||entry.directory):!entry&&['rename','delete'].includes(button.dataset.action);
     menu.hidden=false;menu.style.left='0px';menu.style.top='0px';
     const bounds=menu.getBoundingClientRect();
     const keyboard=event.type==='keydown'||event.clientX===0&&event.clientY===0;
@@ -32,6 +32,13 @@ export function mountFileActions({menu,renameDialog,deleteDialog,begin,finish,cr
 
   async function openDialog(action,entry=target) {
     closeMenu(true);
+    if(action==='open-right') {
+      if(entry&&!entry.directory&&!activeEntry) {
+        activeEntry=entry;
+        try { await openRight(entry.path) } catch(error) { onError(error) } finally { activeEntry=null }
+      }
+      return;
+    }
     if(action==='new-file'||action==='new-folder') {
       if(activeEntry)return;
       activeEntry=entry||{};

@@ -28,6 +28,7 @@ type WorkspaceInfo struct {
 type App struct {
 	ctx           context.Context
 	service       *document.Service
+	right         *document.Service
 	stateDir      string
 	mu            sync.Mutex
 	watcher       *watcher.Watcher
@@ -255,29 +256,85 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 	if a.watcher != nil {
 		a.watcher.Close()
 	}
+	if a.right == nil {
+		a.right = document.NewRightPane(filepath.Join(a.stateDir, "recovery"))
+	}
+	a.right.SetWorkspace(w)
 	a.watcher = watch
 	a.workspace = w
 	info.Bookmark = ""
 	return info, snapshot, nil
 }
-func (a *App) ListDirectory(path string) ([]workspace.Entry, error)     { return a.service.List(path) }
-func (a *App) OpenDocument(path string) (*document.Snapshot, error)     { return a.service.Open(path) }
-func (a *App) ApplyEdit(edit document.Edit) (*document.Snapshot, error) { return a.service.Apply(edit) }
+func (a *App) ListDirectory(path string) ([]workspace.Entry, error) { return a.service.List(path) }
+func (a *App) OpenDocument(path string) (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	return a.openLeftDocument(path)
+}
+
+func (a *App) openLeftDocument(path string) (*document.Snapshot, error) {
+	if a.right != nil && a.right.HasFile(path) {
+		return nil, fmt.Errorf("文档已在右侧打开")
+	}
+	return a.service.Open(path)
+}
+
+func (a *App) OpenRightDocument(path string) (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.right == nil {
+		return nil, fmt.Errorf("请先选择工作区")
+	}
+	if a.service.HasFile(path) {
+		return nil, fmt.Errorf("文档已在左侧打开")
+	}
+	return a.right.Open(path)
+}
+
+func (a *App) CloseRightDocument() {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.right != nil {
+		a.right.SetWorkspace(a.workspace)
+	}
+}
+
+func (a *App) CheckRightDocument() (*document.Snapshot, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if a.right == nil {
+		return nil, nil
+	}
+	return a.right.Check()
+}
+
+func (a *App) sessionService(session string) *document.Service {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if strings.HasPrefix(session, "right-") && a.right != nil {
+		return a.right
+	}
+	return a.service
+}
+
+func (a *App) ApplyEdit(edit document.Edit) (*document.Snapshot, error) {
+	return a.sessionService(edit.Session).Apply(edit)
+}
 func (a *App) ImportImage(session, encoded string) (string, error) {
-	return a.service.ImportImage(session, encoded)
+	return a.sessionService(session).ImportImage(session, encoded)
 }
 func (a *App) DiscardImages(session string, references []string) error {
-	return a.service.DiscardImages(session, references)
+	return a.sessionService(session).DiscardImages(session, references)
 }
 func (a *App) CopyNodeText(session, nodeID string, label *string) error {
-	text, err := a.service.NodeText(session, nodeID, label)
+	text, err := a.sessionService(session).NodeText(session, nodeID, label)
 	if err != nil {
 		return err
 	}
 	return runtime.ClipboardSetText(a.ctx, text)
 }
 func (a *App) CopyNodeMarkdown(session, nodeID string, label *string) error {
-	text, err := a.service.NodeMarkdown(session, nodeID, label)
+	text, err := a.sessionService(session).NodeMarkdown(session, nodeID, label)
 	if err != nil {
 		return err
 	}
@@ -285,21 +342,44 @@ func (a *App) CopyNodeMarkdown(session, nodeID string, label *string) error {
 }
 func (a *App) CheckDocument() (*document.Snapshot, error) { return a.service.Check() }
 func (a *App) ReparseDocument(session string) (*document.Snapshot, error) {
-	return a.service.Reparse(session)
+	return a.sessionService(session).Reparse(session)
 }
 func (a *App) PreserveDraft(session, kind, nodeID, value string) (string, error) {
-	return a.service.PreserveDraft(session, kind, nodeID, value)
+	return a.sessionService(session).PreserveDraft(session, kind, nodeID, value)
 }
 func (a *App) CreateEntry(parent, name string, directory bool) (string, error) {
 	return a.service.Create(parent, name, directory)
 }
+func (a *App) validateRightEntry(path string) error {
+	if a.right == nil {
+		return nil
+	}
+	return a.right.ValidateOpenEntry(path)
+}
 func (a *App) RenameDocument(path, name string) (*document.RenameResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if err := a.validateRightEntry(path); err != nil {
+		return nil, err
+	}
 	return a.service.Rename(path, name)
 }
 func (a *App) MoveEntry(path, parent string) (*document.MoveResult, error) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if err := a.validateRightEntry(path); err != nil {
+		return nil, err
+	}
 	return a.service.MoveEntry(path, parent)
 }
-func (a *App) DeleteDocument(path string) error { return a.service.Delete(path) }
+func (a *App) DeleteDocument(path string) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	if err := a.validateRightEntry(path); err != nil {
+		return err
+	}
+	return a.service.Delete(path)
+}
 func (a *App) RevealDocument(path string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

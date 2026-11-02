@@ -55,6 +55,17 @@ func (s *Service) fileOperationPath(path string) (string, string, error) {
 	return full, rel, nil
 }
 
+func (s *Service) ValidateOpenEntry(path string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rel := filepath.ToSlash(filepath.Clean(path))
+	if s.doc == nil || (s.path != rel && !strings.HasPrefix(s.path, rel+"/")) {
+		return nil
+	}
+	_, _, err := s.fileOperationPath(s.path)
+	return err
+}
+
 func (s *Service) entryOperationPath(path string) (string, string, bool, error) {
 	if s.workspace == nil {
 		return "", "", false, fmt.Errorf("请先选择文件夹")

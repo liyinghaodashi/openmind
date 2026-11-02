@@ -153,7 +153,7 @@ export function mountSettings({container, features, storage}) {
     inputs.set(feature.id, controls);
   }
 
-  const ready = (async () => {
+  async function reload() {
     try {
       saved = await storage.load();
       for (const feature of features) {
@@ -170,9 +170,10 @@ export function mountSettings({container, features, storage}) {
     } catch (error) {
       status.textContent = '设置读取失败，请检查配置后重新打开应用：' + (error?.message || String(error));
     }
-  })();
+  }
+  const ready = reload();
 
-  return {ready, flush: async () => {
+  return {ready, reload, flush: async () => {
     await ready;
     let saving;
     do {saving = pending; await saving;} while (saving !== pending);

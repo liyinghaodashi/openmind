@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<title>右侧文档</title>
+<body class="right-pane">
+<script type="module">
+  try {
+    const response = await fetch('/index.html');
+    if (!response.ok) throw new Error('无法加载编辑器');
+    const shell = new DOMParser().parseFromString(await response.text(), 'text/html');
+    for (const link of shell.head.querySelectorAll('link[rel="stylesheet"]')) document.head.append(link);
+    shell.body.querySelectorAll('script').forEach(script => script.remove());
+    document.body.replaceChildren(...shell.body.children);
+    const vendor = document.createElement('script');
+    vendor.src = '/src/vendor/vditor/dist/index.min.js';
+    await new Promise((resolve, reject) => {
+      vendor.onload = resolve;
+      vendor.onerror = () => reject(new Error('无法加载 Markdown 编辑器'));
+      document.head.append(vendor);
+    });
+    await import('../main.js');
+  } catch (error) {
+    window.frameElement?.failPane(error);
+  }
+</script>
+</body></html>

@@ -1,3 +1,4 @@
+import {createSplitView} from './workspace/split-view.js';
 import {createFileTree} from './workspace/file-tree.js';
 import {preferenceFields} from './ui/preferences.js';
 import {createWorkspaceMenu} from './workspace/menu.js';
@@ -25,7 +26,8 @@ mountGlobalCaret();
 
 const $=id=>document.getElementById(id);
 const fileTreeHover=mountFileTreeHover($('file-tree'));
-const native=window.go?.desktop?.App;
+const paneHost=window.frameElement?.attachPane?window.frameElement:null;
+const native=(paneHost?parent:window).go?.desktop?.App;
 const preview=!native;
 let sourceViewEnabled=true;
 let mindZoomControlsEnabled=true;
@@ -72,12 +74,27 @@ const call=async(name,...args)=>{
   if(!native)throw new Error('这是只读界面预览，请启动 macOS 应用使用文件读写。');
   return native[name](...args);
 };
+function focusDocument(){
+  const element=state.sourceOpen?$('source-editor'):state.snapshot&&!isMindMapPath(state.snapshot.path)?markdown.editable:$('canvas');
+  element?.focus({preventScroll:true});
+}
+const split=createSplitView({
+  container:$('workspace-page'),closeSession:()=>native?.CloseRightDocument(),
+  closeRequested:()=>split.withSaved(split.close).then(focusDocument).catch(error=>toast(errorText(error))),
+  focusOther:path=>{if(state.snapshot?.path!==path)return false;focusDocument();return true},
+  toggleSettings:()=>toggleSettings()
+});
+if(paneHost){
+  $('close-right').hidden=false;
+  $('close-right').onclick=()=>paneHost.closeRequested();
+  $('toggle-always-on-top').disabled=true;
+}
 const commands=createDocumentCommands({write:edit=>call('ApplyEdit',edit),getSnapshot:()=>state.snapshot,captureHistory:captureMindHistory,history:mindHistory});
 $('enter-compact-window').onclick=()=>void setCompactWindow(true);
 $('return-main-window').onclick=()=>void setCompactWindow(false);
 
 async function setCompactWindow(enabled){
-  if(compactWindow===enabled||switchingCompactWindow||state.navigating||state.closing||state.checking||document.querySelector('dialog[open]'))return false;
+  if(paneHost||split.path||compactWindow===enabled||switchingCompactWindow||state.navigating||state.closing||state.checking||document.querySelector('dialog[open]'))return false;
   const mind=state.snapshot&&isMindMapPath(state.snapshot.path);
   if(enabled&&(!state.snapshot||(!mind&&!mdCompactWindowEnabled)||document.body.classList.contains('settings-open')))return false;
   switchingCompactWindow=true;state.navigating=true;
@@ -116,6 +133,18 @@ function toast(message){$('toast').textContent=String(message);$('toast').hidden
 function errorText(error){return error?.message||String(error)}
 const fileActions=mountFileActions({
   menu:$('file-context-menu'),renameDialog:$('rename-file-dialog'),deleteDialog:$('delete-file-dialog'),
+  openRight:async path=>{
+    if(state.navigating||state.closing||compactWindow)return;
+    if(path===state.snapshot?.path){focusDocument();return}
+    if(path===split.path){split.focus();return}
+    state.navigating=true;
+    const opening=!split.path;
+    try {
+      await split.open(path);
+      if(opening&&state.snapshot&&isMindMapPath(state.snapshot.path))map.reveal(map.selected||map.layout?.positions[0]?.id);
+    }
+    finally { state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor }
+  },
   create:(directory,parent)=>beginCreate(directory,parent),
   begin:async()=>{
     if(preview){toast('请在 macOS 应用中重命名或删除文件。');return false}
@@ -127,7 +156,7 @@ const fileActions=mountFileActions({
     return false;
   },
   finish:()=>{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor},
-  rename:async(entry,name)=>{
+  rename:(entry,name)=>split.withSaved(async()=>{
     const result=await call('RenameDocument',entry.path,name);
     const closed=state.snapshot?.path===entry.path&&!result.snapshot;
     if(entry.directory){
@@ -141,8 +170,9 @@ const fileActions=mountFileActions({
       applySnapshot(result.snapshot,{resetView:modeChanged});state.sourceOpen=sourceOpen;updateDocumentView();resetSourceInput();
     }else if(closed)clearCurrentDocument();
     await refreshTree();renderTree();
-  },
-  remove:async entry=>{
+    await split.relocated(entry.path,result.path);
+  }),
+  remove:entry=>split.withSaved(async()=>{
     await call('DeleteDocument',entry.path);
     const within=path=>path===entry.path||entry.directory&&path.startsWith(entry.path+'/');
     if(state.snapshot&&within(state.snapshot.path))clearCurrentDocument();
@@ -152,7 +182,8 @@ const fileActions=mountFileActions({
       fileTree.invalidate();
     }
     await refreshTree();renderTree();
-  },
+    await split.relocated(entry.path,null);
+  }),
   onError:error=>toast(errorText(error))
 });
 fileActions.bindBackground($('file-tree'));
@@ -160,6 +191,7 @@ document.addEventListener('keydown',event=>{
   if(event.key!=='F6'||!event.shiftKey||event.metaKey||event.ctrlKey||event.altKey||event.isComposing||event.keyCode===229)return;
   event.preventDefault();event.stopImmediatePropagation();
   if(event.repeat||preview||!state.snapshot||state.navigating||state.checking||state.closing||state.composing||switchingSettings||switchingCompactWindow||fileActions.active||document.querySelector('dialog[open]')||document.body.classList.contains('settings-open'))return;
+  if(paneHost)return;
   const path=state.snapshot.path;
   closeWorkspaceMenu();documentSearch.close(false);
   void fileActions.renameEntry({path,name:path.split('/').pop(),directory:false});
@@ -192,7 +224,11 @@ async function relocateEntry(entry,parent){
   state.navigating=true;state.fileMoving=true;
   try{
     if(!await readyToNavigate())return;
-    const result=await call('MoveEntry',entry.path,parent);
+    const result=await split.withSaved(async()=>{
+      const moved=await call('MoveEntry',entry.path,parent);
+      await split.relocated(entry.path,moved.path);
+      return moved;
+    });
     state.expanded=new Set([...state.expanded].map(path=>movedTreePath(path,entry.path,result.path)));
     state.selectedDir=movedTreePath(state.selectedDir,entry.path,result.path);
     if(result.snapshot){
@@ -663,8 +699,10 @@ async function chooseWorkspace(root,id){
   try{
     if(!await readyToNavigate())return;
     $('source-editor').readOnly=true;
-    const workspace=await (typeof root==='string'?call('OpenRecentWorkspace',id||root):call('SelectWorkspace'));
-    if(workspace){await setWorkspace(workspace);await refreshRecentWorkspaces()}
+    await split.withSaved(async()=>{
+      const workspace=await (typeof root==='string'?call('OpenRecentWorkspace',id||root):call('SelectWorkspace'));
+      if(workspace){await split.close();await setWorkspace(workspace);await refreshRecentWorkspaces()}
+    });
   }catch(e){banner(errorText(e))}finally{
     state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
   }
@@ -682,11 +720,27 @@ const mindOutlineActions=outline.actions;
 function renderOutline(){outline.render()}
 function updateOutlineCollapseButtons(){outline.syncCollapse()}
 function focusOutline(...args){return outline.focus(...args)}
+async function loadDocument(path){
+  let snapshot;
+  if(preview){
+    const {previewDocuments}=await import('./preview.js');
+    snapshot=previewDocuments.find(item=>item.path===path);
+    if(!snapshot)throw new Error('预览文档不存在');
+  }else snapshot=await call(paneHost?'OpenRightDocument':'OpenDocument',path);
+  state.queue.reset();state.draft=null;state.blocked=false;
+  map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;
+  state.selectedDir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';
+  applySnapshot(snapshot,{resetView:true});resetSourceInput();
+}
 async function openDocument(path){
+  if(paneHost?.focusOther(path))return;
+  if(path===split.path){split.focus();return}
   if(compactWindow&&isMindMapPath(path)){toast('请先通过右上角按钮返回主窗口，再打开思维导图。');return}
-  if(preview){const {previewDocuments}=await import('./preview.js');const snapshot=previewDocuments.find(snapshot=>snapshot.path===path);if(snapshot){map.collapsed.clear();map.selected=null;applySnapshot(snapshot,{resetView:true});resetSourceInput()}return}
-  if(state.navigating)return;state.navigating=true;
-  try{if(!await readyToNavigate())return;const snapshot=await call('OpenDocument',path);state.queue.reset();state.draft=null;state.blocked=false;map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;state.selectedDir=path.includes('/')?path.slice(0,path.lastIndexOf('/')):'';applySnapshot(snapshot,{resetView:true});resetSourceInput()}catch(e){banner(errorText(e))}finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
+  if(state.navigating||state.closing)return;
+  state.navigating=true;
+  try{await externalCheck;if(await readyToNavigate())await loadDocument(path)}
+  catch(e){banner(errorText(e))}
+  finally{state.navigating=false;updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}
 }
 
 const externalFiles=[];
@@ -712,7 +766,12 @@ function processExternalFiles(){
       try{
         if(!await readyToNavigate())return;
         const path=externalFiles.shift();
-        const result=await call('OpenExternalDocument',path);
+        if(split.path&&path===state.workspace?.root+'/'+split.path){split.focus();continue}
+        const result=await split.withSaved(async()=>{
+          const opened=await call('OpenExternalDocument',path);
+          if(state.workspace?.root!==opened.workspace.root)await split.close();
+          return opened;
+        });
         if(state.workspace?.root!==result.workspace.root)await setWorkspace(result.workspace);
         state.queue.reset();state.draft=null;state.blocked=false;
         map.collapsed.clear();map.selected=null;$('error-banner').hidden=true;
@@ -732,11 +791,16 @@ function processExternalFiles(){
   return openingExternalFiles;
 }
 
-async function checkExternal(){
+let externalCheck=null;
+function checkExternal(){
+  if(!externalCheck)externalCheck=readExternalChanges().finally(()=>{externalCheck=null});
+  return externalCheck;
+}
+async function readExternalChanges(){
   if(state.fileDragging||map.nodeDrag||preview||state.navigating||!state.snapshot||state.checking||addingChild||deletingNode||movingNode||state.queue.pending||state.blocked||state.composing||state.closing||finishing)return;
   state.checking=true;
   try{
-    const snapshot=await call('CheckDocument');
+    const snapshot=await call(paneHost?'CheckRightDocument':'CheckDocument');
     if(snapshot){
       if(state.composing){state.blocked=true;setEditorsReadOnly();banner('外部修改与输入法文字同时发生，请确认输入后保留草稿并重新读取。',true);return}
       if(state.queue.pending){state.blocked=true;setEditorsReadOnly();banner('外部修改与本地输入同时发生，请保留本地草稿后重新读取。',true);return}
@@ -806,7 +870,7 @@ function setOutlineMode(enabled){
   const button=$('toggle-outline'),label=outlineMode?'切换到文件':'切换到大纲';button.setAttribute('aria-pressed',String(outlineMode));button.setAttribute('aria-label',label);button.title=label+'（⌥⌘L）';
   sidebarCollapse.expand();
 }
-$('toggle-outline').onclick=()=>{if(!compactWindow&&!switchingCompactWindow)setOutlineMode(!outlineMode)};
+$('toggle-outline').onclick=()=>{if(!paneHost&&!compactWindow&&!switchingCompactWindow)setOutlineMode(!outlineMode)};
 document.addEventListener('keydown',event=>{
   if(event.isComposing||event.keyCode===229||!event.metaKey||!event.altKey||event.ctrlKey||event.shiftKey||event.code!=='KeyL'||$('toggle-outline').disabled)return;
   event.preventDefault();
@@ -834,7 +898,7 @@ $('markdown-editor').addEventListener('click',event=>{
     const target=markdownLinkTarget(href,base);
     if(target){void openDocument(target).then(()=>{if(state.snapshot?.path===target&&!isMindMapPath(target))markdown.focusAnchor(url.hash)});return}
     if(url.hash&&url.origin===location.origin){markdown.focusAnchor(url.hash);return}
-    if(['http:','https:','mailto:'].includes(url.protocol)){if(native)window.runtime.BrowserOpenURL(url.href);else window.open(url.href,'_blank','noopener');return}
+    if(['http:','https:','mailto:'].includes(url.protocol)){if(native)(paneHost?parent:window).runtime.BrowserOpenURL(url.href);else window.open(url.href,'_blank','noopener');return}
     toast('当前链接无法打开。');
   }catch{toast('当前链接无法打开。')}
 },true);
@@ -852,7 +916,7 @@ $('reload-document').onclick=async()=>{
   if(!state.snapshot)return;
   try{
     await state.queue.drain();const recovery=await preserveDraft();const path=state.snapshot.path;
-    const snapshot=await call('OpenDocument',path);
+    const snapshot=await call(paneHost?'OpenRightDocument':'OpenDocument',path);
     state.editor?.remove();state.editor=null;map.editor=null;map.editing=null;state.blocked=false;state.queue.reset();state.draft=null;map.collapsed.clear();
     applySnapshot(snapshot,{external:true});resetSourceInput();$('error-banner').hidden=true;toast('已重新读取文件。本地草稿已保留到恢复目录。');state.recoveryPath=recovery;
   }catch(error){banner(errorText(error)+'；窗口中的本地内容仍被保留。',true)}
@@ -874,7 +938,7 @@ async function toggleSettings(open=$('settings-page').hidden){
     switchingSettings=true;
     try{
       if(page.contains(document.activeElement))document.activeElement.blur();
-      await settings.flush();
+      await settings.flush();await split.refreshSettings();
       if(state.closing)return;
       page.hidden=true;document.body.classList.remove('settings-open');
       updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor;
@@ -890,10 +954,12 @@ async function toggleSettings(open=$('settings-page').hidden){
   const previousFocus=document.activeElement;
   try{
     if(!await readyToNavigate())return;
-    workspaceFocus=previousFocus;
-    closeWorkspaceMenu();
-    document.body.classList.add('settings-open');page.hidden=false;page.focus({preventScroll:true});
-    documentSearch.close(false);
+    await split.withSaved(()=>{
+      workspaceFocus=previousFocus;
+      closeWorkspaceMenu();
+      document.body.classList.add('settings-open');page.hidden=false;page.focus({preventScroll:true});
+      documentSearch.close(false);
+    });
   }catch(error){banner(errorText(error))}
   finally{switchingSettings=false;state.navigating=false;if(page.hidden){updateDocumentView();$('source-editor').readOnly=preview||state.blocked||state.closing||!!state.editor}}
 }
@@ -901,10 +967,14 @@ $('back-from-settings').onclick=()=>void toggleSettings(false);
 document.addEventListener('keydown',event=>{
   if(event.key!=='F12'||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;
   event.preventDefault();event.stopPropagation();
-  if(!event.repeat&&!event.isComposing)void toggleSettings();
+  if(!event.repeat&&!event.isComposing)void (paneHost?paneHost.toggleSettings():toggleSettings());
 },true);
 document.addEventListener('keydown',event=>{if((event.metaKey||event.ctrlKey)&&event.key.toLowerCase()==='s')event.preventDefault()});
 async function closeApp(windowOnly=false){
+  try { await split.withSaved(()=>finishAppClose(windowOnly)) }
+  catch(error){toast(errorText(error))}
+}
+async function finishAppClose(windowOnly){
   if(switchingCompactWindow){toast('正在切换窗口，请稍后再关闭。');return}
   if(state.fileDragging||state.fileMoving){toast('正在移动文件，请稍后再退出。');return}
   if(fileActions.active){toast('请先完成或取消文件操作，再退出。');return}
@@ -925,14 +995,31 @@ async function closeApp(windowOnly=false){
 
 await Promise.all([settings.ready,markdown.ready]);
 const tableActions=markdown.tableActions=new TableActions(markdown);
-if(native){
-  window.runtime.EventsOn('workspace:changed',()=>{void refreshTree();void checkExternal();refreshVisibleWorkspaceMenu()});
-  window.runtime.EventsOn('document:check',()=>{void checkExternal();refreshVisibleWorkspaceMenu()});
+if(paneHost){
+  let locked=false;
+  paneHost.attachPane({
+    get path(){return state.snapshot?.path},
+    load:loadDocument,focus:focusDocument,check:checkExternal,refreshSettings:settings.reload,
+    async lock(){
+      if(state.navigating||state.closing||document.querySelector('dialog[open]'))return false;
+      locked=true;state.navigating=true;
+      await externalCheck;
+      return readyToNavigate();
+    },
+    unlock(){
+      if(!locked)return;
+      locked=false;state.navigating=false;updateDocumentView();
+      $('source-editor').readOnly=preview||state.blocked||!!state.editor;
+    }
+  });
+}else if(native){
+  window.runtime.EventsOn('workspace:changed',()=>{void refreshTree();void checkExternal();split.check();refreshVisibleWorkspaceMenu()});
+  window.runtime.EventsOn('document:check',()=>{void checkExternal();split.check();refreshVisibleWorkspaceMenu()});
   window.runtime.EventsOn('app:closing',()=>void closeApp());
   window.runtime.EventsOn('window:closing',()=>void closeApp(true));
   window.runtime.EventsOn('document:open-requested',()=>void receiveExternalFiles());
   await receiveExternalFiles();
-  window.addEventListener('focus',()=>{void refreshTree();void checkExternal();refreshVisibleWorkspaceMenu()});
+  window.addEventListener('focus',()=>{void refreshTree();void checkExternal();split.check();refreshVisibleWorkspaceMenu()});
   if(!externalFiles.length){
     try{const workspace=await call('RestoreWorkspace');if(workspace)await setWorkspace(workspace)}catch(error){banner('上次的工作区暂时不可用，请重新选择文件夹。'+errorText(error))}
   }
@@ -948,4 +1035,4 @@ if(native){
   applySnapshot(previewSnapshot,{resetView:true});resetSourceInput();
 }
 
-try{await refreshRecentWorkspaces()}catch(error){banner('读取快捷文件夹失败：'+errorText(error))}
+if(!paneHost)try{await refreshRecentWorkspaces()}catch(error){banner('读取快捷文件夹失败：'+errorText(error))}

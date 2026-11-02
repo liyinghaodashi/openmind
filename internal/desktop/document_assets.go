@@ -16,7 +16,7 @@ func (a *App) documentAssetHandler() http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		body, mime, err := a.service.ReadImage(parts[0], parts[1])
+		body, mime, err := a.sessionService(parts[0]).ReadImage(parts[0], parts[1])
 		if err != nil {
 			http.NotFound(w, r)
 			return

@@ -50,7 +50,7 @@ func (a *App) OpenExternalDocument(path string) (*ExternalDocument, error) {
 		if rootErr == nil {
 			rel, relErr := filepath.Rel(root, full)
 			if relErr == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-				snapshot, openErr := a.service.Open(filepath.ToSlash(rel))
+				snapshot, openErr := a.openLeftDocument(filepath.ToSlash(rel))
 				a.mu.Unlock()
 				if openErr != nil {
 					return nil, openErr
