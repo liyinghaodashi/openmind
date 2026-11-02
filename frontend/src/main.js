@@ -106,7 +106,7 @@ const sharedView={
 function peerView(){return paneHost?paneHost.sharedView:split.sharedView}
 function peerEditing(){return peerView()?.busy(state.snapshot?.session)}
 const split=createSplitView({
-  sharedView,container:$('workspace-page'),closeSession:()=>native?.CloseRightDocument(),
+  sharedView,container:$('workspace-page'),divider:$('split-divider'),closeSession:()=>native?.CloseRightDocument(),
   closeRequested:()=>split.withSaved(split.close).then(focusDocument).catch(error=>toast(errorText(error))),
   focusOther:fullPath=>{if(!fullPath||workspacePath(state.workspace?.root,state.snapshot?.path)!==fullPath)return false;focusDocument();return true},
   toggleSettings:()=>toggleSettings()

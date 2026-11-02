@@ -28,6 +28,26 @@ if(!paneHost){
     const frame=document.querySelector('.right-document'),right=frame.contentDocument;
     assert(Math.abs(frame.clientWidth-$('workspace-page').clientWidth)<3,'两栏应等宽');
     assert(!right.getElementById('sidebar').getClientRects().length,'应共用一个侧栏');
+    const divider=$('split-divider'),left=$('workspace-page');
+    const total=left.clientWidth+frame.clientWidth;
+    const boundary=divider.getBoundingClientRect().left+divider.offsetWidth/2;
+    const drag=(phase,x)=>window.__compactRequest({action:'drag-divider',phase,x,y:220});
+    await drag('down',boundary);
+    await drag('move',boundary+total*0.15);
+    await until(()=>Math.abs(left.clientWidth-total*0.65)<2);
+    await drag('move',window.innerWidth-1);
+    await until(()=>Math.abs(left.clientWidth-total*0.75)<2);
+    await drag('move',0);
+    await until(()=>Math.abs(left.clientWidth-total*0.25)<2);
+    await drag('up',0);
+    await until(()=>getComputedStyle(frame).pointerEvents!=='none');
+    assert(right===frame.contentDocument&&left.clientWidth+frame.clientWidth===total,'拖动应保留编辑器和侧栏宽度');
+    divider.focus();
+    divider.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+    assert(Math.abs(left.clientWidth-total*0.26)<2,'方向键应微调分屏');
+    $('toggle-sidebar').click();
+    assert(Math.abs(left.clientWidth/(left.clientWidth+frame.clientWidth)-0.26)<0.002,'收起侧栏应保持分屏比例');
+    $('toggle-sidebar').click();
     const insert=(doc,text)=>{
       const editor=doc.querySelector('.vditor-ir [contenteditable="true"]');
       assert(editor,'正文编辑器应可编辑');
@@ -46,11 +66,13 @@ if(!paneHost){
     source.value='# 导图编辑';source.dispatchEvent(new Event('input',{bubbles:true}));
     right.getElementById('close-right').click();
     await until(()=>!document.querySelector('.right-document'));
+    assert(!divider.getClientRects().length&&left.clientWidth>=total,'关闭右栏应恢复单栏宽度');
     assert(fixture.documents.get('源/子/想法.mind.md').source==='# 导图编辑','关闭前应保存导图');
     assert(state.snapshot.path==='根.md','关闭右栏应保留左栏');
     document.querySelector('.tree-row[data-path="根.md"]').dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,cancelable:true}));
     item.click();
     await until(()=>split.path==='根.md'&&!state.navigating);
+    assert(Math.abs(left.clientWidth-total*0.26)<2,'同一窗口再次分屏应沿用上次比例');
     const shared=document.querySelector('.right-document').contentDocument;
     document.querySelector('.tree-row[data-path="源/笔记.md"]').click();
     await until(()=>state.snapshot.path===rightPath&&!state.navigating);
@@ -77,6 +99,6 @@ if(!paneHost){
     insert(shared,'切换目录后保存');
     await until(()=>fixture.documents.get('根.md').source.includes('切换目录后保存'));
     assert(!markdown.editable.textContent.includes('切换目录后保存'),'右栏编辑不能写入左栏同名文件');
-    window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: 双栏菜单、正文与导图渲染、独立编辑保存、替换和关闭、同文件双向同步和独立滚动'});
+    window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: 双栏菜单、分隔线拖动与边界、正文与导图渲染、独立编辑保存、替换和关闭、同文件双向同步和独立滚动'});
   } catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:String(error)+' '+error.stack+' '+document.querySelector('.right-document')?.contentDocument.getElementById('error-text').textContent})}
 }

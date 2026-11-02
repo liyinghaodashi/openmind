@@ -59,6 +59,12 @@ void om_hide_window(void);
         } else if ([action isEqual:@"check-pin"]) {
             NSInteger expected = [data[@"enabled"] boolValue] ? NSFloatingWindowLevel : NSNormalWindowLevel;
             if (self.window.level != expected) failure = @"Pin button and native window level disagree";
+        } else if ([action isEqual:@"drag-divider"]) {
+            NSDictionary *types = @{@"down": @(NSEventTypeLeftMouseDown), @"move": @(NSEventTypeLeftMouseDragged), @"up": @(NSEventTypeLeftMouseUp)};
+            NSEventType type = [types[data[@"phase"]] unsignedIntegerValue];
+            NSPoint point = NSMakePoint([data[@"x"] doubleValue], message.webView.bounds.size.height - [data[@"y"] doubleValue]);
+            NSEvent *event = [NSEvent mouseEventWithType:type location:point modifierFlags:0 timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.window.windowNumber context:nil eventNumber:0 clickCount:1 pressure:type == NSEventTypeLeftMouseUp ? 0 : 1];
+            [NSApp sendEvent:event];
         } else if ([action isEqual:@"resize"]) {
             NSRect frame = self.window.frame;
             frame.size = NSMakeSize(580, 700);

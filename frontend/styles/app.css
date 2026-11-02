@@ -153,8 +153,13 @@
 #sidebar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
 .section-label>.sidebar-actions{flex-shrink:0}
 
-.right-document{flex:1 1 0;width:0;min-width:0;height:100%;border:0;border-left:1px solid var(--line);background:white}
-.split-open #workspace-page{flex:1 1 0}
+.right-document{flex:calc(100 - var(--left-pane-share,50)) 1 0;width:0;min-width:0;height:100%;border:0;background:white}
+.split-open #workspace-page{flex:var(--left-pane-share,50) 1 0}
+#split-divider{display:none;position:relative;flex:0 0 9px;background:white;cursor:col-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+.split-open:not(.settings-open)>#split-divider{display:block}
+#split-divider::after{content:'';position:absolute;inset:0 4px;background:var(--line)}
+#split-divider:is(:hover,:focus-visible,.dragging)::after{background:#888}
+#split-divider.dragging+.right-document{pointer-events:none}
 .settings-open .right-document,.right-pane #sidebar,.right-pane #toggle-sidebar,.right-pane #toggle-always-on-top,.right-pane #enter-compact-window,.split-open #enter-compact-window{display:none!important}
 .right-pane #workspace-page>.toolbar,.split-open:not(.sidebar-collapsed) #workspace-page>.toolbar{padding-inline:16px}
 .right-pane .source-panel,.split-open .source-panel{min-width:0}
