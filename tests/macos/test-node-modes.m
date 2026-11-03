@@ -23,6 +23,16 @@
         });
         return;
     }
+    if ([message.name isEqualToString:@"compose"]) {
+        id<NSTextInputClient> client = (id<NSTextInputClient>)self.web;
+        NSRange current = NSMakeRange(NSNotFound, 0);
+        [client setMarkedText:@"mima" selectedRange:NSMakeRange(4, 0) replacementRange:current];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 80 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
+            [client insertText:@"密码" replacementRange:current];
+            [self.web evaluateJavaScript:@"window.__composeDone()" completionHandler:nil];
+        });
+        return;
+    }
     if ([message.name isEqualToString:@"pointer"]) {
         NSWindow *window = self.web.window;
         NSPoint point = NSMakePoint([result[@"x"] doubleValue], self.web.bounds.size.height - [result[@"y"] doubleValue]);
@@ -63,6 +73,7 @@ int main(int argc, const char *argv[]) {
         [configuration.userContentController addScriptMessageHandler:probe name:@"result"];
         [configuration.userContentController addScriptMessageHandler:probe name:@"pointer"];
         [configuration.userContentController addScriptMessageHandler:probe name:@"historyKey"];
+        [configuration.userContentController addScriptMessageHandler:probe name:@"compose"];
         NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(100, 100, 1200, 750) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
         window.title = @"OpenMind node mode verification";
         WKWebView *web = [[WKWebView alloc] initWithFrame:window.contentView.bounds configuration:configuration];

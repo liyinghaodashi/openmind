@@ -34,5 +34,13 @@ try{
     assert([...node.querySelectorAll('.vditor-ir__marker')].every(marker=>!marker.getClientRects().length),'Keyboard selection must not reveal image source');
     assert(image.getBoundingClientRect().width>0,'Keyboard selection must keep image visible');
   }
+  const reference='![图片](.assets/%E7%AC%94/a.png)';
+  markdown.load('1. 连接数据库，'+reference+'\n2. 创建管道\n',{session:'list',path:'笔记.md',reset:true});
+  markdown.setReadOnly(false);await settle();
+  const image=markdown.editable.querySelector('img');
+  const caret=document.createRange();caret.setStartBefore(image.parentElement);caret.collapse(true);
+  markdown.editable.focus();window.getSelection().removeAllRanges();window.getSelection().addRange(caret);
+  await new Promise(resolve=>{window.__composeDone=resolve;window.webkit.messageHandlers.compose.postMessage({})});await settle();
+  assert(markdown.currentSource().includes('密码'+reference)&&markdown.editable.querySelector('img')?.naturalWidth===1,'Typing after a list image must preserve its source and preview: '+markdown.currentSource());
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit image click and source visibility checks'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}
