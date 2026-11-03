@@ -25,11 +25,11 @@ try{
   fixtures.push({source:'## **标题**与[链接](https://example.com)\n',level:2,label:'标题与链接',position:'inline'});
   fixtures.push({source:'## \n',level:2,label:''});
   for(const position of ['element','text'])fixtures.push({source:'## 标题\n',level:2,label:'标题',position});
-  for(const fixture of fixtures){
+  for(const action of ['enter','shift-enter'])for(const fixture of fixtures){
     const original=await load(fixture.source,fixture.position);
     const paragraphCount=markdown.editable.querySelectorAll('p').length;
     const top=markdown.editable.querySelector('h'+fixture.level).getBoundingClientRect().top;
-    await native('shift-enter');await settle();
+    await native(action);await settle();
     const state=()=>JSON.stringify({source:markdown.currentSource(),html:markdown.editable.innerHTML});
     const headings=markdown.headings(),heading=headings[0]?.element,paragraph=heading?.previousElementSibling;
     assert(headings.length===1&&headings[0].level===fixture.level&&headings[0].label===fixture.label,'Heading level and text must survive: '+state());
@@ -52,7 +52,7 @@ try{
   assert(markdown.headings()[0]?.label==='标题'&&markdown.editable.querySelectorAll('p').length===2,'Repeated Shift+Enter must add lines before the heading: '+markdown.editable.innerHTML);
   await native('commit','前');await settle();
   assert(markdown.headings()[0]?.label==='前标题','Typing after repeated Shift+Enter must remain in the heading');
-  for(const guard of ['composition','event-composition','blocked','readonly','selection','middle','end','plain-enter','modified','quote']){
+  for(const guard of ['composition','event-composition','blocked','readonly','selection','middle','end','modified','quote']){
     const original=await load(guard==='quote'?'> ## 标题\n':'## 标题\n');
     if(guard==='composition')markdown.composing=true;
     if(guard==='blocked')allow=false;
@@ -61,10 +61,10 @@ try{
     if(guard==='selection')range.setEnd(text,1);
     if(guard==='middle'){range.setStart(text,1);range.collapse(true)}
     if(guard==='end'){range.setStart(text,text.length);range.collapse(true)}
-    const event=new KeyboardEvent('keydown',{key:'Enter',shiftKey:guard!=='plain-enter',metaKey:guard==='modified',isComposing:guard==='event-composition',bubbles:true,cancelable:true});
+    const event=new KeyboardEvent('keydown',{key:'Enter',shiftKey:true,metaKey:guard==='modified',isComposing:guard==='event-composition',bubbles:true,cancelable:true});
     markdown.editable.dispatchEvent(event);
     markdown.composing=false;allow=true;markdown.setReadOnly(false);await settle();
     assert(markdown.currentSource()===original&&writes.length===0,'The '+guard+' case must not insert a paragraph');
   }
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit heading Shift+Enter checks (H1-H6, caret, layout, save, undo/redo, inline formatting and guards)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit heading Enter and Shift+Enter checks (H1-H6, caret, layout, save, undo/redo, inline formatting and guards)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

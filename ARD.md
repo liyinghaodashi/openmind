@@ -336,3 +336,7 @@ macOS 实现独立放在 `internal/globalshortcut`，使用 Carbon `RegisterEven
 两种 mind 渲染器绘制时按当前 `devicePixelRatio` 对齐场景平移，避免小数位移导致 WebKit 对文字和连线重新采样。控制层继续保留原始小数坐标，缩放和布局坐标不变，裁剪使用对齐后的绘制坐标。不得在输入阶段取整，否则连续的小幅触控板移动会丢失。
 
 `node scripts/test-compact-window.mjs mind-pan` 使用原生 WebKit 与 ScreenCaptureKit 比较同一节点平移前后的实际屏幕像素，覆盖两种风格、三档缩放、左上与右下小数平移；渲染器单测补充普通屏与 Retina 的坐标对齐及内部状态不变检查。
+
+## 2026-11-03：md 标题行首回车（0.10.18）
+
+顶层标题可见行首的普通 Enter 与 Shift+Enter 共用已有的插入段落逻辑，上方新增普通空段落，光标随原标题下移。
