@@ -416,7 +416,7 @@ function bindInput(element,kind,nodeId=''){
   element.addEventListener('compositionstart',()=>{composing=true;state.composing=true});
   element.addEventListener('compositionend',()=>{composing=false;state.composing=false;commit()});
   element.addEventListener('input',event=>{if(!composing&&!event.isComposing)commit()});
-  element.addEventListener('beforeinput',event=>{if(state.blocked||state.closing||(!composing&&!state.queue.canAccept(new TextEncoder().encode(element.value).length+1024))){event.preventDefault();toast('文件正在写入，请稍候再输入。')}if(kind==='label'&&event.inputType==='insertLineBreak')event.preventDefault()});
+  element.addEventListener('beforeinput',event=>{if(state.blocked||state.closing||(!composing&&!state.queue.canAccept(new TextEncoder().encode(element.value).length+1024))){event.preventDefault();toast('文件正在写入，请稍候再输入。')}});
   return ()=>{last=element.value};
 }
 const resetSourceInput=bindInput($('source-editor'),'source');

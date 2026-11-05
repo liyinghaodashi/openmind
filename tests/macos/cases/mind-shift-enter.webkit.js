@@ -1,0 +1,50 @@
+try{
+  let checks=0;
+  const assert=(passed,message)=>{checks++;if(!passed)throw new Error(message)};
+  const settle=async()=>{await state.queue.drain();await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame)};
+  const key=(channel,shift)=>new Promise(resolve=>{window.__mindKeyDone=resolve;window.webkit.messageHandlers[channel].postMessage({shift})});
+  const nodes=()=>{const all=[];const visit=node=>{all.push(node);node.children.forEach(visit)};visit(state.snapshot.root);return all};
+  const find=label=>nodes().find(node=>node.label===label);
+  for(const style of ['processon','mindnode']){
+    map.setStyle(style);
+    state.queue.reset();applySnapshot(await call('OpenDocument','颜色.mind.md'),{resetView:true});map.fit();map.render();await settle();
+    const original=state.snapshot.source,count=nodes().length;
+    await editNode(find('子项').id);
+    const editor=state.editor;
+    editor.setSelectionRange(1,1);
+    await key('enterKey',true);await settle();
+    assert(state.editor===editor&&editor.value==='子\n项','Native Shift+Enter must insert a newline and keep editing');
+    assert(editor.selectionStart===2&&editor.selectionEnd===2,'Caret must move to the new line');
+    assert(find('子\n项')&&nodes().length===count,'Newline must save within the same node');
+    await key('historyKey',false);await settle();
+    assert(editor.value==='子项','Native undo must remove the inserted newline');
+    await key('historyKey',true);await settle();
+    assert(editor.value==='子\n项','Native redo must restore the inserted newline');
+    editor.setSelectionRange(0,editor.value.length);
+    assert(document.execCommand('insertText',false,'第一行替换第三行'),'Fixture text must be inserted');await settle();
+    editor.setSelectionRange(3,5);
+    await key('enterKey',true);await settle();
+    assert(editor.value==='第一行\n第三行','Shift+Enter must replace the selected text');
+    await key('enterKey',true);await settle();
+    const label='第一行\n\n第三行';
+    assert(editor.value===label,'Repeated Shift+Enter must preserve a blank line');
+    const beforeBlocked=editor.value;
+    state.blocked=true;
+    await key('enterKey',true);await settle();state.blocked=false;
+    assert(editor.value===beforeBlocked,'Blocked saves must still reject newline input');
+    await key('enterKey',false);await settle();
+    assert(!state.editor&&find(label),'Plain Enter must finish editing without inserting a newline');
+    let node=find(label);
+    assert(node.color==='#D5AA45'&&node.children[0].label==='深层'&&nodes().length===count,'Newlines must preserve color and child hierarchy');
+    assert(map.elements.get(node.id).getBoundingClientRect().height>=3*22*map.scale,'Rendered node must reserve space for all three lines');
+    const saved=state.snapshot.source;
+    assert(await window.__mindRules.request('ReadDisk','颜色.mind.md')===saved,'Newlines must reach disk');
+    await restoreMindHistory('undo');await settle();assert(state.snapshot.source===original,'Canvas undo must restore the original node');
+    await restoreMindHistory('redo');await settle();assert(state.snapshot.source===saved,'Canvas redo must restore all lines');
+    applySnapshot(await call('OpenDocument','颜色.mind.md'),{resetView:true});map.fit();map.render();await settle();
+    assert(find(label)?.children[0].label==='深层','Reopening must preserve line breaks and children');
+    assert(!state.blocked&&$('error-banner').hidden,'Shift+Enter must not cause save errors');
+    applySnapshot(await commands.apply(commands.prepare({kind:'restore-mind',text:original})));
+  }
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native Shift+Enter checks (both styles, caret, selection, blank lines, undo/redo, save guard, Enter, disk, reopen, layout, hierarchy)'});
+}catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

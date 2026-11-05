@@ -8,13 +8,14 @@
 @implementation NodeModesProbe
 - (void)userContentController:(WKUserContentController *)controller didReceiveScriptMessage:(WKScriptMessage *)message {
     NSDictionary *result = message.body;
-    if ([message.name isEqualToString:@"historyKey"]) {
-        NSEventModifierFlags flags = NSEventModifierFlagCommand;
+    if ([message.name isEqualToString:@"historyKey"] || [message.name isEqualToString:@"enterKey"]) {
+        BOOL enter = [message.name isEqualToString:@"enterKey"];
+        NSEventModifierFlags flags = enter ? 0 : NSEventModifierFlagCommand;
         if ([result[@"shift"] boolValue]) flags |= NSEventModifierFlagShift;
         [self.web.window makeKeyAndOrderFront:nil];
         [NSApp activateIgnoringOtherApps:YES];
         [self.web.window makeFirstResponder:self.web];
-        NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:flags timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.web.window.windowNumber context:nil characters:@"z" charactersIgnoringModifiers:@"z" isARepeat:NO keyCode:6];
+        NSEvent *event = [NSEvent keyEventWithType:NSEventTypeKeyDown location:NSZeroPoint modifierFlags:flags timestamp:NSProcessInfo.processInfo.systemUptime windowNumber:self.web.window.windowNumber context:nil characters:enter ? @"\r" : @"z" charactersIgnoringModifiers:enter ? @"\r" : @"z" isARepeat:NO keyCode:enter ? 36 : 6];
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 50 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
             [NSApp sendEvent:event];
             dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 150 * NSEC_PER_MSEC), dispatch_get_main_queue(), ^{
@@ -73,6 +74,7 @@ int main(int argc, const char *argv[]) {
         [configuration.userContentController addScriptMessageHandler:probe name:@"result"];
         [configuration.userContentController addScriptMessageHandler:probe name:@"pointer"];
         [configuration.userContentController addScriptMessageHandler:probe name:@"historyKey"];
+        [configuration.userContentController addScriptMessageHandler:probe name:@"enterKey"];
         [configuration.userContentController addScriptMessageHandler:probe name:@"compose"];
         NSWindow *window = [[NSWindow alloc] initWithContentRect:NSMakeRect(100, 100, 1200, 750) styleMask:NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
         window.title = @"OpenMind node mode verification";
