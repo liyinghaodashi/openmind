@@ -127,16 +127,6 @@
 .outline-item:has(.outline-row.selected) .outline-collapse{color:#202020}
 .outline-item>button:focus-visible{outline-offset:-2px}
 .outline-collapse:disabled{opacity:.25;cursor:default}
-#document-kind-field{border:0;padding:0;margin:24px 0 0;min-width:0}
-#document-kind-field legend{padding:0;margin-bottom:9px;font-size:11px}
-.document-kind-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-#create-dialog .document-kind-option{display:flex;align-items:center;gap:8px;margin:0;padding:8px 10px;border:1px solid #e5e5e5;border-radius:6px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s}
-#create-dialog .document-kind-option:hover{background:#f7f7f7;border-color:#c9c9c9}
-#create-dialog .document-kind-option:has(input:checked){background:#f4f4f4;border-color:#bcbcbc;color:#202020}
-#create-dialog .document-kind-option input{appearance:none;-webkit-appearance:none;position:relative;flex:0 0 17px;width:17px;height:17px;margin:0;padding:0;border:1px solid #c8c8c8;border-radius:4px;background:#fff;cursor:pointer}
-#create-dialog .document-kind-option input:checked{background:#202020;border-color:#202020}
-#create-dialog .document-kind-option input:checked::after{content:"";position:absolute;left:5px;top:2px;width:5px;height:9px;border:solid #fff;border-width:0 1.5px 1.5px 0;transform:rotate(45deg)}
-#create-dialog .document-kind-option input:focus-visible{outline:2px solid #555;outline-offset:3px}
 .setting-choice-row{display:block;cursor:default}
 .setting-choices{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
 .setting-choice{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:7px;background:#f0f0f0;color:#666;cursor:pointer}
@@ -163,3 +153,9 @@
 .settings-open .right-document,.right-pane #sidebar,.right-pane #toggle-sidebar,.right-pane #toggle-always-on-top,.right-pane #enter-compact-window,.split-open #enter-compact-window{display:none!important}
 .right-pane #workspace-page>.toolbar,.split-open:not(.sidebar-collapsed) #workspace-page>.toolbar{padding-inline:16px}
 .right-pane .source-panel,.split-open .source-panel{min-width:0}
+
+.entry-name-field{display:flex;align-items:stretch;border:1px solid #d6d6d6;border-radius:6px;overflow:hidden}
+.entry-name-field:focus-within{border-color:#787878}
+#create-dialog .entry-name-field input{flex:1;min-width:0;width:0;border:0;border-radius:0}
+#document-kind-field{flex:0 0 96px;width:96px;margin:0;padding:0 8px;border:0;border-left:1px solid #e8e8e8;border-radius:0;background:#f7f7f7;color:#444;font:inherit;cursor:pointer}
+#document-kind-field:focus-visible{outline:2px solid #787878;outline-offset:-3px}
