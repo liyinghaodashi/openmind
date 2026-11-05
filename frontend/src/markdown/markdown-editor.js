@@ -44,9 +44,24 @@ export class MarkdownEditor {
         preview:{maxWidth:800,hljs:{enable:false,langs:[]},markdown:{codeBlockPreview:false,mathBlockPreview:false,autoSpace:false,fixTermTypo:false,listStyle:true,sanitize:true},render:{media:{enable:false}}},
         link:{isOpen:false},image:{isPreview:false},
         input:()=>this.flush(),
-        after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.editor.disabled();resolve()}
+        after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.preserveInitialSelection();this.editor.disabled();resolve()}
       });
     });
+  }
+  preserveInitialSelection() {
+    const undo=this.editor.vditor.undo,record=undo.recordFirstPosition;
+    undo.recordFirstPosition=(...args)=>{
+      const selection=window.getSelection();
+      const range=selection?.rangeCount&&!selection.isCollapsed&&this.editable.contains(selection.anchorNode)&&this.editable.contains(selection.focusNode)?selection.getRangeAt(0).cloneRange():null;
+      const backward=range&&(selection.anchorNode!==range.startContainer||selection.anchorOffset!==range.startOffset);
+      const result=record.apply(undo,args);
+      if(range){
+        const {startContainer,startOffset,endContainer,endOffset}=range;
+        if(backward)selection.setBaseAndExtent(endContainer,endOffset,startContainer,startOffset);
+        else selection.setBaseAndExtent(startContainer,startOffset,endContainer,endOffset);
+      }
+      return result;
+    };
   }
   handleCodeEnter(event) {
     if(event.key!=='Enter'||event.shiftKey||event.metaKey||event.ctrlKey||event.altKey||event.defaultPrevented)return;

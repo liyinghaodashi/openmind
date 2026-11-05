@@ -10,7 +10,7 @@ class Element {
   emit(name,event={}){for(const fn of this.listeners.get(name)||[])fn(event)}
 }
 class Editor {
-  constructor(container,options){this.options=options;this.value='';this.vditor={ir:{},lute:{SetLinkBase:value=>this.base=value,SetInlineMath:()=>{}}};queueMicrotask(options.after)}
+  constructor(container,options){this.options=options;this.value='';this.vditor={undo:{recordFirstPosition(){}},ir:{},lute:{SetLinkBase:value=>this.base=value,SetInlineMath:()=>{}}};queueMicrotask(options.after)}
   getValue(){return this.value}
   setValue(value,clearStack){this.value=value.replace(/\r\n/g,'\n').trimEnd()+'\n';this.clearStack=clearStack}
   disabled(){this.disabledState=true}

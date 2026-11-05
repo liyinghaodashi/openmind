@@ -26,7 +26,7 @@ const server=http.createServer(async(req,res)=>{
 });
 try{
   const executable=path.join(probeDirectory,'shortcuts-probe');
-  const probeSource=['markdown-image-click','markdown-inline','markdown-checkbox'].includes(process.argv[2])?'./test-node-modes.m':'./test-document-search.m';
+  const probeSource=['markdown-image-click','markdown-inline','markdown-checkbox','markdown-first-delete'].includes(process.argv[2])?'./test-node-modes.m':'./test-document-search.m';
   const compilation=spawnSync('clang',['-fobjc-arc','-framework','Cocoa','-framework','WebKit',fileURLToPath(new URL(probeSource,import.meta.url)),'-o',executable],{stdio:'inherit'});
   if(compilation.status!==0)throw new Error('Cannot compile native WebKit shortcuts probe');
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
