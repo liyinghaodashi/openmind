@@ -15,6 +15,7 @@ import {mountFileActions} from './workspace/file-actions.js';
 import {sourceSelection,restoreBodySelection,restoreSourceSelection} from './markdown/source-selection.js';
 import {MarkdownEditor} from './markdown/markdown-editor.js';
 import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from './document/document-mode.js';
+import {mountDocumentKind} from './ui/document-kind.js';
 import {mountGlobalCaret} from './ui/global-caret.js';
 import {mountDocumentSearch} from './document/document-search.js';
 import {mountFileTreeDrag,movedTreePath} from './workspace/file-tree-drag.js';
@@ -971,8 +972,9 @@ $('reload-document').onclick=async()=>{
   }catch(error){banner(errorText(error)+'；窗口中的本地内容仍被保留。',true)}
 };
 
+const documentKind=mountDocumentKind($('document-kind-field'),$('create-dialog'));
 let createDirectory=false,createParent='';
-async function beginCreate(directory,parent=state.selectedDir){if(state.navigating||state.checking||state.closing||document.querySelector('dialog[open]'))return;if(preview){toast('只读预览不能创建文件。');return}if(!state.workspace){await chooseWorkspace();if(!state.workspace)return;parent=''}if(!await readyToNavigate())return;createDirectory=directory;createParent=parent;$('create-title').textContent=directory?'新建文件夹':'新建 Markdown';$('document-kind-field').hidden=directory;$('create-form').elements.namedItem('document-kind').value='markdown';$('create-location').textContent='位置：'+state.workspace.name+'/'+createParent;$('entry-name').value='';$('entry-name').placeholder=directory?'文件夹名称':'文档名称';$('create-error').textContent='';$('create-dialog').showModal();$('entry-name').focus()}
+async function beginCreate(directory,parent=state.selectedDir){if(state.navigating||state.checking||state.closing||document.querySelector('dialog[open]'))return;if(preview){toast('只读预览不能创建文件。');return}if(!state.workspace){await chooseWorkspace();if(!state.workspace)return;parent=''}if(!await readyToNavigate())return;createDirectory=directory;createParent=parent;$('create-title').textContent=directory?'新建文件夹':'新建 Markdown';$('document-kind-field').hidden=directory;documentKind.reset();$('create-location').textContent='位置：'+state.workspace.name+'/'+createParent;$('entry-name').value='';$('entry-name').placeholder=directory?'文件夹名称':'文档名称';$('create-error').textContent='';$('create-dialog').showModal();$('entry-name').focus()}
 $('new-file').onclick=()=>void beginCreate(false);$('new-folder').onclick=()=>void beginCreate(true);$('cancel-create').onclick=()=>$('create-dialog').close();
 $('create-form').onsubmit=async event=>{event.preventDefault();const submit=event.submitter;submit.disabled=true;try{const name=createDirectory?$('entry-name').value:newDocumentName($('entry-name').value,$('create-form').elements.namedItem('document-kind').value==='mindmap');const path=await call('CreateEntry',createParent,name,createDirectory);$('create-dialog').close();state.expanded.add(createParent);await refreshTree();if(!createDirectory)await openDocument(path)}catch(error){$('create-error').textContent=errorText(error)}finally{submit.disabled=false}};
 
