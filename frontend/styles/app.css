@@ -140,7 +140,7 @@
 .setting-number-control{display:flex;align-items:center;gap:8px;color:#787878;font-size:12px}
 .setting-number-control input{width:88px;height:34px;margin:0;padding:6px 10px;border:0;border-radius:7px;background:#f0f0f0;color:#202020;font:inherit;font-size:13px;cursor:text}
 
-#sidebar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
+#sidebar-title{color:#000;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px}
 .section-label>.sidebar-actions{flex-shrink:0}
 
 .right-document{flex:calc(100 - var(--left-pane-share,50)) 1 0;width:0;min-width:0;height:100%;border:0;background:white}
