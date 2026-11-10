@@ -12,7 +12,7 @@ const temporary=await mkdtemp(path.join(tmpdir(),'openmind-compact-'));
 const tests=await readFile(path.join(project,'tests/macos/cases/'+(process.argv[2]||'compact-window')+'.webkit.js'),'utf8');
 const fixture=await readFile(path.join(project,'tests/macos/cases/file-tree-drag.fixture.js'),'utf8');
 const bridge=`
-window.__compactSettings={mdCompactWindow:false,hideFileExtensions:false,expandFileNameOnHover:false,mindStyle:'processon',mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
+window.__compactSettings={mdCompactWindow:false,hideFileExtensions:false,expandFileNameOnHover:false,mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
 window.go.desktop.App.GetSettings=async()=>({...window.__compactSettings});
 window.go.desktop.App.SaveSettings=async value=>{window.__compactSettings={...value}};
 window.__compactRequest=data=>new Promise(resolve=>{

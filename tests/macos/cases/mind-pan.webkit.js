@@ -13,8 +13,9 @@ try {
   ]);
   await openDocument('源/子/想法.mind.md');
   map.setNodeMark('main',true);map.setNodeMark('second',true);
-  for(const style of ['processon','mindnode']) for(const scale of [1,.65,1.25]) {
-    map.setStyle(style);map.scale=scale;map.x=30-Math.max(0,(scale-1)*700);map.y=40;map.render();await settle();
+  const style='processon';
+  for(const scale of [1,.65,1.25]) {
+    map.scale=scale;map.x=30-Math.max(0,(scale-1)*700);map.y=40;map.render();await settle();
     const pixels=baseline=>{
       const r=map.elements.get('target').getBoundingClientRect();
       const canvas=map.canvas.getBoundingClientRect();

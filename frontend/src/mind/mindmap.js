@@ -9,10 +9,9 @@ export class MindMap {
     this.scale=1;this.x=0;this.y=0;this.collapsed=new Set();this.frame=0;this.selected=null;this.focusedId=null;
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
-    this.style='processon';
     this.nodeMaxWidth=340;
     this.rendererOptions={canvas,scene,nodes,edges,getNodeMaxWidth:()=>this.nodeMaxWidth,onActivate:id=>this.activateNode(id),onEdit:id=>void this.onEdit(id)};
-    this.renderer=createMindRenderer(this.style,this.rendererOptions);
+    this.renderer=createMindRenderer(this.rendererOptions);
     this.elements=this.renderer.elements;this.edgeElements=this.renderer.edgeElements;
     this.nodeMenu=document.createElement('div');this.nodeMenu.className='file-context-menu node-context-menu';this.nodeMenu.setAttribute('role','menu');this.nodeMenu.setAttribute('aria-label','节点操作');this.nodeMenu.hidden=true;
     const foldButton=document.createElement('button');foldButton.type='button';foldButton.setAttribute('role','menuitem');this.nodeMenu.append(foldButton);document.body.append(this.nodeMenu);
@@ -131,20 +130,6 @@ export class MindMap {
     this.nodeMaxWidth=width;
     this.renderer.measurements.clear();
     if(this.root)this.setRoot(this.root);
-  }
-  setStyle(style){
-    if(this.style===style)return;
-    const anchor=this.layout?.positions.find(p=>p.id===(this.focusedId||this.selected))||this.layout?.positions[0];
-    const renderer=createMindRenderer(style,this.rendererOptions);
-    this.closeNodeMenu();if(this.nodeDrag)this.stopNodeDrag(null,false);
-    this.renderer.clear();this.renderer=renderer;this.style=style;
-    this.elements=renderer.elements;this.edgeElements=renderer.edgeElements;
-    if(this.root){
-      this.setRoot(this.root);
-      const next=this.layout.positions.find(p=>p.id===anchor?.id);
-      if(next){this.x+=(anchor.x-next.x)*this.scale;this.y+=(anchor.y+anchor.height/2-next.y-next.height/2)*this.scale;}
-    }
-    this.schedule();
   }
   closeNodeMenu(restoreFocus=false){
     if(this.nodeMenu)this.nodeMenu.hidden=true;

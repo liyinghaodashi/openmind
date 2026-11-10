@@ -12,8 +12,8 @@ try {
   root.children[0].label = '搜索';
   root.children[1].label = '查看详情';
   const change = async value => {input.value = value; input.dispatchEvent(new Event('change', {bubbles: true})); await settings.flush(); await frames();};
-  for (const style of ['processon', 'mindnode']) {
-    map.setStyle(style);
+  {const style='processon';
+
     const command = 'limit_req_zone $binary_remote_addr zone=my_limit:10m rate=1r/s;';
     map.setNodeMaxWidth(340);
     map.setRoot({id: 'command', kind: 'list', label: command, children: [node('argument')]}, {resetView: true});
@@ -84,7 +84,7 @@ try {
     await toggleSettings(false);
     assert(window.__mindRules.settings.mindNodeMaxWidth === 720 && map.nodeMaxWidth === 720, 'F12 must commit before returning to canvas');
   }
-  map.setStyle('processon');
+
   assert(map.renderer.getNodeMaxWidth() === 720, 'Style changes must retain the configured width');
   window.webkit.messageHandlers.result.postMessage({passed: true, message: 'PASS: ' + checks + ' native WebKit node width checks, wrapped command right inset = ' + rightInsets.join(', ')});
 } catch (error) {

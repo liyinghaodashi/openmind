@@ -17,8 +17,8 @@ try {
     map.selected = 'source';
     map.nodeDrag = {id: 'source', pointer: 1, active: true, target: null};
   };
-  for (const style of ['processon', 'mindnode']) {
-    map.setStyle(style);
+  {const style='processon';
+
     for (const marked of [true, false]) {
       map.setNodeMark('main', marked); map.setNodeMark('second', marked);
       for (const color of ['', '#4877E0']) {
@@ -57,8 +57,8 @@ try {
     node('lower', 2, [node('l1', 3), node('l2', 3), node('l3', 3)]),
     node('source', 2)
   ]);
-  for (const style of ['processon', 'mindnode']) {
-    map.setStyle(style); map.setRoot(gapRoot, {resetView: true});
+  {const style='processon';
+     map.setRoot(gapRoot, {resetView: true});
     for (const scale of [.5, 1, 1.5]) {
       map.scale = scale; map.x = 80; map.y = 100; map.render();
       const upper = map.elements.get('upper').getBoundingClientRect();

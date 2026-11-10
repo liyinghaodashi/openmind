@@ -67,11 +67,11 @@ try{
   await toggleSource(true);await settle();
   assert(!key($('source-editor')).defaultPrevented,'Source editor must retain native text undo');
   await toggleSource(false);await settle();
-  map.setStyle('mindnode');
+
   await relocateNode(find('3. 配置 access token').id,find('第二主题').id,'child');await settle();
   const crossBranch=state.snapshot.source;
-  key();await settle();assert(state.snapshot.source===branched&&map.style==='mindnode','MindNode undo must restore a moved subtree across branches');
-  key(undefined,{shiftKey:true});await settle();assert(state.snapshot.source===crossBranch,'MindNode redo must restore the cross-branch move');
+  key();await settle();assert(state.snapshot.source===branched,'Processon undo must restore a moved subtree across branches');
+  key(undefined,{shiftKey:true});await settle();assert(state.snapshot.source===crossBranch,'Processon redo must restore the cross-branch move');
   await toggleSource(true);await settle();
   let release;
   const gate=new Promise(resolve=>release=resolve);

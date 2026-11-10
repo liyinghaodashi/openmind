@@ -14,8 +14,8 @@ try{
     await settle();
     assert(!state.blocked&&$('error-banner').hidden,'Multiline input must save successfully');
   };
-  for(const style of ['processon','mindnode']){
-    map.setStyle(style);
+  {const style='processon';
+
     state.queue.reset();applySnapshot(await call('OpenDocument','颜色.mind.md'),{resetView:true});map.fit();map.render();await settle();
     const original=state.snapshot.source;
     await editNode(find('子项').id);
@@ -42,5 +42,5 @@ try{
     assert(find('恢复单行')&&!state.snapshot.source.includes('同级续行'),'Replacing multiline text must remove old continuation');
     applySnapshot(await commands.apply(commands.prepare({kind:'restore-mind',text:original})));
   }
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' multiline mind checks (WebKit paste event, input, disk, reparse, reopen, colors, hierarchy, layout, undo/redo, both styles)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' multiline mind checks (WebKit paste event, input, disk, reparse, reopen, colors, hierarchy, layout, undo/redo, processon rendering)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

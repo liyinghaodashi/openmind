@@ -19,7 +19,6 @@ export class ProcessonRenderer {
     this.elements = new Map();
     this.edgeElements = new Map();
     this.measurements = new Map();
-    canvas.dataset.mindStyle = 'processon';
   }
 
   measure(label, depth, node) {

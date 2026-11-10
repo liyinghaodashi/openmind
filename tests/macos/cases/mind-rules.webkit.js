@@ -540,82 +540,9 @@ try{
   $('toggle-source').click();await settle();
   assert(state.sourceOpen&&!$('source-panel').hidden,'Re-enabled source view must open again in mind mode');
   await toggleSource(false);await settle();
-  const processonChoice=$('setting-mindStyle-processon'),mindnodeChoice=$('setting-mindStyle-mindnode');
-  assert(processonChoice.checked&&!mindnodeChoice.checked&&map.style==='processon','Existing settings must default to processon');
-  const styleBranch=map.layout.positions.find(p=>p.depth===1&&p.node.children.length).node;
-  await selectNode(styleBranch.id);await map.toggleSelected();await toggleFocusMode(styleBranch.id);await settle();
-  const styleSource=state.snapshot.source;
-  const anchorScreen=()=>{const p=map.layout.positions.find(p=>p.id===map.focusedId);return {x:map.x+p.x*map.scale,y:map.y+(p.y+p.height/2)*map.scale}};
-  const beforeStyle=anchorScreen(),beforeScale=map.scale,previousRenderer=map.renderer;
-  const checkStyleIsolation=async inactiveStyle=>{
-    const sheet=Array.from(document.styleSheets).find(item=>item.href?.endsWith('/mind/styles/'+inactiveStyle+'/style.css'));
-    assert(sheet,'The inactive style must have its own stylesheet');
-    const node=map.elements.get(map.selected)||map.elements.values().next().value;
-    const ghost=map.renderer.createDragGhost(node,map.scale);$('canvas').append(ghost);
-    const targets=[$('canvas'),map.scene,map.edges,...map.elements.values(),...map.edgeElements.values(),...$('canvas').querySelectorAll('.node-fold-count'),ghost,state.editor].filter(Boolean);
-    const properties=['position','backgroundColor','color','fontSize','fontWeight','lineHeight','padding','border','borderRadius','boxShadow','outline','width','height','transform','opacity','overflow','pointerEvents','webkitUserSelect'];
-    const appearance=()=>JSON.stringify(targets.map(element=>{const style=getComputedStyle(element);return properties.map(property=>style[property])}));
-    const before=appearance();
-    try{sheet.disabled=true;await settle();assert(appearance()===before,'Active '+map.style+' rendering must not depend on '+inactiveStyle+' CSS')}
-    finally{sheet.disabled=false;ghost.remove();await settle()}
-  };
-  document.dispatchEvent(new KeyboardEvent('keydown',{key:'F12',bubbles:true,cancelable:true}));await settle();
-  assert(!$('settings-page').hidden,'F12 must open the style setting');
-  processonChoice.focus();key('ArrowRight');
-  assert(document.activeElement===mindnodeChoice&&processonChoice.checked,'Arrow keys must move style focus without committing a selection');
-  window.__mindRules.saveError='style test failure';key('Enter');await settings.flush();delete window.__mindRules.saveError;
-  assert(processonChoice.checked&&!mindnodeChoice.checked&&map.style==='processon','Failed style saves must restore the selected style');
-  key('Enter');await settings.flush();
-  assert(mindnodeChoice.checked&&!processonChoice.checked&&window.__mindRules.settings.mindStyle==='mindnode','Enter must save an exclusive MindNode selection');
-  document.dispatchEvent(new KeyboardEvent('keydown',{key:'F12',bubbles:true,cancelable:true}));await settle();
-  const afterStyle=anchorScreen();
-  assert(map.style==='mindnode'&&map.collapsed.has(styleBranch.id)&&map.focusedId===styleBranch.id&&map.selected===styleBranch.id,'Style switching must preserve fold, focus and selected node');
-  assert(map.renderer!==previousRenderer&&map.elements!==previousRenderer.elements&&previousRenderer.elements.size===0&&previousRenderer.edgeElements.size===0,'Style switching must dispose the previous renderer and allocate independent DOM maps');
-  assert(document.activeElement===map.elements.get(styleBranch.id),'Returning from settings must restore keyboard focus to the replacement node');
-  assert(map.scale===beforeScale&&Math.abs(beforeStyle.x-afterStyle.x)<.1&&Math.abs(beforeStyle.y-afterStyle.y)<.1,'Style switching must preserve zoom and focused node screen position');
-  assert(state.snapshot.source===styleSource&&await window.__mindRules.request('ReadDisk')===styleSource,'Style switching must not rewrite the document');
-  const folded=map.elements.get(styleBranch.id).querySelector('.node-fold-count');
-  assert(folded&&folded.textContent!=='0','MindNode must retain the folded descendant count');
-  await checkStyleIsolation('processon');
-  await toggleFocusMode(styleBranch.id);await map.toggleSelected(styleBranch.id);map.fit();map.render();await settle();
-  assert(getComputedStyle($('canvas')).backgroundColor==='rgb(238, 238, 241)','MindNode must use the reference gray canvas');
-  for(const p of map.layout.positions.filter(p=>p.depth>0&&map.elements.has(p.id))){
-    const element=map.elements.get(p.id),style=getComputedStyle(element),edge=map.edgeElements.get(p.id);
-    assert(style.backgroundColor==='rgba(0, 0, 0, 0)'&&style.borderBottomStyle==='solid','MindNode descendants must have transparent backgrounds and underlines');
-    assert(Math.abs(element.offsetHeight-p.height)<1,'MindNode text layout must match measured height: '+p.node.label);
-    if(edge){
-      const depth=p.node.kind==='heading'?p.node.level-1:Math.max(2,p.depth);
-      const width=depth===1?3.35:depth===2?2.35:1.85;
-      assert(edge.getAttribute('d').includes(' C ')&&Number(edge.getAttribute('stroke-width'))===width,'MindNode must use curved edges and decreasing branch thickness');
-      const endpoint=edge.getPointAtLength(edge.getTotalLength());
-      assert(Math.abs(endpoint.x-p.x)<.01&&Math.abs(endpoint.y-(p.y+p.height-width/2))<.01,'Curved edges must connect to the center of the underline');
-    }
-  }
-  await setNodeColor(styleBranch.id,'#DC6A5E');await settle();
-  const coloredBranch=nodes().find(node=>node.id===map.selected)||find(styleBranch.label);
-  assert(getComputedStyle(map.elements.get(coloredBranch.id)).borderBottomColor==='rgb(220, 106, 94)'&&map.edgeElements.get(coloredBranch.id).getAttribute('stroke')==='#DC6A5E','Color changes must update MindNode underlines and incoming curves');
-  const inheritingChild=coloredBranch.children.find(node=>!node.color);
-  if(inheritingChild)assert(getComputedStyle(map.elements.get(inheritingChild.id)).borderBottomColor==='rgb(220, 106, 94)','MindNode child underlines must inherit branch color');
-  const oldLabel=coloredBranch.label;
-  await editNode(coloredBranch.id);await settle();
-  assert(getComputedStyle(state.editor).fontWeight==='400'&&getComputedStyle(state.editor).fontSize==='14px','MindNode inline editor must match node typography');
-  await checkStyleIsolation('processon');
-  const longLabel='MindNode 编辑验证 '+('长文本自动换行，'.repeat(9));
-  state.editor.value=longLabel;state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));await state.queue.drain();await finishNodeSelection();await settle();
-  const wrapped=find(longLabel),wrappedPosition=map.layout.positions.find(p=>p.id===wrapped.id);
-  assert(wrappedPosition.height>54&&Math.abs(map.elements.get(wrapped.id).offsetHeight-wrappedPosition.height)<1,'Wrapped MindNode labels must fit their measured nodes');
-  await editNode(wrapped.id);state.editor.value=oldLabel;state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));await state.queue.drain();await finishNodeSelection();await settle();
-  await selectNode(find(oldLabel).id);await addChild();await settle();
-  assert(state.editor&&map.style==='mindnode','MindNode Tab insertion must enter the shared editor');
-  state.editor.value='MindNode 新增';state.editor.dispatchEvent(new InputEvent('input',{bubbles:true}));await state.queue.drain();await finishNodeSelection();await settle();
-  await selectNode(find('MindNode 新增').id);await deleteNode();await settle();
-  assert(!find('MindNode 新增'),'MindNode node deletion must use the shared document operations');
-  await toggleSettings(true);processonChoice.click();await settings.flush();await toggleSettings(false);map.fit();map.render();await settle();
-  assert(map.style==='processon'&&getComputedStyle($('canvas')).backgroundColor==='rgb(255, 255, 255)','Switching back must restore the original canvas');
-  const restoredBranch=map.elements.get(find(oldLabel).id);
-  assert(getComputedStyle(restoredBranch).fontWeight==='550'&&getComputedStyle(restoredBranch).borderBottomWidth==='1px'&&!map.edgeElements.get(find(oldLabel).id).getAttribute('d').includes(' C '),'Switching back must restore original nodes and edge geometry');
-  await checkStyleIsolation('mindnode');
-  await editNode(find(oldLabel).id);await settle();await checkStyleIsolation('mindnode');await finishNodeSelection();await settle();
+  await toggleSettings(true);await settle();
+  assert(!$('settings-page').hidden&&!document.querySelector('[id^=\"setting-\"][id*=\"Style\"]'),'F12 settings must open without a retired mind style setting');
+  await toggleSettings(false);await settle();
   await open();
   await selectNode(state.snapshot.root.children[0].id);key('Tab');await settle();
   assert(state.editor&&map.layout.positions.find(p=>p.id===map.editing).depth===1,'Tab from a main node must create a second-level node');

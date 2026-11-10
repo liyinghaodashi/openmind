@@ -10,10 +10,6 @@ export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineA
     id:'sourceView',group:'通用设置',label:'启用原文功能',description:'在 mind 和 md 模式中显示「原文」按钮，关闭后返回导图或正文。',
     enable:()=>setSourceViewEnabled(true),disable:()=>setSourceViewEnabled(false)
   },{
-    id:'mindStyle',group:'mind模式',label:'渲染风格',description:'选择导图外观。',
-    options:[{value:'processon',label:'processon'},{value:'mindnode',label:'MindNode'}],
-    select:value=>map.setStyle(value)
-  },{
     id:'mindNodeMaxWidth',group:'mind模式',label:'节点最大宽度',description:'文本换行宽度，默认 340px；数值越大，每行可显示的文字越多。',
     type:'number',min:160,max:1600,default:340,select:value=>map.setNodeMaxWidth(value)
   },{

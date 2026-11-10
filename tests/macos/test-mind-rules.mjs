@@ -12,7 +12,7 @@ const addressFile=path.join(directory,'address');
 const tests=await readFile(new URL('./cases/'+(process.argv[2]||'mind-rules')+'.webkit.js',import.meta.url),'utf8');
 const mock=`
 window.__mindRules={};
-window.__mindRules.settings={mdCompactWindow:true,hideFileExtensions:false,expandFileNameOnHover:false,mindStyle:'processon',mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
+window.__mindRules.settings={mdCompactWindow:true,hideFileExtensions:false,expandFileNameOnHover:false,mindMainNodeMark:false,mindSecondNodeMark:false,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true};
 window.__mindRules.request=async(method,...args)=>{
   const response=await fetch('/_mind',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({method,args})});
   const result=await response.json();if(!response.ok)throw new Error(result.error);return result.value;

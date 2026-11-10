@@ -13,8 +13,9 @@ try {
     const rect=map.canvas.getBoundingClientRect();
     return JSON.stringify({width:innerWidth,height:innerHeight,canvas:[rect.x,rect.y,rect.width,rect.height],view:[map.x,map.y,map.scale],nodes:[...map.elements.values()].map(element=>{const r=element.getBoundingClientRect();return [r.x,r.y,r.width,r.height]})});
   };
-  for(const style of ['processon','mindnode'])for(const scale of [1,.65,1.6]){
-    map.setStyle(style);map.scale=scale;map.x=110.25;map.y=140.25;map.render();
+  const style='processon';
+  for(const scale of [1,.65,1.6]){
+    map.scale=scale;map.x=110.25;map.y=140.25;map.render();
     await settle();
     const bounds=map.canvas.getBoundingClientRect();
     const pixels=baseline=>window.__compactRequest({action:'pin-sample',baseline,x:bounds.x+30,y:bounds.y,width:bounds.width-30,height:bounds.height-70});

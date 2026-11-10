@@ -29,66 +29,6 @@ function setup(storage) {
   return {sidebar, button, root, feature, settings, fields, status, input, change, click};
 }
 
-function styleSetup(storage) {
-  const container = new Element(), applied = [];
-  const feature = {id: 'mindStyle', label: '渲染风格', description: '',
-    options: [{value: 'processon', label: 'processon'}, {value: 'mindnode', label: 'MindNode'}],
-    select: value => applied.push(value)};
-  const settings = mountSettings({container, features: [feature], storage});
-  const [fields, status] = container.children;
-  const radios = fields.children[0].children[1].children.map(label => label.children[0]);
-  const choose = value => {
-    for (const radio of radios) radio.checked = radio.value === value;
-    radios.find(radio => radio.checked).dispatchEvent(new Event('change'));
-  };
-  return {settings, fields, status, radios, applied, choose};
-}
-
-test('风格保存成功后生效，失败回退且保留其他设置', async () => {
-  let fail = true;
-  const written = [];
-  const ui = styleSetup({load: async () => ({mindStyle: 'processon', sourceView: false}), save: async value => {
-    written.push(value);
-    if (fail) throw new Error('disk full');
-  }});
-  await ui.settings.ready;
-  ui.choose('mindnode');
-  await ui.settings.flush();
-  assert.deepEqual(ui.applied, ['processon']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [true, false]);
-  assert.match(ui.status.textContent, /disk full/);
-  fail = false;
-  ui.choose('mindnode');
-  await ui.settings.flush();
-  assert.deepEqual(written.at(-1), {mindStyle: 'mindnode', sourceView: false});
-  assert.deepEqual(ui.applied, ['processon', 'mindnode']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [false, true]);
-});
-
-test('快速切换风格串行保存，旧结果不覆盖最后的选择', async () => {
-  let release;
-  const gate = new Promise(resolve => {release = resolve;});
-  const written = [];
-  const ui = styleSetup({load: async () => ({mindStyle: 'processon'}), save: async value => {written.push(value); await gate;}});
-  await ui.settings.ready;
-  ui.choose('mindnode');
-  await Promise.resolve();
-  ui.choose('processon');
-  release();
-  await ui.settings.flush();
-  assert.deepEqual(written, [{mindStyle: 'mindnode'}, {mindStyle: 'processon'}]);
-  assert.deepEqual(ui.applied, ['processon', 'mindnode', 'processon']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [true, false]);
-});
-
-test('无效风格阻止设置表单修改', async () => {
-  const ui = styleSetup({load: async () => ({mindStyle: 'other'}), save: async () => {throw new Error('unexpected save');}});
-  await ui.settings.ready;
-  assert.equal(ui.fields.disabled, true);
-  assert.match(ui.status.textContent, /无效的设置/);
-  assert.deepEqual(ui.applied, []);
-});
-
 test('读取持久化的关闭状态，保存完成后才启用功能，退出等待保存', async () => {
   let release, written;
   const gate = new Promise(resolve => {release = resolve;});

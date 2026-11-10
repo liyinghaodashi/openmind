@@ -5,8 +5,8 @@ try{
   const key=(channel,shift)=>new Promise(resolve=>{window.__mindKeyDone=resolve;window.webkit.messageHandlers[channel].postMessage({shift})});
   const nodes=()=>{const all=[];const visit=node=>{all.push(node);node.children.forEach(visit)};visit(state.snapshot.root);return all};
   const find=label=>nodes().find(node=>node.label===label);
-  for(const style of ['processon','mindnode']){
-    map.setStyle(style);
+  {const style='processon';
+
     state.queue.reset();applySnapshot(await call('OpenDocument','颜色.mind.md'),{resetView:true});map.fit();map.render();await settle();
     const original=state.snapshot.source,count=nodes().length;
     await editNode(find('子项').id);
@@ -46,5 +46,5 @@ try{
     assert(!state.blocked&&$('error-banner').hidden,'Shift+Enter must not cause save errors');
     applySnapshot(await commands.apply(commands.prepare({kind:'restore-mind',text:original})));
   }
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native Shift+Enter checks (both styles, caret, selection, blank lines, undo/redo, save guard, Enter, disk, reopen, layout, hierarchy)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native Shift+Enter checks (processon rendering, caret, selection, blank lines, undo/redo, save guard, Enter, disk, reopen, layout, hierarchy)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

@@ -11,8 +11,8 @@ try {
     const original=state.snapshot.source;
     const expectedOutline=state.snapshot.root.children.flatMap(node=>[node,...node.children]).map(node=>node.id);
     assert(JSON.stringify([...$('document-outline').querySelectorAll('.outline-row')].map(row=>row.dataset.id))===JSON.stringify(expectedOutline),'Outline must show the top two actual layers');
-    for(const style of ['processon','mindnode']) {
-      map.setNodeMark('main',true);map.setNodeMark('second',true);map.setStyle(style);map.fit();map.render();await settle();
+    {const style='processon';
+      map.setNodeMark('main',true);map.setNodeMark('second',true);map.fit();map.render();await settle();
       assert(map.layout.positions.map(p=>p.node.label).join('|')===labels.join('|'),style+': every node must be laid out');
       assert(map.layout.positions.every(p=>map.elements.has(p.id)),style+': every node must render');
       assert(map.layout.positions.filter(p=>p.depth===0).length===roots,style+': missing parents must produce independent roots');

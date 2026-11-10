@@ -7,8 +7,8 @@ try{
   const screen=p=>({x:map.x+p.x*map.scale,y:map.y+(p.y+p.height/2)*map.scale});
   const node=(id,label,children=[])=>({id,label,editable:true,kind:'list',children});
   fixture.snapshot.root.children[0].children[0].children=[node('grandchild','后代节点')];
-  for(const style of ['mindnode','processon']){
-  map.setStyle(style);
+  {const style='processon';
+
   applySnapshot(structuredClone(fixture.snapshot),{resetView:true});await frames();
   for(const depth of [0,1,2]){
     const target=()=>depth===0?state.snapshot.root:depth===1?state.snapshot.root.children[0]:state.snapshot.root.children[0].children[0];
@@ -18,7 +18,7 @@ try{
       await editNode(target().id);await frames();
       for(const before of beforeEditing){
         const p=position(before.id),current=screen(p);
-        assert(p.height===before.height,'Entering edit mode must preserve node height ('+map.style+', depth '+depth+', '+before.id+'): '+before.height+' -> '+p.height);
+        assert(p.height===before.height,'Entering edit mode must preserve node height ('+'processon, depth '+depth+', '+before.id+'): '+before.height+' -> '+p.height);
         assert(Math.abs(current.x-before.x)<.5&&Math.abs(current.y-before.y)<.5,'Showing the caret must not move surrounding nodes');
       }
       const editor=state.editor,label=editor.value,writes=fixture.writes.length,anchor=screen(position(map.editing));
@@ -52,7 +52,7 @@ try{
       for(const suffix of ['','','',"biao'zhu".repeat(4),"biao'zhu".repeat(30),'b','']){
         editor.value=label+suffix;editor.setSelectionRange(editor.value.length,editor.value.length);
         editor.dispatchEvent(new InputEvent('input',{bubbles:true,inputType:'insertCompositionText',isComposing:true}));await frames();
-        checkLayout(map.style+' depth '+depth+' scale '+scale+' composition length '+suffix.length);
+        checkLayout('processon depth '+depth+' scale '+scale+' composition length '+suffix.length);
         assert(fixture.writes.length===writes&&target().label===label,'Composition must only change the visual layout');
         if(suffix.length>20)assert(position(target().children[0].id).x>originalChildX,'Growing labels must move the complete child branch right');
         if(!suffix)assert(Math.abs(position(target().children[0].id).x-originalChildX)<.01,'Cancelling composition must restore branch spacing');
@@ -83,5 +83,5 @@ try{
   }
   assert($('error-banner').hidden,'Layout edits must not produce save errors');
   }
-  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit live layout checks (both styles, stable edit entry, IME growth/shrink, descendants, connectors, wrapping, caret, zoom, delayed and older save replies)'});
+  window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: '+checks+' native WebKit live layout checks (processon rendering, stable edit entry, IME growth/shrink, descendants, connectors, wrapping, caret, zoom, delayed and older save replies)'});
 }catch(error){window.webkit.messageHandlers.result.postMessage({passed:false,message:'FAIL: '+error.message+'\n'+error.stack})}

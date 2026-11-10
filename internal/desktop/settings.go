@@ -8,20 +8,19 @@ import (
 )
 
 type AppSettings struct {
-	MindNodeMaxWidth          int    `json:"mindNodeMaxWidth"`
-	MindMainNodeMark          bool   `json:"mindMainNodeMark"`
-	MindSecondNodeMark        bool   `json:"mindSecondNodeMark"`
-	MDCompactWindow           bool   `json:"mdCompactWindow"`
-	ExpandFileNameOnHover     bool   `json:"expandFileNameOnHover"`
-	HideFileExtensions        bool   `json:"hideFileExtensions"`
-	MindStyle                 string `json:"mindStyle"`
-	MindZoomControls          bool   `json:"mindZoomControls"`
-	MindCopyTree              bool   `json:"mindCopyTree"`
-	SidebarCollapse           bool   `json:"sidebarCollapse"`
-	MindOutlineFocus          bool   `json:"mindOutlineFocus"`
-	MindOutlineCollapse       bool   `json:"mindOutlineCollapse"`
-	MindDoubleClickCreateMain bool   `json:"mindDoubleClickCreateMain"`
-	SourceView                bool   `json:"sourceView"`
+	MindNodeMaxWidth          int  `json:"mindNodeMaxWidth"`
+	MindMainNodeMark          bool `json:"mindMainNodeMark"`
+	MindSecondNodeMark        bool `json:"mindSecondNodeMark"`
+	MDCompactWindow           bool `json:"mdCompactWindow"`
+	ExpandFileNameOnHover     bool `json:"expandFileNameOnHover"`
+	HideFileExtensions        bool `json:"hideFileExtensions"`
+	MindZoomControls          bool `json:"mindZoomControls"`
+	MindCopyTree              bool `json:"mindCopyTree"`
+	SidebarCollapse           bool `json:"sidebarCollapse"`
+	MindOutlineFocus          bool `json:"mindOutlineFocus"`
+	MindOutlineCollapse       bool `json:"mindOutlineCollapse"`
+	MindDoubleClickCreateMain bool `json:"mindDoubleClickCreateMain"`
+	SourceView                bool `json:"sourceView"`
 }
 
 func (a *App) GetSettings() (AppSettings, error) {
@@ -31,7 +30,7 @@ func (a *App) GetSettings() (AppSettings, error) {
 }
 
 func (a *App) readSettings() (AppSettings, error) {
-	settings := &AppSettings{MindNodeMaxWidth: 340, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindStyle: "processon", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
+	settings := &AppSettings{MindNodeMaxWidth: 340, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil
@@ -54,9 +53,6 @@ func (a *App) readSettings() (AppSettings, error) {
 func (settings AppSettings) validate() error {
 	if settings.MindNodeMaxWidth < 160 || settings.MindNodeMaxWidth > 1600 {
 		return fmt.Errorf("节点最大宽度必须是 160–1600 之间的整数")
-	}
-	if settings.MindStyle != "processon" && settings.MindStyle != "mindnode" {
-		return fmt.Errorf("无效的 mind 渲染风格：%q", settings.MindStyle)
 	}
 	return nil
 }

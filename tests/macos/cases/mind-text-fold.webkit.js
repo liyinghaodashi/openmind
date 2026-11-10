@@ -5,8 +5,8 @@ try {
   const source='# 第一行 [color:#abc]\n第二行\n第三行\n## 子节点\n# 两行\n第二行\n# '+ '自动换行测试'.repeat(40)+'\n';
   enqueue('source',source);await state.queue.drain();
   const menu=id=>{map.render();map.showNodeMenu({target:map.elements.get(id),clientX:50,clientY:50,preventDefault(){}})};
-  for(const style of ['processon','mindnode']){
-    map.setStyle(style);map.x=24;map.y=20;
+  {const style='processon';
+    map.x=24;map.y=20;
     const id=state.snapshot.root.children[0].id;
     await selectNode(id);menu(id);assert(!map.textFoldButton.hidden,'three lines must offer folding');
     await toggleNodeFold(id);assert(state.snapshot.source.includes('[isFold]'),'fold must persist');

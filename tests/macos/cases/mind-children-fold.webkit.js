@@ -4,8 +4,8 @@ try {
   const file='颜色.mind.md';
   const open=async()=>{map.collapsed.clear();applySnapshot(await call('OpenDocument',file),{resetView:true})};
   await open();
-  for(const style of ['processon','mindnode']){
-    map.setStyle(style);
+  {const style='processon';
+
     enqueue('source','# 主节点 [color:#abc]\n续行\n末行 [isFold]\n## 子节点 [isFoldKid]\n### 孙节点\n# 其他\n');await state.queue.drain();
     let parent=state.snapshot.root.children[0],child=parent.children[0];
     assert(map.collapsed.has(child.id)&&!map.layout.positions.some(p=>p.node.label==='孙节点'),'source marker must collapse children');
