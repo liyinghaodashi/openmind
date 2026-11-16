@@ -16,6 +16,7 @@ import (
 )
 
 type Snapshot struct {
+	WorkspaceRoot string            `json:"workspaceRoot"`
 	Session       string            `json:"session"`
 	Version       int               `json:"version"`
 	Path          string            `json:"path"`
@@ -43,6 +44,7 @@ type Service struct {
 	mu              sync.Mutex
 	workspace       *workspace.Workspace
 	recovery        string
+	sessionPrefix   string
 	session         string
 	path            string
 	version         int
@@ -63,6 +65,46 @@ type archivedDocument struct {
 
 func New(recovery string) *Service {
 	return &Service{recovery: recovery, archived: map[string]archivedDocument{}, trash: trashFile}
+}
+
+func NewRightPane(recovery string) *Service {
+	s := New(recovery)
+	s.sessionPrefix = "right-"
+	return s
+}
+
+func (s *Service) Workspace() *workspace.Workspace {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.workspace
+}
+
+func (s *Service) HasFile(w *workspace.Workspace, path string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil || w == nil {
+		return false
+	}
+	current, err := s.workspace.Resolve(s.path, false)
+	if err != nil {
+		return false
+	}
+	target, err := w.Resolve(path, false)
+	if err != nil {
+		return false
+	}
+	a, errA := os.Stat(current)
+	b, errB := os.Stat(target)
+	return errA == nil && errB == nil && os.SameFile(a, b)
+}
+
+func (s *Service) Current() *Snapshot {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.doc == nil {
+		return nil
+	}
+	return s.snapshot()
 }
 
 func (s *Service) archive() {
@@ -136,7 +178,7 @@ func (s *Service) open(w *workspace.Workspace, path string, commit func() error)
 		s.archived = map[string]archivedDocument{}
 	}
 	s.workspace = w
-	s.session = randomID()
+	s.session = s.sessionPrefix + randomID()
 	s.path = path
 	s.version = 1
 	s.doc = doc
@@ -147,7 +189,7 @@ func (s *Service) open(w *workspace.Workspace, path string, commit func() error)
 }
 
 func (s *Service) snapshot() *Snapshot {
-	return &Snapshot{Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, Hash: filestore.Hash(s.doc.Source)}
+	return &Snapshot{WorkspaceRoot: s.workspace.Root, Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, Hash: filestore.Hash(s.doc.Source)}
 }
 
 func (s *Service) Apply(edit Edit) (*Snapshot, error) {
@@ -180,6 +222,10 @@ func (s *Service) Apply(edit Edit) (*Snapshot, error) {
 	switch edit.Kind {
 	case "label":
 		next, err = s.doc.WithLabel(edit.NodeID, edit.Text)
+	case "node-fold-kid":
+		next, err = s.doc.WithFoldKid(edit.NodeID, edit.Text == "true")
+	case "node-fold":
+		next, err = s.doc.WithFold(edit.NodeID, edit.Text == "true")
 	case "node-color":
 		next, err = s.doc.WithColor(edit.NodeID, edit.Text)
 	case "source":
@@ -280,7 +326,7 @@ func (s *Service) Check() (*Snapshot, error) {
 	s.archive()
 	s.doc = doc
 	s.version++
-	s.session = randomID()
+	s.session = s.sessionPrefix + randomID()
 	s.lastReply = nil
 	s.lastOp = ""
 	return s.snapshot(), nil
@@ -298,7 +344,7 @@ func (s *Service) Reparse(session string) (*Snapshot, error) {
 	}
 	s.archive()
 	s.doc = doc
-	s.session = randomID()
+	s.session = s.sessionPrefix + randomID()
 	s.lastReply = nil
 	s.lastOp = ""
 	return s.snapshot(), nil
@@ -322,10 +368,14 @@ func (s *Service) PreserveDraft(session, kind, nodeID, value string) (string, er
 		return "", fmt.Errorf("恢复内容超过 2MB")
 	}
 	data := markdown.PreserveLineEndings(doc.Source, value)
-	if kind == "label" || kind == "node-color" {
+	if kind == "label" || kind == "node-color" || kind == "node-fold" || kind == "node-fold-kid" {
 		var d *markdown.Document
 		var err error
-		if kind == "node-color" {
+		if kind == "node-fold-kid" {
+			d, err = doc.WithFoldKid(nodeID, value == "true")
+		} else if kind == "node-fold" {
+			d, err = doc.WithFold(nodeID, value == "true")
+		} else if kind == "node-color" {
 			d, err = doc.WithColor(nodeID, value)
 		} else {
 			d, err = doc.WithLabel(nodeID, value)

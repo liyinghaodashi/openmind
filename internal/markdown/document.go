@@ -16,6 +16,8 @@ type Node struct {
 	ID        string  `json:"id"`
 	Label     string  `json:"label"`
 	Color     string  `json:"color,omitempty"`
+	Fold      bool    `json:"isFold,omitempty"`
+	FoldKid   bool    `json:"isFoldKid,omitempty"`
 	Kind      string  `json:"kind"`
 	Level     int     `json:"level"`
 	Editable  bool    `json:"editable"`
@@ -199,13 +201,42 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 	if !ok || !n.Editable {
 		return nil, fmt.Errorf("该节点请在 Markdown 原文中编辑")
 	}
-	if strings.ContainsAny(label, "\r\n\x00") || !utf8.ValidString(label) {
+	if d.mind && n.FoldKid {
+		plain, err := d.WithFoldKid(id, false)
+		if err != nil {
+			return nil, err
+		}
+		next, err := plain.withLabel(id, label, preserveColor)
+		if err != nil {
+			return nil, err
+		}
+		return next.WithFoldKid(id, true)
+	}
+	if d.mind && n.Fold {
+		plain, err := d.WithFold(id, false)
+		if err != nil {
+			return nil, err
+		}
+		next, err := plain.withLabel(id, label, preserveColor)
+		if err != nil {
+			return nil, err
+		}
+		return next.WithFold(id, true)
+	}
+	if strings.ContainsRune(label, '\x00') || !utf8.ValidString(label) {
+		return nil, fmt.Errorf("节点文本必须是有效 UTF-8 文本且不能包含空字符")
+	}
+	if !d.mind && strings.ContainsAny(label, "\r\n") {
 		return nil, fmt.Errorf("节点标题只接受单行 UTF-8 文本")
 	}
 	if len(label) > 32*1024 {
 		return nil, fmt.Errorf("节点文本过长")
 	}
-	if d.mind && preserveColor && n.Color != "" {
+	end := n.End
+	multiline := d.mind && (strings.ContainsAny(label, "\r\n") || bytes.ContainsAny(d.Source[n.Start:n.End], "\r\n"))
+	if multiline {
+		label, end = d.mindLabelReplacement(n, label, preserveColor)
+	} else if d.mind && preserveColor && n.Color != "" {
 		if _, color := mindLabelColor(label); color == "" {
 			metadata := string(d.Source[n.Start+len(n.Label) : n.End])
 			if label == "" {
@@ -217,31 +248,31 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 		}
 	}
 	prefix, suffix := "", ""
-	if n.Start == n.End && label != "" {
+	if (n.Start == n.End || multiline) && label != "" {
 		if n.Start > 0 && d.Source[n.Start-1] != ' ' && d.Source[n.Start-1] != '\t' {
 			prefix = " "
 		}
-		if n.Kind == "heading" && n.End < len(d.Source) && d.Source[n.End] == '#' {
+		if !multiline && n.Kind == "heading" && n.End < len(d.Source) && d.Source[n.End] == '#' {
 			suffix = " "
 		}
 	}
 	replacement := prefix + label + suffix
-	if len(d.Source)-n.End+n.Start+len(replacement) > MaxBytes {
+	if len(d.Source)-end+n.Start+len(replacement) > MaxBytes {
 		return nil, fmt.Errorf("文档超过 2MB")
 	}
-	newSource := make([]byte, 0, len(d.Source)+len(replacement)-(n.End-n.Start))
+	newSource := make([]byte, 0, len(d.Source)+len(replacement)-(end-n.Start))
 	newSource = append(newSource, d.Source[:n.Start]...)
 	newSource = append(newSource, []byte(replacement)...)
-	newSource = append(newSource, d.Source[n.End:]...)
+	newSource = append(newSource, d.Source[end:]...)
 	next := &Document{Source: newSource, Nodes: map[string]*Node{}, name: d.name, mind: d.mind}
-	delta := len(replacement) - (n.End - n.Start)
+	delta := len(replacement) - (end - n.Start)
 	var clone func(*Node) *Node
 	clone = func(old *Node) *Node {
 		c := *old
 		c.Children = make([]*Node, 0, len(old.Children))
 		if d.mind {
 			for _, position := range []*int{&c.lineStart, &c.lineEnd, &c.branchEnd} {
-				if *position >= n.End {
+				if *position >= end {
 					*position += delta
 				}
 			}
@@ -251,9 +282,17 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 			c.Start += len(prefix)
 			c.End = c.Start + len(label)
 			if d.mind {
-				c.Label, c.Color = mindLabelColor(label)
+				if multiline {
+					c.Label, c.Color = mindMultilineLabel(label, n.Kind == "heading")
+					if !strings.ContainsAny(label, "\r\n") {
+						_, headerEnd := mindLabelSpan([]byte(label), 0, n.Kind == "heading")
+						c.End = c.Start + headerEnd
+					}
+				} else {
+					c.Label, c.Color = mindLabelColor(label)
+				}
 			}
-		} else if c.Start >= n.End && c.Start >= 0 {
+		} else if c.Start >= end && c.Start >= 0 {
 			c.Start += delta
 			c.End += delta
 		}

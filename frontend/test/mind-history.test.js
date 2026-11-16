@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {MindHistory} from '../src/features/mind-history.js';
+import {MindHistory} from '../src/mind/mind-history.js';
 
 test('undo and redo only advance after a successful save; new edits discard redo',()=>{
   const history=new MindHistory();

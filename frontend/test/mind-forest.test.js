@@ -1,11 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import vm from 'node:vm';
-import {layoutTree} from '../src/layout.js';
-import {MindMap} from '../src/mindmap.js';
-import {findNodeMatches} from '../src/features/document-search.js';
-import {nodeDropTarget} from '../src/node-drop.js';
+import {createMindSelection} from '../src/mind/selection.js';
+import {layoutTree} from '../src/mind/layout.js';
+import {MindMap} from '../src/mind/mindmap.js';
+import {findNodeMatches} from '../src/document/document-search.js';
+import {nodeDropTarget} from '../src/mind/node-drop.js';
 
 const node=(id,children=[])=>({id,label:id,kind:'heading',children});
 const forest={id:'root',label:'文件名',kind:'file',children:[node('A',[node('A2',[node('A3',[node('Detail')])])]),node('B',[node('B2')])]};
@@ -44,13 +43,9 @@ test('没有有效主节点时布局和缩放仍然有限，重新打开导图�
 });
 
 test('方向键在主节点之间切换，左键不会选中隐藏的文件根',async()=>{
-  const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-  const navigation=source.slice(source.indexOf('function nodePath('),source.indexOf('\n',source.indexOf('function nodeAtPath(')));
-  const move=source.slice(source.indexOf('async function moveSelection('),source.indexOf('\nfunction copyNodeText('));
   const map={root:forest,selected:'A',collapsed:new Set(),layout:layoutTree(forest,new Set(),measure),elements:new Map(),setRoot(root){this.layout=layoutTree(root,this.collapsed,measure)},reveal(){},render(){}};
   const state={snapshot:{root:forest},queue:{drain:async()=>true},editor:null};
-  const context=vm.createContext({state,map,preview:false,addingChild:false,deletingNode:false,movingNode:false,editRequest:0,finishNode:async()=>true,$:()=>({}),banner:message=>assert.fail(message),errorText:String});
-  vm.runInContext(navigation+'\n'+move,context);
+  const context={moveSelection:createMindSelection({state,map,preview:false,operations:{busy:false,begin(){},end(){}},finishNode:async()=>true,sourceEditor:{},onError:error=>assert.fail(String(error))})};
   await context.moveSelection('ArrowLeft');assert.equal(map.selected,'A');
   await context.moveSelection('ArrowDown');assert.equal(map.selected,'B');
   await context.moveSelection('ArrowUp');assert.equal(map.selected,'A');

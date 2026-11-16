@@ -41,7 +41,7 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 | 导航 | 折叠、分支聚焦、大纲定位       | 六级标题大纲                   |
 | 原文 | 与导图并排编辑                 | 切换到完整 Markdown 编辑       |
 
-**在结构中思考。** 多个主节点各自展开，分支可以拖动、折叠、聚焦和设色。提供 processon 与 MindNode 两种渲染风格，在 `F12` 设置中切换。
+**在结构中思考。** 多个主节点各自展开，分支可以拖动、折叠、聚焦和设色。固定使用 processon 渲染风格。
 
 **在文字中展开。** 标题、引用、任务列表、表格、代码块、链接和图片直接呈现在正文中。支持粘贴截图、拖入图片，以及调整表格行列。
 
@@ -49,7 +49,7 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 
 <p align="center"><sub>Markdown 模式 · 项目自带的只读预览</sub></p>
 
-**在熟悉的文件夹里工作。** 浏览目录，新建、重命名、拖动文件或文件夹，将删除的内容移入 macOS 废纸篓。启动时恢复上次工作区，快捷列表保留通过「添加文件夹」加入的最多 4 个工作区；双击打开 Markdown 文件不会自动加入。
+**在熟悉的文件夹里工作。** 浏览目录，新建、重命名、拖动文件或文件夹，将删除的内容移入 macOS 废纸篓。启动时恢复上次工作区，快捷列表保留通过「添加文件夹」加入的所有工作区；双击打开 Markdown 文件不会自动加入。
 
 **保持思路连贯。** 编辑自动保存，外部文件变化自动同步。`⌘F` 搜索当前文档，在正文、原文和导图中定位；导图会展开匹配节点的祖先分支。
 
@@ -88,9 +88,7 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 - 收集第一次反馈
 ```
 
-导图遵循 **`# → ## → ### → 嵌套的 - 列表`**，不跳过层级。一个文件可以包含多个 `#` 主节点；三级标题下的 `-` 列表继续展开为更深的节点。
-
-普通段落、代码块、前置元数据、四至六级标题、有序列表及 `+` / `*` 列表不会生成导图节点，但仍保留在原文中。这些约束只作用于 Mind 模式，普通 Markdown 模式支持常规正文语法。
+导图支持一至六级标题和嵌套的 `-` 列表。标题归入最近的较低级别标题，列表按缩进归入父列表或当前标题。允许跳级、多个主节点和纯列表。节点也可包含多行文字。
 
 <details>
 <summary>给分支一点颜色</summary>
@@ -110,10 +108,11 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 
 | 场景               | 快捷键              | 操作                               |
 | ------------------ | ------------------- | ---------------------------------- |
-| 通用               | `⌘F`               | 搜索当前文档                       |
+| 通用               | `⌘F`               | 打开或关闭当前文档搜索             |
 | 通用               | `⇧F6`              | 重命名当前文件                     |
 | 搜索中             | `⌘G` / `⇧⌘G`     | 下一个 / 上一个匹配                |
-| 通用               | `⌥⌘L`             | 切换文件树与大纲                   |
+| 通用               | `⌘L`               | 切换文件树与大纲                   |
+| 通用               | `⌥⌘L`              | 收起或展开整个侧边栏               |
 | 通用               | `F12`               | 打开或关闭设置                     |
 | 导图选中节点       | `↑` `↓` `←` `→` | 在节点间移动                       |
 | 导图选中节点       | `Enter`             | 开始编辑                           |
@@ -123,6 +122,7 @@ OpenMind 是一款面向 macOS 的本地思维导图与 Markdown 编辑器。用
 | 导图选中节点       | `⌘/`               | 折叠或展开分支                     |
 | 导图选中节点       | `⌘Backspace`       | 删除节点                           |
 | 导图画布           | `⌘Z` / `⇧⌘Z`     | 撤销 / 重做节点操作                |
+| Markdown 文档      | `⌘/`               | 切换正文与原文                     |
 | Markdown 正文      | `⌘1` … `⌘5`      | 设置对应级别标题，再按一次恢复段落 |
 | Markdown 正文      | `⌘[` / `⌘]`       | 有序 / 无序列表                    |
 | Markdown 正文      | `⌘K` / `⌘T`       | 代码块 / 插入表格                  |
@@ -209,9 +209,9 @@ node --test frontend/test/*.test.js
 涉及搜索、节点交互或导图语法时，可运行对应的 macOS WebKit 回归脚本：
 
 ```sh
-node scripts/test-document-search.mjs
-node scripts/test-node-modes.mjs
-node scripts/test-mind-rules.mjs
+node tests/macos/test-document-search.mjs
+node tests/macos/test-node-modes.mjs
+node tests/macos/test-mind-rules.mjs
 ```
 
 功能修改后重新构建应用，在原生窗口中确认行为，并检查包签名完整性：
@@ -221,25 +221,7 @@ sh scripts/build-macos.sh
 codesign --verify --deep --strict build/bin/OpenMind.app
 ```
 
-<details>
-<summary>代码地图</summary>
-
-
-| 路径                                                    | 职责                                           |
-| ------------------------------------------------------- | ---------------------------------------------- |
-| `main.go` / `app.go`                                    | Wails 启动、Go / JavaScript 桥接与应用生命周期 |
-| `internal/markdown/`                                    | Markdown 解析、导图投影与源文本修改            |
-| `internal/document/`                                    | 文档会话、保存协调、文件和图片操作             |
-| `internal/filestore/`                                   | 文件校验、原子替换与恢复副本                   |
-| `internal/workspace/` / `internal/watcher/`             | 工作区边界、目录树与 macOS 文件监听            |
-| `frontend/src/mindmap.js` / `frontend/src/mind-styles/` | 导图交互与两套独立渲染器                       |
-| `frontend/src/markdown-editor.js`                       | Markdown 即时渲染编辑器                        |
-| `frontend/src/queue.js`                                 | 前端串行保存队列                               |
-| `scripts/` / `frontend/test/`                           | 构建、预览及回归验证                           |
-
-产品思路见 [灵感.mind.md](examples/灵感.mind.md)，架构决策及其演进见 [ARD.md](ARD.md)。[原始技术方案](TECHNICAL_DESIGN.md) 供了解背景，当前行为以代码及后续决策为准。
-
-</details>
+模块入口与测试位置见[代码地图](CODE_MAP.md)。设计演进见[架构决策](ARD.md)。
 
 <a id="contributing"></a>
 

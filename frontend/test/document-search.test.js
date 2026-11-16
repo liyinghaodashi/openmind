@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {findTextMatches,findNodeMatches} from '../src/features/document-search.js';
+import {findTextMatches,findNodeMatches} from '../src/document/document-search.js';
 
 test('中文、混合大小写按原始 UTF-16 偏移匹配，保留非 ASCII 大小写字符长度',()=>{
   assert.deepEqual(findTextMatches('中文 JAVA java 中文','中文'),[{start:0,end:2},{start:13,end:15}]);

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from '../src/document-mode.js';
+import {isMindMapPath,documentTitle,documentAssetBase,markdownLinkTarget,newDocumentName} from '../src/document/document-mode.js';
 
 test('only the filename suffix selects mind maps',()=>{
   for(const path of ['notes.mind.md','目录/想法.MIND.MD'])assert.equal(isMindMapPath(path),true);

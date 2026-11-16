@@ -195,6 +195,14 @@ func (d *Document) WithMovedNode(id, targetID, placement string) (*Document, map
 		}
 		if old == owner {
 			index := len(expected)
+			if d.mind && placement == "child" {
+				index = 0
+				for _, child := range expected {
+					if child.lineStart < d.mindChildPosition(target) {
+						index++
+					}
+				}
+			}
 			if placement != "child" {
 				for i, child := range expected {
 					if child == target {
@@ -333,6 +341,9 @@ func (d *Document) moveBranch(n *Node, kind string, level, indent int, ranges ma
 		lineEnd = n.Start + pos + 1
 	} else {
 		lineEnd = len(d.Source)
+	}
+	if d.mind {
+		lineEnd = n.lineEnd
 	}
 	if !n.Editable && (kind != n.Kind || level != n.Level || kind == "list" && indent != d.listIndent(n)) {
 		return nil, nil, fmt.Errorf("复杂节点改变层级请在 Markdown 原文中编辑")

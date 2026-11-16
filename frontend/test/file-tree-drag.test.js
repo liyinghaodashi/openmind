@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {canDropEntry,movedTreePath} from '../src/features/file-tree-drag.js';
+import {canDropEntry,movedTreePath} from '../src/workspace/file-tree-drag.js';
 
 test('文件能移入其他文件夹或根目录，同一父目录不接受拖放',()=>{
   assert.equal(canDropEntry({path:'笔记.md',directory:false},'目标'),true);

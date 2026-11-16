@@ -3,8 +3,19 @@ package appicon
 import (
 	"bytes"
 	"image/png"
+	"os"
 	"testing"
 )
+
+func TestPackagedIconMatchesDockIcon(t *testing.T) {
+	packaged, err := os.ReadFile("../../build/appicon.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(packaged, animePNG) {
+		t.Fatal("packaged application/document icon must match the rounded Dock icon")
+	}
+}
 
 func TestEmbeddedAnimeIcon(t *testing.T) {
 	image, err := png.Decode(bytes.NewReader(animePNG))

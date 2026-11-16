@@ -15,7 +15,7 @@ static NSRect om_visible_frame(NSRect frame, NSScreen *screen) {
     return frame;
 }
 
-int om_set_compact_window(int enabled) {
+int om_set_compact_window(int enabled, int width) {
     __block int result = 0;
     void (^change)(void) = ^{
         NSWindow *window = NSApp.keyWindow ?: NSApp.mainWindow;
@@ -48,7 +48,7 @@ int om_set_compact_window(int enabled) {
             }
             NSScreen *screen = window.screen ?: NSScreen.mainScreen;
             NSRect available = screen.visibleFrame;
-            NSRect target = NSMakeRect(NSMaxX(available) - 464, NSMaxY(available) - 604, 440, 580);
+            NSRect target = NSMakeRect(NSMaxX(available) - width - 24, NSMaxY(available) - 604, width, 580);
             [window setFrame:om_visible_frame(target, screen) display:YES];
         } else {
             window.minSize = [saved[@"minSize"] sizeValue];

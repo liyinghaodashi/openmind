@@ -8,6 +8,9 @@ import (
 	"strings"
 
 	"openmind/internal/bookmark"
+
+	"golang.org/x/text/collate"
+	"golang.org/x/text/language"
 )
 
 type Entry struct {
@@ -108,11 +111,12 @@ func (w *Workspace) List(rel string) ([]Entry, error) {
 		}
 		result = append(result, Entry{Path: filepath.ToSlash(filepath.Join(rel, item.Name())), Name: item.Name(), Directory: item.IsDir()})
 	}
+	nameOrder := collate.New(language.SimplifiedChinese, collate.Numeric)
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].Directory != result[j].Directory {
 			return result[i].Directory
 		}
-		return result[i].Name < result[j].Name
+		return compareNames(result[i].Name, result[j].Name, nameOrder) < 0
 	})
 	return result, nil
 }

@@ -3,6 +3,7 @@ package markdown
 import (
 	"fmt"
 	"sort"
+	"strings"
 )
 
 func (d *Document) BranchMarkdown(id string, label *string) (string, error) {
@@ -45,13 +46,21 @@ func (d *Document) BranchMarkdown(id string, label *string) (string, error) {
 	if d.mind {
 		var colored []*Node
 		for _, n := range exported.Nodes {
-			if n.Color != "" && n.Start >= start && n.End <= end {
+			if (n.Color != "" || n.Fold || n.FoldKid) && n.Start >= start && n.End <= end {
 				colored = append(colored, n)
 			}
 		}
 		sort.Slice(colored, func(i, j int) bool { return colored[i].Start > colored[j].Start })
 		for _, n := range colored {
-			result = result[:n.Start-start+len(n.Label)] + result[n.End-start:]
+			raw, folded, foldedKid := mindLabelFolds(string(source[n.Start:n.End]))
+			if folded || foldedKid {
+				result = result[:n.Start-start+len(raw)] + result[n.End-start:]
+			}
+			first, _, _ := strings.Cut(raw, "\n")
+			first = strings.TrimSuffix(first, "\r")
+			_, headerEnd := mindLabelSpan([]byte(first), 0, n.Kind == "heading")
+			label, _ := mindLabelColor(first[:headerEnd])
+			result = result[:n.Start-start+len(label)] + result[n.Start-start+headerEnd:]
 		}
 	}
 	return result, nil

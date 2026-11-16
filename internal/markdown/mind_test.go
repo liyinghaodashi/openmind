@@ -34,12 +34,7 @@ func TestMindStrictHierarchy(t *testing.T) {
 
 func TestMindRejectsUnsupportedStructures(t *testing.T) {
 	for _, tc := range []struct{ name, source string }{
-		{"orphan headings", "## Orphan\n### Orphan\n- Orphan\n# Keep\n"},
-		{"skipped secondary", "# Keep\n### Orphan\n- Orphan\n"},
-		{"skipped third", "# Keep\n- Orphan\n## Secondary\n- Orphan\n"},
-		{"deep headings", "# Keep\n## Secondary\n### Third\n#### Orphan\n- Orphan\n##### Orphan\n###### Orphan\n"},
-		{"other lists", "# Keep\n## Secondary\n### Third\n1. Orphan\n   - Orphan\n+ Orphan\n* Orphan\n"},
-		{"indented orphan", "# Keep\n## Secondary\n### Third\n  - Orphan\n    - Orphan\n"},
+		{"other lists", "# Keep\n## Secondary\n### Third\n1. Orphan\n+ Orphan\n* Orphan\n"},
 		{"setext", "Orphan\n====\n\nOrphan\n----\n# Keep\n"},
 		{"fenced code", "# Keep\n## Secondary\n### Third\n```md\n# Orphan\n- Orphan\n```\n~~~\n## Orphan\n~~~\n"},
 		{"frontmatter", "---\n# Orphan\n- Orphan\n---\n# Keep\n"},

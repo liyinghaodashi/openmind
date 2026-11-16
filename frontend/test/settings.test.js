@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mountSettings} from '../src/settings.js';
-import {createSidebarCollapse} from '../src/features/sidebar-collapse.js';
+import {mountSettings} from '../src/ui/settings.js';
+import {createSidebarCollapse} from '../src/workspace/sidebar-collapse.js';
 
 class Element extends EventTarget {
   children = [];
@@ -28,66 +28,6 @@ function setup(storage) {
   const click = () => button.dispatchEvent(new Event('click'));
   return {sidebar, button, root, feature, settings, fields, status, input, change, click};
 }
-
-function styleSetup(storage) {
-  const container = new Element(), applied = [];
-  const feature = {id: 'mindStyle', label: '渲染风格', description: '',
-    options: [{value: 'processon', label: 'processon'}, {value: 'mindnode', label: 'MindNode'}],
-    select: value => applied.push(value)};
-  const settings = mountSettings({container, features: [feature], storage});
-  const [fields, status] = container.children;
-  const radios = fields.children[0].children[1].children.map(label => label.children[0]);
-  const choose = value => {
-    for (const radio of radios) radio.checked = radio.value === value;
-    radios.find(radio => radio.checked).dispatchEvent(new Event('change'));
-  };
-  return {settings, fields, status, radios, applied, choose};
-}
-
-test('风格保存成功后生效，失败回退且保留其他设置', async () => {
-  let fail = true;
-  const written = [];
-  const ui = styleSetup({load: async () => ({mindStyle: 'processon', sourceView: false}), save: async value => {
-    written.push(value);
-    if (fail) throw new Error('disk full');
-  }});
-  await ui.settings.ready;
-  ui.choose('mindnode');
-  await ui.settings.flush();
-  assert.deepEqual(ui.applied, ['processon']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [true, false]);
-  assert.match(ui.status.textContent, /disk full/);
-  fail = false;
-  ui.choose('mindnode');
-  await ui.settings.flush();
-  assert.deepEqual(written.at(-1), {mindStyle: 'mindnode', sourceView: false});
-  assert.deepEqual(ui.applied, ['processon', 'mindnode']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [false, true]);
-});
-
-test('快速切换风格串行保存，旧结果不覆盖最后的选择', async () => {
-  let release;
-  const gate = new Promise(resolve => {release = resolve;});
-  const written = [];
-  const ui = styleSetup({load: async () => ({mindStyle: 'processon'}), save: async value => {written.push(value); await gate;}});
-  await ui.settings.ready;
-  ui.choose('mindnode');
-  await Promise.resolve();
-  ui.choose('processon');
-  release();
-  await ui.settings.flush();
-  assert.deepEqual(written, [{mindStyle: 'mindnode'}, {mindStyle: 'processon'}]);
-  assert.deepEqual(ui.applied, ['processon', 'mindnode', 'processon']);
-  assert.deepEqual(ui.radios.map(input => input.checked), [true, false]);
-});
-
-test('无效风格阻止设置表单修改', async () => {
-  const ui = styleSetup({load: async () => ({mindStyle: 'other'}), save: async () => {throw new Error('unexpected save');}});
-  await ui.settings.ready;
-  assert.equal(ui.fields.disabled, true);
-  assert.match(ui.status.textContent, /无效的设置/);
-  assert.deepEqual(ui.applied, []);
-});
 
 test('读取持久化的关闭状态，保存完成后才启用功能，退出等待保存', async () => {
   let release, written;
@@ -142,7 +82,7 @@ test('离开设置等待期间新增的切换也必须保存完成', async () =>
   assert.equal(finished, true);
 });
 
-test('关闭功能会展开侧栏并移除折叠行为，反复启用不会重复绑定', async () => {
+test('隐藏和显示折叠按钮保留侧栏状态，按钮隐藏时仍可切换侧栏', async () => {
   const ui = setup({load: async () => ({sidebarCollapse: true}), save: async () => {}});
   await ui.settings.ready;
   ui.feature.enable();
@@ -150,10 +90,12 @@ test('关闭功能会展开侧栏并移除折叠行为，反复启用不会重�
   assert.equal(ui.sidebar.hidden, true);
   ui.change(false);
   await ui.settings.flush();
-  assert.equal(ui.sidebar.hidden, false);
-  assert.equal(ui.root.classes.has('sidebar-collapsed'), false);
+  assert.equal(ui.sidebar.hidden, true);
+  assert.equal(ui.root.classes.has('sidebar-collapsed'), true);
   assert.equal(ui.button.hidden, true);
   ui.click();
+  assert.equal(ui.sidebar.hidden, true);
+  ui.feature.toggle();
   assert.equal(ui.sidebar.hidden, false);
   for (let i = 0; i < 3; i++) {
     ui.change(true);
@@ -182,7 +124,7 @@ test('保存失败回退勾选，保留原功能和折叠状态，之后可以�
   fail = false;
   ui.change(false);
   await ui.settings.flush();
-  assert.equal(ui.sidebar.hidden, false);
+  assert.equal(ui.sidebar.hidden, true);
   assert.equal(ui.button.hidden, true);
   assert.equal(ui.status.textContent, '');
 });
@@ -233,4 +175,35 @@ test('一个设置保存失败后，其他设置不会把失败值重新写入',
   assert.deepEqual(active, {focus: true, collapse: false});
   assert.equal(inputs[0].checked, true);
   assert.equal(inputs[1].checked, false);
+});
+
+test('节点宽度兼容旧配置，校验整数与范围，保存失败回退', async () => {
+  const container = new Element(), applied = [], written = [];
+  let fail = false;
+  const settings = mountSettings({container, features: [{
+    id: 'mindNodeMaxWidth', label: '节点最大宽度', type: 'number', min: 160, max: 1600, default: 340,
+    select: value => applied.push(value)
+  }], storage: {load: async () => ({sourceView: false}), save: async value => {
+    if (fail) throw new Error('disk full');
+    written.push(value);
+  }}});
+  await settings.ready;
+  const [fields, status] = container.children;
+  const input = fields.children[0].children[1].children[0];
+  assert.equal(input.value, '340');
+  const change = async value => {input.value = value; input.dispatchEvent(new Event('change')); await settings.flush();};
+  for (const value of ['160', '600', '1600']) await change(value);
+  assert.deepEqual(applied, [340, 160, 600, 1600]);
+  assert.deepEqual(written.at(-1), {sourceView: false, mindNodeMaxWidth: 1600});
+  for (const value of ['', '0', '159', '1601', '280.5', 'abc']) {
+    await change(value);
+    assert.equal(input.value, '1600');
+    assert.match(status.textContent, /整数/);
+  }
+  assert.equal(written.length, 3);
+  fail = true;
+  await change('500');
+  assert.equal(input.value, '1600');
+  assert.equal(applied.at(-1), 1600);
+  assert.match(status.textContent, /disk full/);
 });

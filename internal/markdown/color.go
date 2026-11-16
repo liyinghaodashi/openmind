@@ -26,15 +26,20 @@ func (d *Document) WithColor(id, color string) (*Document, error) {
 		return nil, fmt.Errorf("仅思维导图节点支持设置颜色")
 	}
 	label := node.Label
+	first, rest, multiline := strings.Cut(label, "\n")
 	if color != "" {
 		prefix, valid := mindLabelColor("[color:" + color + "]")
 		if prefix != "" || valid == "" {
 			return nil, fmt.Errorf("颜色必须是 #RGB 或 #RRGGBB 格式")
 		}
-		if label != "" {
-			label += " "
+		if first != "" {
+			first += " "
 		}
-		label += "[color:" + valid + "]"
+		first += "[color:" + valid + "]"
+	}
+	label = first
+	if multiline {
+		label += "\n" + rest
 	}
 	return d.withLabel(id, label, false)
 }

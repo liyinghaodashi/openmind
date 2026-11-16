@@ -74,6 +74,12 @@ func (d *Document) withInsertedNode(id string, sibling bool) (*Document, string,
 		position = parent.branchEnd
 		if !sibling {
 			position = d.mindChildPosition(parent)
+			insertIndex = 0
+			for _, child := range parent.Children {
+				if child.lineStart < position {
+					insertIndex++
+				}
+			}
 		}
 	} else {
 		switch parent.Kind {

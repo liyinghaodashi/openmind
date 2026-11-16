@@ -64,3 +64,5 @@
 .outline-row.level-4{padding-left:46px;color:#777}
 .outline-row.level-5,.outline-row.level-6{padding-left:54px;color:#777}
 @media(max-width:1100px){#markdown-editor .vditor-reset{padding:36px max(38px,calc((100% - 772px)/2)) 120px!important}}
+
+#markdown-editor .vditor-ir__node[data-type="img"]{display:inline-block;max-width:100%;-webkit-user-modify:read-only}
