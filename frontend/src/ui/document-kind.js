@@ -29,7 +29,15 @@ export function mountDocumentKind(field,dialog){
     const direction={ArrowLeft:-1,ArrowUp:-1,ArrowRight:1,ArrowDown:1}[event.key];
     if(!direction&&event.key!=='Home'&&event.key!=='End')return;
     event.preventDefault();event.stopPropagation();
-    if(menu.hidden){open();return}
+    if(menu.hidden){
+      if(event.key==='ArrowUp'||event.key==='ArrowDown'){
+        const index=options.findIndex(option=>option.dataset.kind===input.value);
+        select(options[(index+direction+options.length)%options.length].dataset.kind);
+        return;
+      }
+      open();
+      return;
+    }
     const index=options.indexOf(document.activeElement);
     options[event.key==='Home'?0:event.key==='End'?options.length-1:(index+direction+options.length)%options.length].focus();
   });
