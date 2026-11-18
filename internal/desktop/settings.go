@@ -9,6 +9,8 @@ import (
 
 type AppSettings struct {
 	MindNodeMaxWidth          int  `json:"mindNodeMaxWidth"`
+	SidebarFontSize           int  `json:"sidebarFontSize"`
+	SidebarWidth              int  `json:"sidebarWidth"`
 	MindMainNodeMark          bool `json:"mindMainNodeMark"`
 	MindSecondNodeMark        bool `json:"mindSecondNodeMark"`
 	MDCompactWindow           bool `json:"mdCompactWindow"`
@@ -30,7 +32,7 @@ func (a *App) GetSettings() (AppSettings, error) {
 }
 
 func (a *App) readSettings() (AppSettings, error) {
-	settings := &AppSettings{MindNodeMaxWidth: 340, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
+	settings := &AppSettings{MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil
@@ -54,12 +56,28 @@ func (settings AppSettings) validate() error {
 	if settings.MindNodeMaxWidth < 160 || settings.MindNodeMaxWidth > 1600 {
 		return fmt.Errorf("节点最大宽度必须是 160–1600 之间的整数")
 	}
+	if settings.SidebarFontSize < 10 || settings.SidebarFontSize > 24 {
+		return fmt.Errorf("侧边栏字体大小必须是 10–24 之间的整数")
+	}
+	if settings.SidebarWidth < 180 || settings.SidebarWidth > 480 {
+		return fmt.Errorf("侧边栏宽度必须是 180–480 之间的整数")
+	}
 	return nil
+}
+
+func (settings *AppSettings) applyDefaults() {
+	if settings.SidebarFontSize == 0 {
+		settings.SidebarFontSize = 12
+	}
+	if settings.SidebarWidth == 0 {
+		settings.SidebarWidth = 244
+	}
 }
 
 func (a *App) SaveSettings(settings AppSettings) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+	settings.applyDefaults()
 	if err := settings.validate(); err != nil {
 		return err
 	}

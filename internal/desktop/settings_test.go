@@ -10,7 +10,7 @@ import (
 func TestSettingsDefaults(t *testing.T) {
 	a := &App{stateDir: t.TempDir()}
 	settings, err := a.GetSettings()
-	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}) {
+	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}) {
 		t.Fatalf("default settings: %+v, %v", settings, err)
 	}
 	path := filepath.Join(a.stateDir, "settings.json")
@@ -34,6 +34,7 @@ func TestSettingsDefaults(t *testing.T) {
 			t.Fatal(err)
 		}
 		settings, err = a.GetSettings()
+		fixture.want.applyDefaults()
 		if err != nil || settings != fixture.want {
 			t.Fatalf("missing options should use defaults for %s: %+v, %v", fixture.input, settings, err)
 		}
@@ -67,6 +68,7 @@ func TestSettingsPersistAcrossRestart(t *testing.T) {
 		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: false, MindZoomControls: true, MindCopyTree: true},
 		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
 	} {
+		want.applyDefaults()
 		if err := a.SaveSettings(want); err != nil {
 			t.Fatal(err)
 		}
@@ -88,7 +90,7 @@ func TestSettingsPersistAcrossRestart(t *testing.T) {
 }
 
 func TestInvalidSettingsAreNotOverwrittenOnRead(t *testing.T) {
-	for _, input := range []string{`{"mdCompactWindow":"false"}`, `{`, `null`, `[]`, `{"sidebarCollapse":"false"}`, `{"mindOutlineFocus":"false"}`, `{"mindOutlineCollapse":0}`, `{"mindDoubleClickCreateMain":"false"}`, `{"sourceView":"false"}`, `{"mindZoomControls":"false"}`, `{"mindCopyTree":"false"}`} {
+	for _, input := range []string{`{"mdCompactWindow":"false"}`, `{`, `null`, `[]`, `{"sidebarCollapse":"false"}`, `{"mindOutlineFocus":"false"}`, `{"mindOutlineCollapse":0}`, `{"mindDoubleClickCreateMain":"false"}`, `{"sourceView":"false"}`, `{"mindZoomControls":"false"}`, `{"mindCopyTree":"false"}`, `{"sidebarFontSize":9}`, `{"sidebarWidth":481}`} {
 		t.Run(input, func(t *testing.T) {
 			a := &App{stateDir: t.TempDir()}
 			path := filepath.Join(a.stateDir, "settings.json")
@@ -164,6 +166,49 @@ func TestMindNodeMaxWidthPersistenceAndValidation(t *testing.T) {
 		}
 		if _, err := a.GetSettings(); err == nil {
 			t.Fatalf("accepted %s", input)
+		}
+	}
+}
+
+func TestSidebarSettingsPersistenceAndValidation(t *testing.T) {
+	a := &App{stateDir: t.TempDir()}
+	settings, err := a.GetSettings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fixture := range []struct {
+		fontSize int
+		width    int
+	}{
+		{10, 180}, {16, 320}, {24, 480},
+	} {
+		settings.SidebarFontSize = fixture.fontSize
+		settings.SidebarWidth = fixture.width
+		if err := a.SaveSettings(settings); err != nil {
+			t.Fatal(err)
+		}
+		restarted := &App{stateDir: a.stateDir}
+		got, err := restarted.GetSettings()
+		if err != nil || got != settings {
+			t.Fatalf("sidebar settings did not persist: %+v, %v", got, err)
+		}
+		a = restarted
+	}
+	for _, fixture := range []struct {
+		fontSize int
+		width    int
+	}{
+		{9, 320}, {25, 320}, {16, 179}, {16, 481},
+	} {
+		invalid := settings
+		invalid.SidebarFontSize = fixture.fontSize
+		invalid.SidebarWidth = fixture.width
+		if err := a.SaveSettings(invalid); err == nil {
+			t.Fatalf("accepted invalid sidebar settings: %+v", fixture)
+		}
+		got, err := a.GetSettings()
+		if err != nil || got != settings {
+			t.Fatalf("invalid save changed sidebar settings: %+v, %v", got, err)
 		}
 	}
 }
