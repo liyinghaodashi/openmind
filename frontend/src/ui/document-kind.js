@@ -1,5 +1,6 @@
 export function mountDocumentKind(field,dialog){
   const input=field.querySelector('input');
+  const nameInput=dialog.querySelector('#entry-name');
   const toggle=field.querySelector('[aria-haspopup]');
   const menu=field.querySelector('[role=listbox]');
   const options=[...menu.querySelectorAll('[role=option]')];
@@ -14,6 +15,10 @@ export function mountDocumentKind(field,dialog){
     const selected=options.find(option=>option.dataset.kind===value);
     toggle.querySelector('[data-kind-label]').textContent=selected.querySelector('small').textContent;
     toggle.setAttribute('aria-label','文档类型：'+selected.querySelector('span').textContent);
+  }
+  function cycle(direction){
+    const index=options.findIndex(option=>option.dataset.kind===input.value);
+    select(options[(index+direction+options.length)%options.length].dataset.kind);
   }
   function open(){
     menu.hidden=false;
@@ -31,8 +36,7 @@ export function mountDocumentKind(field,dialog){
     event.preventDefault();event.stopPropagation();
     if(menu.hidden){
       if(event.key==='ArrowUp'||event.key==='ArrowDown'){
-        const index=options.findIndex(option=>option.dataset.kind===input.value);
-        select(options[(index+direction+options.length)%options.length].dataset.kind);
+        cycle(direction);
         return;
       }
       open();
@@ -40,6 +44,14 @@ export function mountDocumentKind(field,dialog){
     }
     const index=options.indexOf(document.activeElement);
     options[event.key==='Home'?0:event.key==='End'?options.length-1:(index+direction+options.length)%options.length].focus();
+  });
+  nameInput?.addEventListener('keydown',event=>{
+    if(event.isComposing||event.keyCode===229||event.metaKey||event.ctrlKey||event.altKey||event.shiftKey)return;
+    const direction={ArrowUp:-1,ArrowDown:1}[event.key];
+    if(!direction||!menu.hidden)return;
+    event.preventDefault();
+    event.stopPropagation();
+    cycle(direction);
   });
   field.addEventListener('focusout',event=>{if(!field.contains(event.relatedTarget))close()});
   document.addEventListener('pointerdown',event=>{if(!field.contains(event.target))close()});
