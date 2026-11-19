@@ -236,8 +236,8 @@ func (a *App) openWorkspaceTarget(root string, remember bool, path string) (*Wor
 		if err != nil {
 			return err
 		}
-		saved.WorkspaceInfo = *info
 		if remember {
+			saved.WorkspaceInfo = *info
 			saved.Recent = recentWorkspaces(*info, saved.Recent)
 		}
 		return a.writeWorkspaceState(saved)

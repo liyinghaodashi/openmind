@@ -173,3 +173,27 @@ func TestExternalOpenOnlyExplicitFoldersAppearInSwitcher(t *testing.T) {
 	assertFolders(a)
 	assertFolders(restarted)
 }
+
+func TestExternalOpenDoesNotReplaceRestoredWorkspace(t *testing.T) {
+	a := externalOpenApp(t)
+	manualRoot := t.TempDir()
+	manualRoot, _ = filepath.EvalSymlinks(manualRoot)
+	if _, err := a.openWorkspace(manualRoot); err != nil {
+		t.Fatal(err)
+	}
+	externalRoot := t.TempDir()
+	path := externalOpenFile(t, externalRoot, "外部.md", []byte("# 外部\n"))
+	if _, err := a.OpenExternalDocument(path); err != nil {
+		t.Fatal(err)
+	}
+
+	restarted := externalOpenApp(t)
+	restarted.stateDir = a.stateDir
+	restored, err := restarted.RestoreWorkspace()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Root != manualRoot {
+		t.Fatalf("restored workspace: %s, want %s", restored.Root, manualRoot)
+	}
+}
