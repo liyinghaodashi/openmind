@@ -12,6 +12,29 @@ function colorTint(color) {
   return `rgb(${channels.join(', ')})`;
 }
 
+function wrapText(label, font, maxWidth, measureText) {
+  const lines = [];
+  for (const paragraph of String(label).split('\n')) {
+    const characters = Array.from(paragraph);
+    if (!characters.length) {
+      lines.push('');
+      continue;
+    }
+    let line = '';
+    for (const character of characters) {
+      const candidate = line + character;
+      if (line && measureText(candidate, font, Number.MAX_SAFE_INTEGER, 1).width > maxWidth) {
+        lines.push(line);
+        line = character;
+      } else {
+        line = candidate;
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
 export class ProcessonRenderer {
   constructor({canvas, scene, nodes, edges, onActivate, onEdit, measureText, getNodeMaxWidth = () => 340}) {
     Object.assign(this, {canvas, scene, nodes, edges, onActivate, onEdit, measureText, getNodeMaxWidth});
@@ -170,30 +193,67 @@ export class ProcessonRenderer {
       nodeGroup.setAttribute('transform', `translate(${padding} ${padding})`);
       svg.append(nodeGroup);
       for (const position of layout.positions) {
-        const source = this.elements.get(position.id);
-        if (!source) continue;
-        const foreign = this.document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
-        const badgeWidth = position.hiddenCount ? 10 + Math.max(22, 12 + String(position.hiddenCount).length * 7) : 0;
-        foreign.setAttribute('x', String(position.x));
-        foreign.setAttribute('y', String(position.y));
-        foreign.setAttribute('width', String(position.width + badgeWidth));
-        foreign.setAttribute('height', String(position.height));
-        const node = source.cloneNode(true);
-        node.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
-        node.className = source.className.replace(/\b(selected|editing|dragging-source|drop-before|drop-after)\b/g, '').replace(/\s+/g, ' ').trim();
-        const inlineStyles = (from, to) => {
-          const computed = this.document.defaultView?.getComputedStyle(from);
-          if (!computed) return;
-          for (let i = 0; i < computed.length; i++) {
-            const name = computed[i];
-            to.style.setProperty(name, computed.getPropertyValue(name), computed.getPropertyPriority(name));
-          }
-          for (let i = 0; i < from.children.length; i++) inlineStyles(from.children[i], to.children[i]);
-        };
-        inlineStyles(source, node);
-        Object.assign(node.style, {position: 'relative', left: '0px', top: '0px', width: position.width + 'px', height: position.height + 'px', minHeight: '0px', margin: '0', transform: 'none', outline: 'none', pointerEvents: 'none'});
-        nodeGroup.append(foreign);
-        foreign.append(node);
+        const depth = styleDepth(position.node, position.depth);
+        const mainMarked = this.canvas.classList.contains('mind-main-node-mark');
+        const secondMarked = this.canvas.classList.contains('mind-second-node-mark');
+        const compact = depth === 0 ? !mainMarked : depth === 1 ? !secondMarked : true;
+        const horizontalPadding = compact ? 6 : depth === 0 ? 22 : 17;
+        const lineHeight = depth === 0 ? 29 : 22;
+        const fontSize = depth === 0 ? 22 : depth === 1 ? 15 : 14;
+        const fontWeight = depth === 0 ? 600 : depth === 1 ? 550 : 400;
+        const font = `${fontWeight} ${fontSize}px LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif`;
+        const label = (position.displayLabel ?? position.node.label) || '空节点';
+        const lines = wrapText(label, font, Math.max(1, position.width - horizontalPadding * 2 - 2), this.measureText);
+        const tint = depth <= 1 ? colorTint(position.effectiveColor) : '';
+        const rectangle = this.document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rectangle.setAttribute('x', String(position.x));
+        rectangle.setAttribute('y', String(position.y));
+        rectangle.setAttribute('width', String(position.width));
+        rectangle.setAttribute('height', String(position.height));
+        rectangle.setAttribute('rx', depth === 2 ? '0' : '9');
+        rectangle.setAttribute('fill', tint || (depth === 0 ? (mainMarked ? '#202020' : 'none') : depth === 1 ? (secondMarked ? '#e4e4e7' : 'none') : 'none'));
+        rectangle.setAttribute('stroke', tint || (depth === 0 && mainMarked ? '#202020' : 'none'));
+        if (depth === 2) rectangle.setAttribute('stroke-width', '0');
+        nodeGroup.append(rectangle);
+        const text = this.document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', String(position.x + horizontalPadding + 1));
+        text.setAttribute('y', String(position.y + position.height / 2 - (lines.length - 1) * lineHeight / 2));
+        text.setAttribute('fill', depth === 0 && mainMarked && !tint ? '#fff' : depth === 2 ? '#404040' : '#303030');
+        text.setAttribute('font-family', 'LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif');
+        text.setAttribute('font-size', String(fontSize));
+        text.setAttribute('font-weight', String(fontWeight));
+        text.setAttribute('dominant-baseline', 'middle');
+        text.setAttribute('xml:space', 'preserve');
+        lines.forEach((line, index) => {
+          const tspan = this.document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
+          tspan.setAttribute('x', String(position.x + horizontalPadding + 1));
+          tspan.setAttribute('dy', index ? String(lineHeight) : '0');
+          tspan.textContent = line;
+          text.append(tspan);
+        });
+        nodeGroup.append(text);
+        if (position.hiddenCount) {
+          const badgeWidth = Math.max(22, 12 + String(position.hiddenCount).length * 7);
+          const badge = this.document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          badge.setAttribute('x', String(position.x + position.width + 10));
+          badge.setAttribute('y', String(position.y + position.height / 2 - 11));
+          badge.setAttribute('width', String(badgeWidth));
+          badge.setAttribute('height', '22');
+          badge.setAttribute('rx', '11');
+          badge.setAttribute('fill', '#fff');
+          badge.setAttribute('stroke', '#b8b8b8');
+          nodeGroup.append(badge);
+          const badgeText = this.document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          badgeText.setAttribute('x', String(position.x + position.width + 10 + badgeWidth / 2));
+          badgeText.setAttribute('y', String(position.y + position.height / 2));
+          badgeText.setAttribute('fill', '#777');
+          badgeText.setAttribute('font-family', 'LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif');
+          badgeText.setAttribute('font-size', '11');
+          badgeText.setAttribute('text-anchor', 'middle');
+          badgeText.setAttribute('dominant-baseline', 'middle');
+          badgeText.textContent = String(position.hiddenCount);
+          nodeGroup.append(badgeText);
+        }
       }
       const serialized = new XMLSerializer().serializeToString(svg);
       const image = new Image();
