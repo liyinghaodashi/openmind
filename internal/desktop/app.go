@@ -2,6 +2,7 @@ package desktop
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -104,6 +105,30 @@ func (a *App) SelectWorkspace() (*WorkspaceInfo, error) {
 		return nil, nil
 	}
 	return a.openWorkspace(root)
+}
+
+func (a *App) SavePNG(defaultFilename, dataURL string) error {
+	const prefix = "data:image/png;base64,"
+	if !strings.HasPrefix(dataURL, prefix) {
+		return fmt.Errorf("无效的 PNG 数据")
+	}
+	data, err := base64.StdEncoding.DecodeString(strings.TrimSpace(strings.TrimPrefix(dataURL, prefix)))
+	if err != nil {
+		return fmt.Errorf("无法解析 PNG 数据：%w", err)
+	}
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:                "导出为 PNG",
+		DefaultFilename:      defaultFilename,
+		Filters:              []runtime.FileFilter{{DisplayName: "PNG 图片", Pattern: "*.png"}},
+		CanCreateDirectories: true,
+	})
+	if err != nil || path == "" {
+		return err
+	}
+	if !strings.HasSuffix(strings.ToLower(path), ".png") {
+		path += ".png"
+	}
+	return os.WriteFile(path, data, 0644)
 }
 func (a *App) RestoreWorkspace() (*WorkspaceInfo, error) {
 	a.mu.Lock()

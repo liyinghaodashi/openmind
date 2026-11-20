@@ -289,7 +289,17 @@ function clearCurrentDocument(){
   updateDocumentView();renderOutline();
 }
 function banner(message,reload=false){$('error-text').textContent=message;$('error-banner').hidden=false;$('reload-document').hidden=!reload}
-const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onFoldKid:id=>toggleNodeFold(id,{children:true}),onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
+async function exportMindMapPng(){
+  if(preview){toast('请在 macOS 应用中导出 PNG。');return}
+  if(!state.snapshot||!isMindMapPath(state.snapshot.path))return;
+  if(!await finishNode())return;
+  try{
+    const data=await map.createPng();
+    await call('SavePNG',documentTitle(state.snapshot.path)+'.png',data);
+    toast('已导出 PNG。');
+  }catch(error){toast(errorText(error))}
+}
+const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onFoldKid:id=>toggleNodeFold(id,{children:true}),onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onExport:exportMindMapPng,onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
 const markdown=new MarkdownEditor({container:$('markdown-editor'),onInput:text=>enqueue('source',text),onComposition:composing=>state.composing=composing,onBeforeInput:canInputMarkdown,onOutline:()=>{if(state.snapshot&&!isMindMapPath(state.snapshot.path))renderOutline()},images:{importImage:(session,data)=>call('ImportImage',session,data),discardImages:(session,paths)=>call('DiscardImages',session,paths),onError:error=>toast(errorText(error))}});
 const documentSearch=mountDocumentSearch({
   bar:$('document-search'),input:$('document-search-input'),count:$('document-search-count'),

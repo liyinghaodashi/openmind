@@ -64,7 +64,7 @@ export class ProcessonRenderer {
     return ghost;
   }
 
-  render({layout, x, y, scale, selected, editing, editor, collapsed, drag}) {
+  render({layout, x, y, scale, selected, editing, editor, collapsed, drag, renderAll = false}) {
     const pixelRatio = this.document.defaultView?.devicePixelRatio || 1;
     x = Math.round(x * pixelRatio) / pixelRatio;
     y = Math.round(y * pixelRatio) / pixelRatio;
@@ -72,7 +72,7 @@ export class ProcessonRenderer {
     const view = {x: (-x - 150) / scale, y: (-y - 100) / scale, width: (this.canvas.clientWidth + 300) / scale, height: (this.canvas.clientHeight + 200) / scale};
     const keep = new Set();
     for (const p of layout.positions) {
-      if (!intersects(p, view) && p.id !== selected) continue;
+      if (!renderAll && !intersects(p, view) && p.id !== selected) continue;
       keep.add(p.id);
       const depth = styleDepth(p.node, p.depth);
       let element = this.elements.get(p.id);
@@ -111,7 +111,7 @@ export class ProcessonRenderer {
     const keepEdges = new Set();
     for (const edge of layout.edges) {
       const a = edge.from, b = edge.to, startX = a.x + a.width, startY = a.y + a.height / 2, endY = b.y + b.height / 2;
-      if (!intersects({x: startX, y: Math.min(startY, endY), width: b.x - startX, height: Math.abs(endY - startY)}, view)) continue;
+      if (!renderAll && !intersects({x: startX, y: Math.min(startY, endY), width: b.x - startX, height: Math.abs(endY - startY)}, view)) continue;
       keepEdges.add(edge.id);
       let path = this.edgeElements.get(edge.id);
       if (!path) {path = this.document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('fill', 'none'); this.edges.append(path); this.edgeElements.set(edge.id, path);}
@@ -130,6 +130,93 @@ export class ProcessonRenderer {
         editor.style.color = depth <= 1 && colorTint(p.effectiveColor) ? '#303030' : '';
         Object.assign(editor.style, {left: p.x + 'px', top: p.y + 'px', width: p.width + 'px', height: p.height + 'px'});
       }
+    }
+  }
+
+  async createPng({layout, collapsed, x, y, scale, selected, editing, editor, drag}) {
+    const padding = 32;
+    const width = Math.max(1, Math.ceil(layout.width + padding * 2));
+    const height = Math.max(1, Math.ceil(layout.height + padding * 2));
+    const pixelRatio = Math.min(2, Math.max(1, this.document.defaultView?.devicePixelRatio || 1), Math.sqrt(24000000 / (width * height)));
+    const current = {layout, x, y, scale, selected, editing, editor, collapsed, drag};
+    this.render({layout, x: 0, y: 0, scale: 1, selected: null, editing: null, editor: null, collapsed, drag: null, renderAll: true});
+    try {
+      const svg = this.document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      svg.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+      svg.setAttribute('width', String(width));
+      svg.setAttribute('height', String(height));
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      const background = this.document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      background.setAttribute('width', String(width));
+      background.setAttribute('height', String(height));
+      background.setAttribute('fill', '#fff');
+      svg.append(background);
+      const edgeGroup = this.document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      edgeGroup.setAttribute('transform', `translate(${padding} ${padding})`);
+      svg.append(edgeGroup);
+      for (const edge of layout.edges) {
+        const a = edge.from, b = edge.to, startX = a.x + a.width, startY = a.y + a.height / 2, endY = b.y + b.height / 2;
+        const mid = startX + (b.x - startX) * .4, radius = Math.min(7, Math.abs(endY - startY), (b.x - mid) / 2), direction = Math.sign(endY - startY);
+        const path = this.document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('d', direction === 0 ? `M ${startX} ${startY} H ${b.x}` : `M ${startX} ${startY} H ${mid} V ${endY - direction * radius} Q ${mid} ${endY} ${mid + radius} ${endY} H ${b.x}`);
+        path.setAttribute('stroke-width', '1.85');
+        path.setAttribute('stroke-linecap', 'butt');
+        path.setAttribute('stroke', edge.color || '#7c808d');
+        edgeGroup.append(path);
+      }
+      const nodeGroup = this.document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      nodeGroup.setAttribute('transform', `translate(${padding} ${padding})`);
+      svg.append(nodeGroup);
+      for (const position of layout.positions) {
+        const source = this.elements.get(position.id);
+        if (!source) continue;
+        const foreign = this.document.createElementNS('http://www.w3.org/2000/svg', 'foreignObject');
+        const badgeWidth = position.hiddenCount ? 10 + Math.max(22, 12 + String(position.hiddenCount).length * 7) : 0;
+        foreign.setAttribute('x', String(position.x));
+        foreign.setAttribute('y', String(position.y));
+        foreign.setAttribute('width', String(position.width + badgeWidth));
+        foreign.setAttribute('height', String(position.height));
+        const node = source.cloneNode(true);
+        node.setAttribute('xmlns', 'http://www.w3.org/1999/xhtml');
+        node.className = source.className.replace(/\b(selected|editing|dragging-source|drop-before|drop-after)\b/g, '').replace(/\s+/g, ' ').trim();
+        const inlineStyles = (from, to) => {
+          const computed = this.document.defaultView?.getComputedStyle(from);
+          if (!computed) return;
+          for (let i = 0; i < computed.length; i++) {
+            const name = computed[i];
+            to.style.setProperty(name, computed.getPropertyValue(name), computed.getPropertyPriority(name));
+          }
+          for (let i = 0; i < from.children.length; i++) inlineStyles(from.children[i], to.children[i]);
+        };
+        inlineStyles(source, node);
+        Object.assign(node.style, {position: 'relative', left: '0px', top: '0px', width: position.width + 'px', height: position.height + 'px', minHeight: '0px', margin: '0', transform: 'none', outline: 'none', pointerEvents: 'none'});
+        nodeGroup.append(foreign);
+        foreign.append(node);
+      }
+      const serialized = new XMLSerializer().serializeToString(svg);
+      const image = new Image();
+      return await new Promise((resolve, reject) => {
+        image.onload = () => {
+          try {
+            const canvas = this.document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(width * pixelRatio));
+            canvas.height = Math.max(1, Math.round(height * pixelRatio));
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#fff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (error) {
+            reject(error);
+          }
+        };
+        image.onerror = () => reject(new Error('生成 PNG 失败。'));
+        image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(serialized);
+      });
+    } finally {
+      this.render(current);
     }
   }
 

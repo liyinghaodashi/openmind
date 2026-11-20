@@ -4,8 +4,8 @@ import {nodeDropTarget} from './node-drop.js';
 import {nodeColors} from './node-colors.js';
 
 export class MindMap {
-  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onFold, onFoldKid, onColor, onCopyTree, onZoom, onLayout, canDrag, onMove, onDragState}) {
-    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onFold,onFoldKid,onColor,onCopyTree,onZoom,onLayout,canDrag,onMove,onDragState});
+  constructor({canvas, scene, nodes, edges, onEdit, onSelect, onCreateMain, onFocus, onFold, onFoldKid, onColor, onCopyTree, onExport, onZoom, onLayout, canDrag, onMove, onDragState}) {
+    Object.assign(this,{canvas,scene,nodes,edges,onEdit,onSelect,onCreateMain,onFocus,onFold,onFoldKid,onColor,onCopyTree,onExport,onZoom,onLayout,canDrag,onMove,onDragState});
     this.scale=1;this.x=0;this.y=0;this.collapsed=new Set();this.frame=0;this.selected=null;this.focusedId=null;
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
@@ -29,6 +29,8 @@ export class MindMap {
     this.nodeMenu.insertBefore(this.colorRow,focusButton);
     this.copyTreeButton=document.createElement('button');this.copyTreeButton.type='button';this.copyTreeButton.setAttribute('role','menuitem');this.copyTreeButton.textContent='复制树';this.nodeMenu.insertBefore(this.copyTreeButton,focusButton);
     this.copyTreeButton.addEventListener('click',()=>{const id=this.menuNodeId;if(this.copyTreeEnabled)void this.onCopyTree?.(id);this.closeNodeMenu(true)});
+    this.exportPngButton=document.createElement('button');this.exportPngButton.type='button';this.exportPngButton.setAttribute('role','menuitem');this.exportPngButton.textContent='导出为 PNG';this.nodeMenu.insertBefore(this.exportPngButton,focusButton);
+    this.exportPngButton.addEventListener('click',()=>{this.closeNodeMenu(true);void this.onExport?.()});
     foldButton.addEventListener('click',()=>{const id=this.menuNodeId;this.closeNodeMenu(true);this.toggleSelected(id)});
     focusButton.addEventListener('click',()=>{const id=this.menuNodeId,fromOutline=this.menuFromOutline;this.closeNodeMenu();void this.onFocus?.(id,{fromOutline})});
     this.nodeMenu.addEventListener('keydown',event=>{
@@ -139,7 +141,7 @@ export class MindMap {
   showNodeMenu(event,{id,fromOutline=false}={}){
     const editor=!fromOutline&&event.target===this.editor?this.editor:null;
     const el=editor?this.elements.get(this.editing):event.target.closest(fromOutline?'.outline-item':'.mind-node');
-    const fromCanvas=!fromOutline&&!el&&this.focusedId&&!event.target.closest('.zoom-controls,button');
+    const fromCanvas=!fromOutline&&!el&&this.root&&!event.target.closest('.zoom-controls,button');
     if(!el&&!fromCanvas)return;
     event.preventDefault();this.closeNodeMenu();
     const find=node=>node?.id===id?node:node?.children.map(find).find(Boolean);
@@ -154,6 +156,8 @@ export class MindMap {
     const focusButton=this.nodeMenu.lastChild;focusButton.textContent=fromCanvas?'退出聚焦模式':'聚焦模式';focusButton.setAttribute('aria-checked',String(this.focusedId===node.id));
     this.colorRow.hidden=fromCanvas||fromOutline||!node.editable;
     this.copyTreeButton.hidden=fromCanvas||fromOutline||!this.copyTreeEnabled;
+    if(this.exportPngButton)this.exportPngButton.hidden=!fromCanvas;
+    focusButton.hidden=fromCanvas&&!this.focusedId;
     const selectedColor=(this.layout?.positions.find(p=>p.id===node.id)?.effectiveColor||'').toUpperCase();
     for(const button of this.colorOptions.children)button.setAttribute('aria-checked',String(button.dataset.color===selectedColor));
     this.nodeMenu.hidden=false;this.nodeMenu.style.left='0px';this.nodeMenu.style.top='0px';
@@ -227,6 +231,10 @@ export class MindMap {
     this.y=h/2-(target.y+target.height/2)*this.scale;this.schedule();
   }
   zoom(factor,cx=this.canvas.clientWidth/2,cy=this.canvas.clientHeight/2){const next=Math.max(.15,Math.min(2.5,this.scale*factor));this.x=cx-(cx-this.x)*next/this.scale;this.y=cy-(cy-this.y)*next/this.scale;this.scale=next;this.schedule();}
+  async createPng(){
+    if(!this.layout?.positions.length)throw new Error('当前没有可导出的节点。');
+    return this.renderer.createPng({layout:this.layout,collapsed:this.collapsed,x:this.x,y:this.y,scale:this.scale,selected:this.selected,editing:this.editing,editor:this.editor,drag:this.nodeDrag});
+  }
   schedule(){if(!this.frame)this.frame=requestAnimationFrame(()=>{this.frame=0;this.render()});}
   render(){
     if(!this.layout)return;
