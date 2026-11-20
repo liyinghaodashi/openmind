@@ -192,6 +192,7 @@ export class ProcessonRenderer {
       const nodeGroup = this.document.createElementNS('http://www.w3.org/2000/svg', 'g');
       nodeGroup.setAttribute('transform', `translate(${padding} ${padding})`);
       svg.append(nodeGroup);
+      const metrics = this.document.createElement('canvas').getContext('2d');
       for (const position of layout.positions) {
         const depth = styleDepth(position.node, position.depth);
         const mainMarked = this.canvas.classList.contains('mind-main-node-mark');
@@ -217,17 +218,20 @@ export class ProcessonRenderer {
         nodeGroup.append(rectangle);
         const text = this.document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('x', String(position.x + horizontalPadding + 1));
-        text.setAttribute('y', String(position.y + position.height / 2 - (lines.length - 1) * lineHeight / 2));
+        metrics.font = font;
+        const firstLine = metrics.measureText(lines[0] || '国');
+        const lastLine = lines.length === 1 ? firstLine : metrics.measureText(lines.at(-1) || '国');
+        const baseline = position.y + (position.height - (lines.length - 1) * lineHeight
+          + firstLine.actualBoundingBoxAscent - lastLine.actualBoundingBoxDescent) / 2;
         text.setAttribute('fill', depth === 0 && mainMarked && !tint ? '#fff' : depth === 2 ? '#404040' : '#303030');
         text.setAttribute('font-family', 'LocalUI, -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif');
         text.setAttribute('font-size', String(fontSize));
         text.setAttribute('font-weight', String(fontWeight));
-        text.setAttribute('dominant-baseline', 'middle');
         text.setAttribute('xml:space', 'preserve');
         lines.forEach((line, index) => {
           const tspan = this.document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
           tspan.setAttribute('x', String(position.x + horizontalPadding + 1));
-          tspan.setAttribute('dy', index ? String(lineHeight) : '0');
+          tspan.setAttribute('y', String(baseline + index * lineHeight));
           tspan.textContent = line;
           text.append(tspan);
         });
