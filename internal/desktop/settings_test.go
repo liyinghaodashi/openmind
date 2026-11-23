@@ -10,7 +10,7 @@ import (
 func TestSettingsDefaults(t *testing.T) {
 	a := &App{stateDir: t.TempDir()}
 	settings, err := a.GetSettings()
-	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}) {
+	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MDImageStorage: "base64", MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}) {
 		t.Fatalf("default settings: %+v, %v", settings, err)
 	}
 	path := filepath.Join(a.stateDir, "settings.json")

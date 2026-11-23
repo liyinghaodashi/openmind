@@ -33,6 +33,6 @@ func (s *Service) ReadImage(session, path string) ([]byte, string, error) {
 		}
 		return nil, "", err
 	}
-	body, _, err := filestore.Read(full, 20*1024*1024)
+	body, _, err := filestore.Read(full, maxImageBytes)
 	return body, mime, err
 }

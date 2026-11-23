@@ -1,5 +1,5 @@
 export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineActions,renderOutline,
-  setHideExtensions,setSourceViewEnabled,setZoomControls,setCompactWindowEnabled,setSidebarFontSize,setSidebarWidth}) {
+  setHideExtensions,setSourceViewEnabled,setZoomControls,setCompactWindowEnabled,setSidebarFontSize,setSidebarWidth,setImageStorageMode}) {
   return [sidebarCollapse,{
     id:'hideFileExtensions',group:'通用设置',label:'隐藏文件后缀',description:'文件树隐藏 .md、.markdown 和 .mind.md 后缀。',
     enable:()=>setHideExtensions(true),disable:()=>setHideExtensions(false)
@@ -42,6 +42,11 @@ export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineA
   },{
     id:'mindDoubleClickCreateMain',group:'mind模式',label:'双击新建一级节点',description:'在 mind 模式中双击画布空白处新建一级节点。',
     enable:()=>{map.doubleClickCreateMain=true},disable:()=>{map.doubleClickCreateMain=false}
+  },{
+    id:'mdImageStorage',group:'md模式',label:'图片存储方式',description:'粘贴图片时使用内嵌 AVIF Base64，或使用文档专属的 .assets 文件夹。',options:[
+      {value:'base64',label:'内嵌 Base64'},
+      {value:'assets',label:'.assets 文件夹'}
+    ],select:value=>setImageStorageMode(value)
   },{
     id:'mdCompactWindow',group:'md模式',label:'启用便签小窗',description:'在 md 模式中显示便签小窗入口，可在置顶小窗中编辑文档。',
     enable:()=>setCompactWindowEnabled(true),disable:()=>setCompactWindowEnabled(false)

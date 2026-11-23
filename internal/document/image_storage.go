@@ -15,7 +15,7 @@ import (
 	"openmind/internal/markdown"
 )
 
-const maxImageBytes = 20 * 1024 * 1024
+const maxImageBytes = 0
 
 func imageFolder(documentPath string) string {
 	name := strings.TrimSuffix(filepath.Base(documentPath), filepath.Ext(documentPath))
@@ -117,12 +117,9 @@ func (s *Service) ImportImage(session, encoded string) (string, error) {
 	if s.doc == nil || session != s.session || s.blocked || strings.HasSuffix(strings.ToLower(s.path), ".mind.md") {
 		return "", fmt.Errorf("当前文档不能导入图片")
 	}
-	if len(encoded) > base64.StdEncoding.EncodedLen(maxImageBytes) {
-		return "", fmt.Errorf("图片不能超过 20MB")
-	}
 	data, err := base64.StdEncoding.DecodeString(encoded)
-	if err != nil || len(data) == 0 || len(data) > maxImageBytes {
-		return "", fmt.Errorf("图片内容无效或超过 20MB")
+	if err != nil || len(data) == 0 {
+		return "", fmt.Errorf("图片内容无效")
 	}
 	extension := imageExtension(data)
 	if extension == "" {

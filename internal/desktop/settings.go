@@ -8,22 +8,23 @@ import (
 )
 
 type AppSettings struct {
-	MindNodeMaxWidth          int  `json:"mindNodeMaxWidth"`
-	SidebarFontSize           int  `json:"sidebarFontSize"`
-	SidebarWidth              int  `json:"sidebarWidth"`
-	MindMainNodeMark          bool `json:"mindMainNodeMark"`
-	MindSecondNodeMark        bool `json:"mindSecondNodeMark"`
-	MDCompactWindow           bool `json:"mdCompactWindow"`
-	ExpandFileNameOnHover     bool `json:"expandFileNameOnHover"`
-	HideFileExtensions        bool `json:"hideFileExtensions"`
-	MindZoomControls          bool `json:"mindZoomControls"`
-	MindCopyTree              bool `json:"mindCopyTree"`
-	MindExportPng             bool `json:"mindExportPng"`
-	SidebarCollapse           bool `json:"sidebarCollapse"`
-	MindOutlineFocus          bool `json:"mindOutlineFocus"`
-	MindOutlineCollapse       bool `json:"mindOutlineCollapse"`
-	MindDoubleClickCreateMain bool `json:"mindDoubleClickCreateMain"`
-	SourceView                bool `json:"sourceView"`
+	MindNodeMaxWidth          int    `json:"mindNodeMaxWidth"`
+	SidebarFontSize           int    `json:"sidebarFontSize"`
+	SidebarWidth              int    `json:"sidebarWidth"`
+	MindMainNodeMark          bool   `json:"mindMainNodeMark"`
+	MindSecondNodeMark        bool   `json:"mindSecondNodeMark"`
+	MDCompactWindow           bool   `json:"mdCompactWindow"`
+	MDImageStorage            string `json:"mdImageStorage"`
+	ExpandFileNameOnHover     bool   `json:"expandFileNameOnHover"`
+	HideFileExtensions        bool   `json:"hideFileExtensions"`
+	MindZoomControls          bool   `json:"mindZoomControls"`
+	MindCopyTree              bool   `json:"mindCopyTree"`
+	MindExportPng             bool   `json:"mindExportPng"`
+	SidebarCollapse           bool   `json:"sidebarCollapse"`
+	MindOutlineFocus          bool   `json:"mindOutlineFocus"`
+	MindOutlineCollapse       bool   `json:"mindOutlineCollapse"`
+	MindDoubleClickCreateMain bool   `json:"mindDoubleClickCreateMain"`
+	SourceView                bool   `json:"sourceView"`
 }
 
 func (a *App) GetSettings() (AppSettings, error) {
@@ -33,7 +34,7 @@ func (a *App) GetSettings() (AppSettings, error) {
 }
 
 func (a *App) readSettings() (AppSettings, error) {
-	settings := &AppSettings{MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}
+	settings := &AppSettings{MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MDImageStorage: "base64", SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil
@@ -47,6 +48,7 @@ func (a *App) readSettings() (AppSettings, error) {
 	if settings == nil {
 		return AppSettings{}, fmt.Errorf("设置文件必须是 JSON 对象")
 	}
+	settings.applyDefaults()
 	if err := settings.validate(); err != nil {
 		return AppSettings{}, err
 	}
@@ -63,6 +65,9 @@ func (settings AppSettings) validate() error {
 	if settings.SidebarWidth < 180 || settings.SidebarWidth > 480 {
 		return fmt.Errorf("侧边栏宽度必须是 180–480 之间的整数")
 	}
+	if settings.MDImageStorage != "base64" && settings.MDImageStorage != "assets" {
+		return fmt.Errorf("md 图片存储方式无效")
+	}
 	return nil
 }
 
@@ -72,6 +77,9 @@ func (settings *AppSettings) applyDefaults() {
 	}
 	if settings.SidebarWidth == 0 {
 		settings.SidebarWidth = 244
+	}
+	if settings.MDImageStorage == "" {
+		settings.MDImageStorage = "base64"
 	}
 }
 

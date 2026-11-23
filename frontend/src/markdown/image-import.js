@@ -1,11 +1,22 @@
 const imageFile=file=>file.type?.startsWith('image/')||/\.(png|jpe?g|gif|webp|svg|avif|bmp|ico)$/i.test(file.name||'');
 
-function fileData(file) {
-  if(file.size>20*1024*1024)return Promise.reject(new Error('图片不能超过 20MB'));
+function fileData(file, inline) {
   return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onerror=()=>reject(new Error('读取图片失败'));
-    reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+    reader.onload=async()=>{
+      try {
+        if(!inline){resolve(String(reader.result).split(',')[1]);return}
+        const bitmap=await createImageBitmap(file);
+        const canvas=document.createElement('canvas');
+        canvas.width=bitmap.width;canvas.height=bitmap.height;
+        canvas.getContext('2d').drawImage(bitmap,0,0);
+        bitmap.close?.();
+        const dataURL=canvas.toDataURL('image/avif',0.82);
+        if(!dataURL.startsWith('data:image/avif;base64,'))throw new Error('当前环境无法将图片转换为 AVIF');
+        resolve(dataURL);
+      } catch(error) { reject(error) }
+    };
     reader.readAsDataURL(file);
   });
 }
@@ -16,7 +27,7 @@ export function imageTransferFiles(transfer) {
   return Array.from(transfer?.items||[]).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter(Boolean);
 }
 
-export function bindImageImport(editor,{importImage,discardImages,onError}) {
+export function bindImageImport(editor,{importImage,discardImages,onError,getImageStorageMode=()=> 'assets'}) {
   const container=editor.container;
   const rangeFor=event=>{
     if(event.type==='drop'){
@@ -41,8 +52,10 @@ export function bindImageImport(editor,{importImage,discardImages,onError}) {
     editor.imageTask=(async()=>{
       const references=[];
       let inserted=false;
+      let inline=false;
       try{
-        for(const file of files)references.push(await importImage(session,await fileData(file)));
+        inline=getImageStorageMode()==='base64';
+        for(const file of files)references.push(inline?await fileData(file,true):await importImage(session,await fileData(file,false)));
         if(editor.readOnly||!editor.loaded||editor.composing||editor.session!==session||editor.path!==path||editor.imageGeneration!==generation||editor.currentSource()!==source||!editor.editable.contains(range.startContainer)||!editor.editable.contains(range.endContainer))throw new Error('编辑位置已变化，图片导入已取消，请重新插入。');
         const text=references.map(reference=>'![图片]('+reference+')').join('\n\n');
         if(!editor.onBeforeInput(source,{data:text}))return;
@@ -51,7 +64,7 @@ export function bindImageImport(editor,{importImage,discardImages,onError}) {
         editor.editor.insertMD(text);inserted=true;editor.flush();
       }catch(error){onError(error)}
       finally{
-        if(!inserted&&references.length){try{await discardImages(session,references)}catch(error){onError(error)}}
+        if(!inserted&&references.length&&!inline){try{await discardImages(session,references)}catch(error){onError(error)}}
         editor.imageTask=null;
       }
     })();

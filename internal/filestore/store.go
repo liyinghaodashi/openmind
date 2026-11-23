@@ -37,11 +37,16 @@ func Read(path string, limit int) ([]byte, os.FileInfo, error) {
 	if stat, ok := before.Sys().(*syscall.Stat_t); ok && stat.Nlink > 1 {
 		return nil, nil, fmt.Errorf("v0.1 不支持编辑硬链接文件，请复制为独立文件")
 	}
-	b, err := io.ReadAll(io.LimitReader(f, int64(limit)+1))
+	var b []byte
+	if limit > 0 {
+		b, err = io.ReadAll(io.LimitReader(f, int64(limit)+1))
+	} else {
+		b, err = io.ReadAll(f)
+	}
 	if err != nil {
 		return nil, nil, err
 	}
-	if len(b) > limit {
+	if limit > 0 && len(b) > limit {
 		return nil, nil, fmt.Errorf("文件超过大小限制")
 	}
 	after, err := f.Stat()

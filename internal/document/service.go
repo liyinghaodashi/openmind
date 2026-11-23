@@ -364,7 +364,7 @@ func (s *Service) PreserveDraft(session, kind, nodeID, value string) (string, er
 		}
 		doc, path = old.doc, old.path
 	}
-	if len(value) > markdown.MaxBytes {
+	if markdown.MaxBytes > 0 && len(value) > markdown.MaxBytes {
 		return "", fmt.Errorf("恢复内容超过 2MB")
 	}
 	data := markdown.PreserveLineEndings(doc.Source, value)

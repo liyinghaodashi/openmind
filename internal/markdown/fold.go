@@ -53,9 +53,6 @@ func (d *Document) withFold(id string, folded, children bool) (*Document, error)
 		raw += " [isFoldKid]"
 	}
 	source := string(d.Source[:n.Start]) + raw + string(d.Source[n.End:])
-	if len(source) > MaxBytes {
-		return nil, fmt.Errorf("文档超过 2MB")
-	}
 	next := &Document{Source: []byte(source), Nodes: map[string]*Node{}, name: d.name, mind: d.mind}
 	delta := len(raw) - (n.End - n.Start)
 	var clone func(*Node) *Node

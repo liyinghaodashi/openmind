@@ -300,7 +300,8 @@ async function exportMindMapPng(){
   }catch(error){toast(errorText(error))}
 }
 const map=new MindMap({canvas:$('canvas'),scene:$('scene'),nodes:$('nodes'),edges:$('edges'),onEdit:editNode,onSelect:selectNode,onCreateMain:()=>addNode({main:true}),onFocus:toggleFocusMode,onFold:toggleNodeFold,onFoldKid:id=>toggleNodeFold(id,{children:true}),onColor:setNodeColor,onCopyTree:id=>copyNode(id,{tree:true}),onExport:exportMindMapPng,onLayout:updateOutlineCollapseButtons,onZoom:scale=>$('zoom-value').textContent=Math.round(scale*100)+'%',canDrag:canDragNode,onMove:relocateNode,onDragState:active=>{state.nodeDragging=active;if(state.editor)state.editor.readOnly=active||state.blocked||state.closing;$('source-editor').readOnly=active||preview||state.blocked||state.closing||!!state.editor}});
-const markdown=new MarkdownEditor({container:$('markdown-editor'),onInput:text=>enqueue('source',text),onComposition:composing=>state.composing=composing,onBeforeInput:canInputMarkdown,onOutline:()=>{if(state.snapshot&&!isMindMapPath(state.snapshot.path))renderOutline()},images:{importImage:(session,data)=>call('ImportImage',session,data),discardImages:(session,paths)=>call('DiscardImages',session,paths),onError:error=>toast(errorText(error))}});
+let mdImageStorageMode='base64';
+const markdown=new MarkdownEditor({container:$('markdown-editor'),onInput:text=>enqueue('source',text),onComposition:composing=>state.composing=composing,onBeforeInput:canInputMarkdown,onOutline:()=>{if(state.snapshot&&!isMindMapPath(state.snapshot.path))renderOutline()},images:{importImage:(session,data)=>call('ImportImage',session,data),discardImages:(session,paths)=>call('DiscardImages',session,paths),getImageStorageMode:()=>mdImageStorageMode,onError:error=>toast(errorText(error))}});
 const documentSearch=mountDocumentSearch({
   bar:$('document-search'),input:$('document-search-input'),count:$('document-search-count'),
   previous:$('document-search-previous'),next:$('document-search-next'),closeButton:$('document-search-close'),
@@ -906,10 +907,11 @@ const settings=mountSettings({
     setHideExtensions:fileTree.setHideExtensions,
     setZoomControls(enabled){mindZoomControlsEnabled=enabled;updateDocumentView()},
     setSidebarFontSize,setSidebarWidth,
+    setImageStorageMode(value){mdImageStorageMode=value},
     setCompactWindowEnabled(enabled){mdCompactWindowEnabled=enabled;updateDocumentView()}
   }),
   storage:preview
-    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
+    ?{load:async()=>({mdCompactWindow:true,mdImageStorage:'base64',hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;

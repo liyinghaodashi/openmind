@@ -10,7 +10,7 @@ import (
 	"github.com/yuin/goldmark/ast"
 )
 
-const MaxBytes = 2 * 1024 * 1024
+const MaxBytes = 0
 
 type Node struct {
 	ID        string  `json:"id"`
@@ -78,9 +78,7 @@ func PreserveLineEndings(original []byte, input string) []byte {
 }
 
 func Parse(source []byte, name string) (*Document, error) {
-	if len(source) > MaxBytes {
-		return nil, fmt.Errorf("v0.1 支持不超过 2MB 的 Markdown")
-	}
+	// MaxBytes 为 0，表示不限制 Markdown 文档大小。
 	if !utf8.Valid(source) {
 		return nil, fmt.Errorf("文件不是有效的 UTF-8，未进行转换")
 	}
@@ -257,9 +255,7 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 		}
 	}
 	replacement := prefix + label + suffix
-	if len(d.Source)-end+n.Start+len(replacement) > MaxBytes {
-		return nil, fmt.Errorf("文档超过 2MB")
-	}
+	// MaxBytes 为 0，表示不限制 Markdown 文档大小。
 	newSource := make([]byte, 0, len(d.Source)+len(replacement)-(end-n.Start))
 	newSource = append(newSource, d.Source[:n.Start]...)
 	newSource = append(newSource, []byte(replacement)...)
