@@ -19,6 +19,9 @@ func (s *Service) ConvertImageAVIF(session, encoded string) (string, error) {
 	if s.doc == nil || session != s.session || s.blocked || strings.HasSuffix(strings.ToLower(s.path), ".mind.md") {
 		return "", fmt.Errorf("当前文档不能导入图片")
 	}
+	if comma := strings.IndexByte(encoded, ','); strings.HasPrefix(encoded, "data:") && comma >= 0 {
+		encoded = encoded[comma+1:]
+	}
 	data, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil || len(data) == 0 {
 		return "", fmt.Errorf("图片内容无效")
