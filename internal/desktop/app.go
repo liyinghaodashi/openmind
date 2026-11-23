@@ -437,6 +437,11 @@ func (a *App) ApplyEdit(edit document.Edit) (*document.Snapshot, error) {
 func (a *App) ImportImage(session, encoded string) (string, error) {
 	return a.sessionService(session).ImportImage(session, encoded)
 }
+
+func (a *App) ConvertImageAVIF(session, encoded string) (string, error) {
+	return a.sessionService(session).ConvertImageAVIF(session, encoded)
+}
+
 func (a *App) DiscardImages(session string, references []string) error {
 	return a.sessionService(session).DiscardImages(session, references)
 }

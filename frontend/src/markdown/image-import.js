@@ -12,8 +12,8 @@ function fileData(file, inline) {
         canvas.width=bitmap.width;canvas.height=bitmap.height;
         canvas.getContext('2d').drawImage(bitmap,0,0);
         bitmap.close?.();
-        const dataURL=canvas.toDataURL('image/avif',0.82);
-        if(!dataURL.startsWith('data:image/avif;base64,'))throw new Error('当前环境无法将图片转换为 AVIF');
+        const dataURL=canvas.toDataURL('image/png');
+        if(!dataURL.startsWith('data:image/png;base64,'))throw new Error('当前环境无法读取图片');
         resolve(dataURL);
       } catch(error) { reject(error) }
     };
@@ -27,7 +27,7 @@ export function imageTransferFiles(transfer) {
   return Array.from(transfer?.items||[]).filter(item=>item.kind==='file').map(item=>item.getAsFile()).filter(Boolean);
 }
 
-export function bindImageImport(editor,{importImage,discardImages,onError,getImageStorageMode=()=> 'assets'}) {
+export function bindImageImport(editor,{importImage,convertImage,discardImages,onError,getImageStorageMode=()=> 'assets'}) {
   const container=editor.container;
   const rangeFor=event=>{
     if(event.type==='drop'){
@@ -55,7 +55,7 @@ export function bindImageImport(editor,{importImage,discardImages,onError,getIma
       let inline=false;
       try{
         inline=getImageStorageMode()==='base64';
-        for(const file of files)references.push(inline?await fileData(file,true):await importImage(session,await fileData(file,false)));
+        for(const file of files)references.push(inline?await convertImage(session,await fileData(file,true)):await importImage(session,await fileData(file,false)));
         if(editor.readOnly||!editor.loaded||editor.composing||editor.session!==session||editor.path!==path||editor.imageGeneration!==generation||editor.currentSource()!==source||!editor.editable.contains(range.startContainer)||!editor.editable.contains(range.endContainer))throw new Error('编辑位置已变化，图片导入已取消，请重新插入。');
         const text=references.map(reference=>'![图片]('+reference+')').join('\n\n');
         if(!editor.onBeforeInput(source,{data:text}))return;
