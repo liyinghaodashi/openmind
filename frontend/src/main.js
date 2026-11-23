@@ -909,7 +909,7 @@ const settings=mountSettings({
     setCompactWindowEnabled(enabled){mdCompactWindowEnabled=enabled;updateDocumentView()}
   }),
   storage:preview
-    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true}),save:async()=>{}}
+    ?{load:async()=>({mdCompactWindow:true,hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;

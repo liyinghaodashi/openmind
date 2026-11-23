@@ -10,7 +10,7 @@ import (
 func TestSettingsDefaults(t *testing.T) {
 	a := &App{stateDir: t.TempDir()}
 	settings, err := a.GetSettings()
-	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}) {
+	if err != nil || settings != (AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}) {
 		t.Fatalf("default settings: %+v, %v", settings, err)
 	}
 	path := filepath.Join(a.stateDir, "settings.json")
@@ -21,14 +21,15 @@ func TestSettingsDefaults(t *testing.T) {
 		input string
 		want  AppSettings
 	}{
-		{`{"mindZoomControls":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: false, MindCopyTree: true}},
-		{`{"mindCopyTree":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: false}},
-		{`{}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}},
-		{`{"sidebarCollapse":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: false, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}},
-		{`{"mindOutlineFocus":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}},
-		{`{"mindOutlineCollapse":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}},
-		{`{"mindDoubleClickCreateMain":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: false, SourceView: true, MindZoomControls: true, MindCopyTree: true}},
-		{`{"sourceView":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: false, MindZoomControls: true, MindCopyTree: true}},
+		{`{"mindZoomControls":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: false, MindCopyTree: true, MindExportPng: true}},
+		{`{"mindCopyTree":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: false, MindExportPng: true}},
+		{`{}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"sidebarCollapse":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: false, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"mindOutlineFocus":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"mindOutlineCollapse":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"mindDoubleClickCreateMain":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: false, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"sourceView":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: false, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}},
+		{`{"mindExportPng":false}`, AppSettings{MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, MindNodeMaxWidth: 340, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: false}},
 	} {
 		if err := os.WriteFile(path, []byte(fixture.input), 0600); err != nil {
 			t.Fatal(err)
@@ -56,17 +57,17 @@ func TestSettingsPersistAcrossRestart(t *testing.T) {
 		{MDCompactWindow: false, MindNodeMaxWidth: 280},
 		{MindNodeMaxWidth: 280, ExpandFileNameOnHover: true},
 		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: false},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: false, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: false, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: false, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: false, MindZoomControls: true, MindCopyTree: true},
-		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: false, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: false, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: false, MindOutlineCollapse: false, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: false, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: false, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
+		{MindNodeMaxWidth: 280, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true},
 	} {
 		want.applyDefaults()
 		if err := a.SaveSettings(want); err != nil {
@@ -90,7 +91,7 @@ func TestSettingsPersistAcrossRestart(t *testing.T) {
 }
 
 func TestInvalidSettingsAreNotOverwrittenOnRead(t *testing.T) {
-	for _, input := range []string{`{"mdCompactWindow":"false"}`, `{`, `null`, `[]`, `{"sidebarCollapse":"false"}`, `{"mindOutlineFocus":"false"}`, `{"mindOutlineCollapse":0}`, `{"mindDoubleClickCreateMain":"false"}`, `{"sourceView":"false"}`, `{"mindZoomControls":"false"}`, `{"mindCopyTree":"false"}`, `{"sidebarFontSize":9}`, `{"sidebarWidth":481}`} {
+	for _, input := range []string{`{"mdCompactWindow":"false"}`, `{`, `null`, `[]`, `{"sidebarCollapse":"false"}`, `{"mindOutlineFocus":"false"}`, `{"mindOutlineCollapse":0}`, `{"mindDoubleClickCreateMain":"false"}`, `{"sourceView":"false"}`, `{"mindZoomControls":"false"}`, `{"mindCopyTree":"false"}`, `{"mindExportPng":"false"}`, `{"sidebarFontSize":9}`, `{"sidebarWidth":481}`} {
 		t.Run(input, func(t *testing.T) {
 			a := &App{stateDir: t.TempDir()}
 			path := filepath.Join(a.stateDir, "settings.json")

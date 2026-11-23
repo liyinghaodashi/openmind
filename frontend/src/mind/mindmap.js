@@ -9,6 +9,7 @@ export class MindMap {
     this.scale=1;this.x=0;this.y=0;this.collapsed=new Set();this.frame=0;this.selected=null;this.focusedId=null;
     this.doubleClickCreateMain=true;
     this.copyTreeEnabled=true;
+    this.exportPngEnabled=true;
     this.nodeMaxWidth=340;
     this.rendererOptions={canvas,scene,nodes,edges,getNodeMaxWidth:()=>this.nodeMaxWidth,onActivate:id=>this.activateNode(id),onEdit:id=>void this.onEdit(id)};
     this.renderer=createMindRenderer(this.rendererOptions);
@@ -133,6 +134,10 @@ export class MindMap {
     this.renderer.measurements.clear();
     if(this.root)this.setRoot(this.root);
   }
+  setExportPngEnabled(enabled){
+    this.exportPngEnabled=enabled;
+    if(!enabled)this.closeNodeMenu();
+  }
   closeNodeMenu(restoreFocus=false){
     if(this.nodeMenu)this.nodeMenu.hidden=true;
     const origin=this.menuOrigin;this.menuNodeId=null;this.menuOrigin=null;this.menuFromOutline=false;
@@ -156,7 +161,7 @@ export class MindMap {
     const focusButton=this.nodeMenu.lastChild;focusButton.textContent=fromCanvas?'退出聚焦模式':'聚焦模式';focusButton.setAttribute('aria-checked',String(this.focusedId===node.id));
     this.colorRow.hidden=fromCanvas||fromOutline||!node.editable;
     this.copyTreeButton.hidden=fromCanvas||fromOutline||!this.copyTreeEnabled;
-    if(this.exportPngButton)this.exportPngButton.hidden=!fromCanvas;
+    if(this.exportPngButton)this.exportPngButton.hidden=!fromCanvas||!this.exportPngEnabled;
     focusButton.hidden=fromCanvas&&!this.focusedId;
     const selectedColor=(this.layout?.positions.find(p=>p.id===node.id)?.effectiveColor||'').toUpperCase();
     for(const button of this.colorOptions.children)button.setAttribute('aria-checked',String(button.dataset.color===selectedColor));

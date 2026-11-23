@@ -28,6 +28,9 @@ export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineA
     id:'mindZoomControls',group:'mind模式',label:'显示缩放控件',description:'在 mind 模式的右下角显示缩小、缩放比例、放大和适应窗口控件。',
     enable:()=>setZoomControls(true),disable:()=>setZoomControls(false)
   },{
+    id:'mindExportPng',group:'mind模式',label:'启用导出 PNG',description:'在 mind 模式画布右键菜单中显示「导出为 PNG」。',
+    enable:()=>map.setExportPngEnabled(true),disable:()=>map.setExportPngEnabled(false)
+  },{
     id:'mindCopyTree',group:'mind模式',label:'启用复制树',description:'在节点右键菜单中显示「复制树」，复制当前节点及全部子节点的 Markdown。⌘C 仅复制当前节点文本。',
     enable:()=>{map.copyTreeEnabled=true},disable:()=>{map.copyTreeEnabled=false;map.closeNodeMenu()}
   },{

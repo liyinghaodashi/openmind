@@ -18,6 +18,7 @@ type AppSettings struct {
 	HideFileExtensions        bool `json:"hideFileExtensions"`
 	MindZoomControls          bool `json:"mindZoomControls"`
 	MindCopyTree              bool `json:"mindCopyTree"`
+	MindExportPng             bool `json:"mindExportPng"`
 	SidebarCollapse           bool `json:"sidebarCollapse"`
 	MindOutlineFocus          bool `json:"mindOutlineFocus"`
 	MindOutlineCollapse       bool `json:"mindOutlineCollapse"`
@@ -32,7 +33,7 @@ func (a *App) GetSettings() (AppSettings, error) {
 }
 
 func (a *App) readSettings() (AppSettings, error) {
-	settings := &AppSettings{MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true}
+	settings := &AppSettings{MindNodeMaxWidth: 340, SidebarFontSize: 12, SidebarWidth: 244, MindMainNodeMark: true, MindSecondNodeMark: true, MDCompactWindow: true, SidebarCollapse: true, MindOutlineFocus: true, MindOutlineCollapse: true, MindDoubleClickCreateMain: true, SourceView: true, MindZoomControls: true, MindCopyTree: true, MindExportPng: true}
 	data, err := os.ReadFile(filepath.Join(a.stateDir, "settings.json"))
 	if os.IsNotExist(err) {
 		return *settings, nil
