@@ -1,5 +1,5 @@
 export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineActions,renderOutline,
-  setHideExtensions,setSourceViewEnabled,setZoomControls,setCompactWindowEnabled,setSidebarFontSize,setSidebarWidth,setImageStorageMode}) {
+  setHideExtensions,setSourceViewEnabled,setZoomControls,setCompactWindowEnabled,setSidebarFontSize,setSidebarWidth,setSidebarResizeEnabled,setImageStorageMode}) {
   return [sidebarCollapse,{
     id:'hideFileExtensions',group:'通用设置',label:'隐藏文件后缀',description:'文件树隐藏 .md、.markdown 和 .mind.md 后缀。',
     enable:()=>setHideExtensions(true),disable:()=>setHideExtensions(false)
@@ -9,6 +9,9 @@ export function preferenceFields({sidebarCollapse,map,fileTreeHover,mindOutlineA
   },{
     id:'sidebarWidth',group:'通用设置',label:'侧边栏宽度',description:'调整侧边栏宽度，默认 244px。',
     type:'number',min:180,max:480,default:244,select:value=>setSidebarWidth(value)
+  },{
+    id:'sidebarResize',group:'通用设置',label:'启用侧边栏拖动调整',description:'开启后可拖动侧边栏右边缘调整宽度，默认关闭。',
+    default:false,enable:()=>setSidebarResizeEnabled(true),disable:()=>setSidebarResizeEnabled(false)
   },{
     id:'expandFileNameOnHover',group:'通用设置',label:'悬停展开文件名',description:'名称显示省略号时，悬停可让文字和背景向右展开，适用于文件和文件夹。',
     enable:()=>fileTreeHover.setEnabled(true),disable:()=>fileTreeHover.setEnabled(false)

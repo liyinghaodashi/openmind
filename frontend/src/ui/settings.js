@@ -157,7 +157,7 @@ export function mountSettings({container, features, storage}) {
     try {
       saved = await storage.load();
       for (const feature of features) {
-        if (feature.type === 'number' && saved[feature.id] === undefined) saved[feature.id] = feature.default;
+        if (feature.default !== undefined && saved[feature.id] === undefined) saved[feature.id] = feature.default;
         const valid = feature.type === 'number' ? Number.isInteger(saved[feature.id]) && saved[feature.id] >= feature.min && saved[feature.id] <= feature.max : feature.options ? feature.options.some(option => option.value === saved[feature.id]) : typeof saved[feature.id] === 'boolean';
         if (!valid) throw new Error('无效的设置：' + feature.label);
       }

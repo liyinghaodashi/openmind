@@ -901,18 +901,23 @@ function setSourceViewEnabled(enabled){
 const sidebarCollapse=createSidebarCollapse({sidebar:$('sidebar'),button:$('toggle-sidebar'),root:document.body,beforeChange:()=>{fileTreeDrag.cancel();closeWorkspaceMenu()}});
 function setSidebarFontSize(value){$('sidebar').style.setProperty('--sidebar-font-size',value+'px')}
 function setSidebarWidth(value){$('sidebar').style.setProperty('--sidebar-width',value+'px')}
+function setSidebarResizeEnabled(enabled){
+  const handle=$('sidebar-resizer');
+  handle.hidden=!enabled;
+  handle.setAttribute('aria-disabled',String(!enabled));
+}
 const settings=mountSettings({
   container:$('settings-options'),
   features:preferenceFields({
     sidebarCollapse,map,fileTreeHover,mindOutlineActions,renderOutline,setSourceViewEnabled,
     setHideExtensions:fileTree.setHideExtensions,
     setZoomControls(enabled){mindZoomControlsEnabled=enabled;updateDocumentView()},
-    setSidebarFontSize,setSidebarWidth,
+    setSidebarFontSize,setSidebarWidth,setSidebarResizeEnabled,
     setImageStorageMode(value){mdImageStorageMode=value},
     setCompactWindowEnabled(enabled){mdCompactWindowEnabled=enabled;updateDocumentView()}
   }),
   storage:preview
-    ?{load:async()=>({mdCompactWindow:true,mdImageStorage:'base64',hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
+    ?{load:async()=>({mdCompactWindow:true,mdImageStorage:'base64',hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,sidebarResize:false,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
 });
 bindSidebarResize({
