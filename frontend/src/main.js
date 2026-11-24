@@ -9,6 +9,7 @@ import {nodePath,nodeAtPath} from './mind/tree-navigation.js';
 import {EditQueue} from './document/queue.js';
 import {MindMap} from './mind/mindmap.js';
 import {createSidebarCollapse} from './workspace/sidebar-collapse.js';
+import {bindSidebarResize} from './workspace/sidebar-resize.js';
 import {mountSettings} from './ui/settings.js';
 import {bindToolbarMaximise} from './ui/toolbar-maximise.js';
 import {mountFileActions} from './workspace/file-actions.js';
@@ -913,6 +914,12 @@ const settings=mountSettings({
   storage:preview
     ?{load:async()=>({mdCompactWindow:true,mdImageStorage:'base64',hideFileExtensions:false,mindNodeMaxWidth:340,sidebarFontSize:12,sidebarWidth:244,mindMainNodeMark:true,mindSecondNodeMark:true,sidebarCollapse:true,mindOutlineFocus:true,mindOutlineCollapse:true,mindDoubleClickCreateMain:true,sourceView:true,mindZoomControls:true,mindCopyTree:true,mindExportPng:true}),save:async()=>{}}
     :{load:()=>call('GetSettings'),save:value=>call('SaveSettings',value)}
+});
+bindSidebarResize({
+  sidebar:$('sidebar'),
+  handle:$('sidebar-resizer'),
+  onResize:setSidebarWidth,
+  onCommit:value=>settings.setNumber('sidebarWidth',value)
 });
 $('choose-workspace').onclick=toggleWorkspaceMenu;
 function updateSidebarTitle(){

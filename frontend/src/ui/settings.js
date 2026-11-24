@@ -173,7 +173,11 @@ export function mountSettings({container, features, storage}) {
   }
   const ready = reload();
 
-  return {ready, reload, flush: async () => {
+  return {ready, reload, setNumber(id, value) {
+    const feature = features.find(item => item.id === id);
+    if (!feature || feature.type !== 'number' || !Number.isInteger(value) || value < feature.min || value > feature.max) return;
+    save(feature, value);
+  }, flush: async () => {
     await ready;
     let saving;
     do {saving = pending; await saving;} while (saving !== pending);
