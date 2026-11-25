@@ -10,6 +10,7 @@ try{
   const original=markdown.currentSource(),scroll=markdown.editable.scrollTop;
   const sidebarBounds=side.getBoundingClientRect(),bounds=page.getBoundingClientRect();
   assert(buttons.length===2,'Expected two code blocks');
+  assert(!buttons[1].closest('[title]'),'Expand button must have no hover tooltip');
   const buttonBounds=buttons[1].getBoundingClientRect();
   const language=markdown.editable.querySelectorAll('[data-type="code-block-info"]')[1].getBoundingClientRect();
   assert(buttonBounds.right<=language.left&&Math.abs(buttonBounds.top-language.top)<2,'Button placement');

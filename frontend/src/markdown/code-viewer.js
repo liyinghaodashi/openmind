@@ -6,7 +6,6 @@ function iconButton(label,path){
   const button=document.createElement('button');
   button.type='button';
   button.className='markdown-code-button';
-  button.title=label;
   button.setAttribute('aria-label',label);
   button.innerHTML='<svg aria-hidden="true" viewBox="0 0 16 16"><path d="'+path+'"/></svg>';
   return button;
@@ -20,6 +19,7 @@ export function bindCodeViewer(container,editable){
   viewer.setAttribute('aria-label','放大的代码块');
   viewer.hidden=true;
   const close=iconButton('收起代码块（Esc）','M1 5h4V1m10 10h-4v4');
+  close.title=close.getAttribute('aria-label');
   const content=document.createElement('div');
   viewer.append(close,content);
   container.append(controls,viewer);
