@@ -1,3 +1,4 @@
+import {bindCodeHighlights} from './code-highlights.js';
 import {documentAssetBase} from '../document/document-mode.js';
 import {TableDialog} from './table-dialog.js';
 import {bindImageImport} from './image-import.js';
@@ -44,7 +45,7 @@ export class MarkdownEditor {
         preview:{maxWidth:800,hljs:{enable:false,langs:[]},markdown:{codeBlockPreview:false,mathBlockPreview:false,autoSpace:false,fixTermTypo:false,listStyle:true,sanitize:true},render:{media:{enable:false}}},
         link:{isOpen:false},image:{isPreview:false},
         input:()=>this.flush(),
-        after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');this.preserveInitialSelection();this.editor.disabled();resolve()}
+        after:()=>{this.editor.vditor.lute.SetInlineMath(false);this.editable=container.querySelector('.vditor-ir [contenteditable]');this.editable.setAttribute('aria-label','Markdown 正文编辑器');this.editable.setAttribute('role','textbox');this.editable.setAttribute('aria-multiline','true');this.editable.setAttribute('aria-readonly','true');bindCodeHighlights(this.editable);this.preserveInitialSelection();this.editor.disabled();resolve()}
       });
     });
   }
