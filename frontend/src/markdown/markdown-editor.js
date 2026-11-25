@@ -247,7 +247,7 @@ export class MarkdownEditor {
   load(source,{session,path,reset=false}={}) {
     this.headingContinuation=null;
     if(!reset&&this.loaded&&this.source===source&&this.session===session&&this.path===path){this.onOutline?.();return}
-    this.tableDialog?.finish();this.tableActions?.reset();this.loaded=false;
+    this.dismissCodeViewer?.();this.tableDialog?.finish();this.tableActions?.reset();this.loaded=false;
     this.imageGeneration++;
     clearTimeout(this.editor.vditor.ir.processTimeoutId);
     this.editor.vditor.lute.SetLinkBase(documentAssetBase(session,path));
@@ -310,5 +310,5 @@ export class MarkdownEditor {
     heading?.element.scrollIntoView({block:'start'});return !!heading;
   }
   focus(){this.editor.focus()}
-  clear(){this.imageGeneration++;this.tableDialog?.finish();this.tableActions?.reset();this.loaded=false;clearTimeout(this.editor.vditor.ir.processTimeoutId);this.editor.setValue('',true);this.source='';this.normalized=this.editor.getValue()}
+  clear(){this.imageGeneration++;this.dismissCodeViewer?.();this.tableDialog?.finish();this.tableActions?.reset();this.loaded=false;clearTimeout(this.editor.vditor.ir.processTimeoutId);this.editor.setValue('',true);this.source='';this.normalized=this.editor.getValue()}
 }

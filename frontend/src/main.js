@@ -20,6 +20,7 @@ import {mountDocumentKind} from './ui/document-kind.js';
 import {mountGlobalCaret} from './ui/global-caret.js';
 import {mountDocumentSearch} from './document/document-search.js';
 import {mountFileTreeDrag,movedTreePath} from './workspace/file-tree-drag.js';
+import {bindCodeViewer} from './markdown/code-viewer.js';
 import {TableActions} from './markdown/table-actions.js';
 import {mountFileTreeHover} from './workspace/file-tree-hover.js';
 import {MindHistory} from './mind/mind-history.js';
@@ -1072,6 +1073,7 @@ async function finishAppClose(windowOnly){
 }
 
 await Promise.all([settings.ready,markdown.ready]);
+markdown.dismissCodeViewer=bindCodeViewer(markdown.container,markdown.editable);
 const tableActions=markdown.tableActions=new TableActions(markdown);
 if(paneHost){
   let locked=false;
