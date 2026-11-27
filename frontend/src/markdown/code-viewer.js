@@ -67,7 +67,11 @@ export function bindCodeViewer(container,editable){
     }
     for(const block of editable.querySelectorAll(blockSelector)){
       const field=block.querySelector('[data-type="code-block-info"]');
-      if(!field)continue;
+      if(field?.textContent.replaceAll('\u200b','').trim().toLowerCase()!=='mermaid'){
+        buttons.get(block)?.remove();
+        buttons.delete(block);
+        continue;
+      }
       const rect=field.getBoundingClientRect();
       let button=buttons.get(block);
       if(!button){

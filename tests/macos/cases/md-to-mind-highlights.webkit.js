@@ -1,9 +1,8 @@
 try {
   const md = '源/笔记.md', mind = '源/子/想法.mind.md';
-  const source = ['~~~sql', 'SELECT count(*) FROM notes WHERE id > 42;', '~~~'].join('\n');
+  const source = ['~~~sql', 'SELECT count(*) FROM notes WHERE id > 42;', '~~~', '', '~~~mermaid', 'graph TD', 'A --> B', '~~~'].join('\n');
   window.__fileDragFixture.documents.get(md).source = source;
   const settle = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  const keywordRanges = () => [...(CSS.highlights.get('md-keyword') || [])];
   const registered = () => [...CSS.highlights].filter(([key]) => key.startsWith('md-'))
     .reduce((sum, [, highlight]) => sum + highlight.size, 0);
   const other = new Highlight();
@@ -15,8 +14,9 @@ try {
   if (!originalCount) throw new Error('正文未创建高亮');
   document.querySelector('button[aria-label="放大代码块"]').click();
   await settle();
-  if (!keywordRanges().some(range => range.startContainer.parentElement.closest('.markdown-code-viewer')))
-    throw new Error('放大视图未建立高亮');
+  const viewer = document.querySelector('.markdown-code-viewer');
+  if (viewer.hidden || !viewer.textContent.includes('A --> B'))
+    throw new Error('Mermaid 代码块未放大');
 
   await openDocument(mind);
   await settle();
