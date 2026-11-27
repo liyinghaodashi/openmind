@@ -172,15 +172,25 @@ export class MindMap {
     this.nodeMenu.style.top=Math.max(8,Math.min(keyboard?origin.bottom:event.clientY,window.innerHeight-bounds.height-8))+'px';
     if(!editor)[...this.nodeMenu.querySelectorAll('button')].find(button=>!button.hidden&&!button.closest('[hidden]'))?.focus({preventScroll:true});
   }
-  setRoot(root,{resetView=false}={}){
+  setRoot(root,{resetView=false,focusedId=resetView?null:this.focusedId}={}){
     const anchor=!resetView&&this.editor?this.layout?.positions.find(p=>p.id===this.editing):null;
     this.closeNodeMenu();if(this.nodeDrag)this.stopNodeDrag(null,false);this.root=root;
-    if(resetView)this.focusedId=null;
+    this.focusedId=focusedId;
     const find=node=>node.id===this.focusedId?node:node.children.map(find).find(Boolean);
     const focused=this.focusedId?find(root):null;
     if(!focused)this.focusedId=null;
     this.viewRoot=focused||root;
-    this.layout=layoutTree(root,this.collapsed,(...args)=>this.measure(...args),{rootGap:this.canvas.classList.contains('mind-main-node-mark')?64:30});
+    let collapsed=this.collapsed;
+    if(focused&&collapsed.size){
+      collapsed=new Set(collapsed);
+      const revealAncestors=node=>{
+        if(node===focused)return true;
+        if(!node.children.some(revealAncestors))return false;
+        collapsed.delete(node.id);return true;
+      };
+      revealAncestors(root);
+    }
+    this.layout=layoutTree(root,collapsed,(...args)=>this.measure(...args),{rootGap:this.canvas.classList.contains('mind-main-node-mark')?64:30});
     if(focused){
       const ids=new Set();
       const add=node=>{ids.add(node.id);node.children.forEach(add)};add(focused);

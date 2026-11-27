@@ -46,14 +46,14 @@ func (d *Document) BranchMarkdown(id string, label *string) (string, error) {
 	if d.mind {
 		var colored []*Node
 		for _, n := range exported.Nodes {
-			if (n.Color != "" || n.Fold || n.FoldKid) && n.Start >= start && n.End <= end {
+			if (n.Color != "" || n.Fold || n.FoldKid || n.focusMarks > 0) && n.Start >= start && n.End <= end {
 				colored = append(colored, n)
 			}
 		}
 		sort.Slice(colored, func(i, j int) bool { return colored[i].Start > colored[j].Start })
 		for _, n := range colored {
-			raw, folded, foldedKid := mindLabelFolds(string(source[n.Start:n.End]))
-			if folded || foldedKid {
+			raw, folded, foldedKid, focus := mindLabelFlags(string(source[n.Start:n.End]))
+			if folded || foldedKid || focus > 0 {
 				result = result[:n.Start-start+len(raw)] + result[n.End-start:]
 			}
 			first, _, _ := strings.Cut(raw, "\n")

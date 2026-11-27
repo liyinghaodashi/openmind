@@ -24,6 +24,7 @@ type Snapshot struct {
 	Root          *markdown.Node    `json:"root"`
 	Hash          string            `json:"hash"`
 	CreatedNodeID string            `json:"createdNodeId,omitempty"`
+	FocusedID     string            `json:"focusedId,omitempty"`
 	FocusNodeID   string            `json:"focusNodeId,omitempty"`
 	NodeIDMap     map[string]string `json:"nodeIdMap,omitempty"`
 	ImageWarning  string            `json:"imageWarning,omitempty"`
@@ -189,7 +190,7 @@ func (s *Service) open(w *workspace.Workspace, path string, commit func() error)
 }
 
 func (s *Service) snapshot() *Snapshot {
-	return &Snapshot{WorkspaceRoot: s.workspace.Root, Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, Hash: filestore.Hash(s.doc.Source)}
+	return &Snapshot{WorkspaceRoot: s.workspace.Root, Session: s.session, Version: s.version, Path: s.path, Source: string(s.doc.Source), Root: s.doc.Root, FocusedID: s.doc.FocusedID(), Hash: filestore.Hash(s.doc.Source)}
 }
 
 func (s *Service) Apply(edit Edit) (*Snapshot, error) {
@@ -219,15 +220,21 @@ func (s *Service) Apply(edit Edit) (*Snapshot, error) {
 	var createdNodeID string
 	var focusNodeID string
 	var nodeIDMap map[string]string
+	base := s.doc
+	if edit.Kind != "source" && edit.Kind != "restore-mind" && edit.Kind != "node-focus" {
+		base = base.NormalizeFocus(base.FocusedID())
+	}
 	switch edit.Kind {
 	case "label":
-		next, err = s.doc.WithLabel(edit.NodeID, edit.Text)
+		next, err = base.WithLabel(edit.NodeID, edit.Text)
+	case "node-focus":
+		next, err = base.WithFocus(edit.NodeID, edit.Text == "true")
 	case "node-fold-kid":
-		next, err = s.doc.WithFoldKid(edit.NodeID, edit.Text == "true")
+		next, err = base.WithFoldKid(edit.NodeID, edit.Text == "true")
 	case "node-fold":
-		next, err = s.doc.WithFold(edit.NodeID, edit.Text == "true")
+		next, err = base.WithFold(edit.NodeID, edit.Text == "true")
 	case "node-color":
-		next, err = s.doc.WithColor(edit.NodeID, edit.Text)
+		next, err = base.WithColor(edit.NodeID, edit.Text)
 	case "source":
 		next, err = markdown.Parse(markdown.PreserveLineEndings(s.doc.Source, edit.Text), s.path)
 	case "restore-mind":
@@ -236,21 +243,26 @@ func (s *Service) Apply(edit Edit) (*Snapshot, error) {
 		}
 		next, err = markdown.Parse([]byte(edit.Text), s.path)
 	case "insert-sibling":
-		next, createdNodeID, err = s.doc.WithSibling(edit.NodeID)
+		next, createdNodeID, err = base.WithSibling(edit.NodeID)
 	case "insert-child":
-		next, createdNodeID, err = s.doc.WithChild(edit.NodeID)
+		next, createdNodeID, err = base.WithChild(edit.NodeID)
 	case "delete-node":
-		next, nodeIDMap, focusNodeID, err = s.doc.WithoutNode(edit.NodeID)
+		next, nodeIDMap, focusNodeID, err = base.WithoutNode(edit.NodeID)
 	case "move-node":
 		if !strings.HasSuffix(strings.ToLower(s.path), ".mind.md") {
 			return nil, fmt.Errorf("仅思维导图文档支持拖动节点")
 		}
-		next, nodeIDMap, focusNodeID, err = s.doc.WithMovedNode(edit.NodeID, edit.TargetID, edit.Placement)
+		next, nodeIDMap, focusNodeID, err = base.WithMovedNode(edit.NodeID, edit.TargetID, edit.Placement)
 	default:
 		return nil, fmt.Errorf("不支持的编辑操作")
 	}
 	if err != nil {
 		return nil, err
+	}
+	if edit.Kind == "insert-child" && edit.NodeID == s.doc.Root.ID && s.doc.FocusedID() != "" {
+		next = next.NormalizeFocus("")
+	} else {
+		next = next.NormalizeFocus(next.FocusedID())
 	}
 	if bytes.Equal(next.Source, s.doc.Source) {
 		reply := s.snapshot()
@@ -368,10 +380,12 @@ func (s *Service) PreserveDraft(session, kind, nodeID, value string) (string, er
 		return "", fmt.Errorf("恢复内容超过 2MB")
 	}
 	data := markdown.PreserveLineEndings(doc.Source, value)
-	if kind == "label" || kind == "node-color" || kind == "node-fold" || kind == "node-fold-kid" {
+	if kind == "node-focus" || kind == "label" || kind == "node-color" || kind == "node-fold" || kind == "node-fold-kid" {
 		var d *markdown.Document
 		var err error
-		if kind == "node-fold-kid" {
+		if kind == "node-focus" {
+			d, err = doc.WithFocus(nodeID, value == "true")
+		} else if kind == "node-fold-kid" {
 			d, err = doc.WithFoldKid(nodeID, value == "true")
 		} else if kind == "node-fold" {
 			d, err = doc.WithFold(nodeID, value == "true")

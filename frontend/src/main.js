@@ -373,11 +373,6 @@ function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=fal
   if(snapshot.imageWarning)toast(snapshot.imageWarning);
   const pathChanged=previous?.path!==snapshot.path||previous?.workspaceRoot!==snapshot.workspaceRoot;
   if(resetView||pathChanged||external)mindHistory.clear();
-  if(resetView||pathChanged||external)map.focusedId=null;
-  else if(map.focusedId){
-    const path=nodePath(state.snapshot.root,map.focusedId);
-    map.focusedId=snapshot.nodeIdMap?snapshot.nodeIdMap[map.focusedId]||null:nodeAtPath(snapshot.root,path)?.id||null;
-  }
   if(isMindMapPath(snapshot.path)&&(resetView||pathChanged||external||restoreFolds)){
     map.collapsed.clear();
     const restore=node=>{if(node.isFoldKid)map.collapsed.add(node.id);node.children.forEach(restore)};
@@ -392,7 +387,11 @@ function applySnapshot(snapshot,{resetView=false,external=false,restoreFolds=fal
   if(!state.composing&&(!state.queue?.pending||external)){const start=source.selectionStart,end=source.selectionEnd,scroll=source.scrollTop;source.value=snapshot.source;source.setSelectionRange(Math.min(start,source.value.length),Math.min(end,source.value.length));source.scrollTop=scroll;}
   source.readOnly=preview||state.blocked||state.closing||state.navigating||state.fileDragging||addingChild||deletingNode||movingNode||!!state.editor;
   $('source-size').textContent=new TextEncoder().encode(snapshot.source).length.toLocaleString()+' 字节';
-  if(isMindMapPath(snapshot.path)){map.setRoot(snapshot.root,{resetView})}
+  if(isMindMapPath(snapshot.path)){
+    const focusedId=snapshot.focusedId||null;
+    map.setRoot(snapshot.root,{resetView,focusedId});
+    if(resetView&&focusedId)map.focusBranch(focusedId);
+  }
   else if(resetView||pathChanged||external||fromPeer||state.sourceOpen&&!state.queue.pending&&!state.composing){markdown.load(snapshot.source,{session:snapshot.session,path:snapshot.path,reset:resetView||pathChanged})}
   renderOutline();if(pathChanged)renderTree();
   documentSearch.refresh({reset:pathChanged,jump:external});
@@ -413,7 +412,6 @@ state.queue=new EditQueue({
 function setEditorsReadOnly(){if(state.editor)state.editor.readOnly=true;$('source-editor').readOnly=true;markdown.setReadOnly(true)}
 function enqueue(kind,text,nodeId=''){
   if(preview||!state.snapshot||state.blocked)return;
-  if(kind==='source'&&map.focusedId){map.focusedId=null;map.setRoot(state.snapshot.root);renderOutline();documentSearch.refresh({reset:true})}
   state.draft={kind,nodeId,text};
   try{state.queue.push(commands.prepare({kind,text,nodeId}))}
   catch(error){state.blocked=true;setEditorsReadOnly();banner(errorText(error),true);void preserveDraft().catch(e=>banner(errorText(error)+' 恢复副本失败：'+errorText(e),true));}
@@ -447,7 +445,7 @@ const moveSelection=createMindSelection({state,map,preview,
 });
 function captureMindHistory(){
   const root=state.snapshot.root;
-  return {source:state.snapshot.source,selected:nodePath(root,map.selected),focused:nodePath(root,map.focusedId),collapsed:[...map.collapsed].map(id=>nodePath(root,id)).filter(Boolean)};
+  return {source:state.snapshot.source,selected:nodePath(root,map.selected),collapsed:[...map.collapsed].map(id=>nodePath(root,id)).filter(Boolean)};
 }
 async function restoreMindHistory(direction){
   if(preview||state.fileDragging||state.nodeDragging||addingChild||deletingNode||movingNode||state.checking||state.blocked||state.closing||state.composing||state.navigating||!state.snapshot||!isMindMapPath(state.snapshot.path))return;
@@ -458,9 +456,8 @@ async function restoreMindHistory(direction){
     const current=captureMindHistory();
     const snapshot=await commands.apply(commands.prepare({kind:'restore-mind',text:target.source}));
     mindHistory.commit(direction,current);
-    map.focusedId=null;applySnapshot(snapshot);resetSourceInput();state.draft=null;
+    applySnapshot(snapshot);resetSourceInput();state.draft=null;
     map.selected=nodeAtPath(snapshot.root,target.selected)?.id||null;
-    map.focusedId=nodeAtPath(snapshot.root,target.focused)?.id||null;
     map.collapsed=new Set(target.collapsed.map(path=>nodeAtPath(snapshot.root,path)?.id).filter(Boolean));
     map.setRoot(snapshot.root);map.reveal(map.selected);map.render();renderOutline();documentSearch.refresh({reset:true,preserveView:true});
     (map.elements.get(map.selected)||map.canvas).focus({preventScroll:true});
@@ -486,7 +483,13 @@ async function toggleFocusMode(id,{fromOutline=false}={}){
       for(let depth=0;depth<path.length;depth++)map.collapsed.delete(nodeAtPath(state.snapshot.root,path.slice(0,depth))?.id);
       map.setRoot(state.snapshot.root);
     }
-    map.toggleFocus(node.id);
+    if(preview){
+      map.toggleFocus(node.id);
+    }else{
+      enqueue('node-focus',String(map.focusedId!==node.id),node.id);
+      if(!await state.queue.drain())return;
+      state.draft=null;map.selected=node.id;resetSourceInput();
+    }
     if(fromOutline&&map.focusedId)map.focusBranch(node.id);
     map.render();renderOutline();documentSearch.refresh({reset:true,preserveView:true});
     map.elements.get(node.id)?.focus({preventScroll:true});
@@ -606,7 +609,6 @@ async function addNode({sibling=false,main=false}={}){
       return nodeAtPath(snapshot.root,nextPath)?.id;
     }).filter(Boolean));
     map.collapsed.delete(nodeAtPath(snapshot.root,sibling?path.slice(0,-1):path)?.id);
-    if(main)map.focusedId=null;
     map.selected=snapshot.createdNodeId;
     applySnapshot(snapshot);resetSourceInput();map.reveal(snapshot.createdNodeId);
     addingChild=false;

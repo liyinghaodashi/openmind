@@ -5,8 +5,9 @@ import (
 	"strings"
 )
 
-func mindLabelFolds(raw string) (string, bool, bool) {
+func mindLabelFlags(raw string) (string, bool, bool, int) {
 	fold, foldKid := false, false
+	focus := 0
 	for {
 		trimmed := strings.TrimRight(raw, " \t")
 		switch {
@@ -16,8 +17,11 @@ func mindLabelFolds(raw string) (string, bool, bool) {
 		case strings.HasSuffix(trimmed, "[isFoldKid]"):
 			raw = strings.TrimRight(strings.TrimSuffix(trimmed, "[isFoldKid]"), " \t")
 			foldKid = true
+		case strings.HasSuffix(trimmed, "[isFocus]"):
+			raw = strings.TrimRight(strings.TrimSuffix(trimmed, "[isFocus]"), " \t")
+			focus++
 		default:
-			return raw, fold, foldKid
+			return raw, fold, foldKid, focus
 		}
 	}
 }
@@ -45,13 +49,25 @@ func (d *Document) withFold(id string, folded, children bool) (*Document, error)
 		return d, nil
 	}
 
-	raw, _, _ := mindLabelFolds(string(d.Source[n.Start:n.End]))
+	return d.withNodeFlags(n, fold, foldKid, n.focusMarks), nil
+}
+
+func renderNodeFlags(raw string, fold, foldKid bool, focus int) string {
+	raw, _, _, _ = mindLabelFlags(raw)
 	if fold {
 		raw += " [isFold]"
 	}
 	if foldKid {
 		raw += " [isFoldKid]"
 	}
+	if focus > 0 {
+		raw += " [isFocus]"
+	}
+	return raw
+}
+
+func (d *Document) withNodeFlags(n *Node, fold, foldKid bool, focus int) *Document {
+	raw := renderNodeFlags(string(d.Source[n.Start:n.End]), fold, foldKid, focus)
 	source := string(d.Source[:n.Start]) + raw + string(d.Source[n.End:])
 	next := &Document{Source: []byte(source), Nodes: map[string]*Node{}, name: d.name, mind: d.mind}
 	delta := len(raw) - (n.End - n.Start)
@@ -64,8 +80,9 @@ func (d *Document) withFold(id string, folded, children bool) (*Document, error)
 				*position += delta
 			}
 		}
-		if c.ID == id {
+		if c.ID == n.ID {
 			c.End += delta
+			c.focusMarks = min(focus, 1)
 			c.Fold = fold
 			c.FoldKid = foldKid
 		} else if c.Start >= n.End && c.Start >= 0 {
@@ -79,5 +96,5 @@ func (d *Document) withFold(id string, folded, children bool) (*Document, error)
 		return &c
 	}
 	next.Root = clone(d.Root)
-	return next, nil
+	return next
 }

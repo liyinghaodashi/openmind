@@ -13,21 +13,22 @@ import (
 const MaxBytes = 0
 
 type Node struct {
-	ID        string  `json:"id"`
-	Label     string  `json:"label"`
-	Color     string  `json:"color,omitempty"`
-	Fold      bool    `json:"isFold,omitempty"`
-	FoldKid   bool    `json:"isFoldKid,omitempty"`
-	Kind      string  `json:"kind"`
-	Level     int     `json:"level"`
-	Editable  bool    `json:"editable"`
-	Children  []*Node `json:"children"`
-	Start     int     `json:"-"`
-	End       int     `json:"-"`
-	lineStart int
-	lineEnd   int
-	branchEnd int
-	indent    int
+	ID         string  `json:"id"`
+	Label      string  `json:"label"`
+	Color      string  `json:"color,omitempty"`
+	Fold       bool    `json:"isFold,omitempty"`
+	FoldKid    bool    `json:"isFoldKid,omitempty"`
+	Kind       string  `json:"kind"`
+	Level      int     `json:"level"`
+	Editable   bool    `json:"editable"`
+	Children   []*Node `json:"children"`
+	Start      int     `json:"-"`
+	End        int     `json:"-"`
+	focusMarks int
+	lineStart  int
+	lineEnd    int
+	branchEnd  int
+	indent     int
 }
 
 type Document struct {
@@ -199,27 +200,13 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 	if !ok || !n.Editable {
 		return nil, fmt.Errorf("该节点请在 Markdown 原文中编辑")
 	}
-	if d.mind && n.FoldKid {
-		plain, err := d.WithFoldKid(id, false)
-		if err != nil {
-			return nil, err
-		}
+	if d.mind && (n.Fold || n.FoldKid || n.focusMarks > 0) {
+		plain := d.withNodeFlags(n, false, false, 0)
 		next, err := plain.withLabel(id, label, preserveColor)
 		if err != nil {
 			return nil, err
 		}
-		return next.WithFoldKid(id, true)
-	}
-	if d.mind && n.Fold {
-		plain, err := d.WithFold(id, false)
-		if err != nil {
-			return nil, err
-		}
-		next, err := plain.withLabel(id, label, preserveColor)
-		if err != nil {
-			return nil, err
-		}
-		return next.WithFold(id, true)
+		return next.withNodeFlags(next.Nodes[id], n.Fold, n.FoldKid, n.focusMarks), nil
 	}
 	if strings.ContainsRune(label, '\x00') || !utf8.ValidString(label) {
 		return nil, fmt.Errorf("节点文本必须是有效 UTF-8 文本且不能包含空字符")
@@ -278,6 +265,7 @@ func (d *Document) withLabel(id, label string, preserveColor bool) (*Document, e
 			c.Start += len(prefix)
 			c.End = c.Start + len(label)
 			if d.mind {
+				label, c.Fold, c.FoldKid, c.focusMarks = mindLabelFlags(label)
 				if multiline {
 					c.Label, c.Color = mindMultilineLabel(label, n.Kind == "heading")
 					if !strings.ContainsAny(label, "\r\n") {

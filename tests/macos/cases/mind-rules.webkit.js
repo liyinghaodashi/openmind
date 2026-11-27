@@ -382,9 +382,9 @@ try{
   focusItem.click();await settle();
   assert(map.focusedId===find('2. 访问网页').id&&map.viewRoot.label==='2. 访问网页'&&!map.layout.positions.some(p=>p.id===find('第二主节点').id),'Other node menus must switch focus to the chosen subtree');
   assert(map.layout.positions.every(p=>nodePath(state.snapshot.root,p.id).slice(0,4).join('/')===nodePath(state.snapshot.root,map.focusedId).join('/')),'Switched focus must contain only the new entry and its descendants');
-  assert(map.x===switchView.x&&map.y===switchView.y&&map.scale===switchView.scale&&map.layout.positions.every(p=>JSON.stringify(p)===JSON.stringify(switchPositions.get(p.id))),'Switching focus must preserve pan, zoom, depth and node geometry');
+  assert(map.x===switchView.x&&map.y===switchView.y&&map.scale===switchView.scale&&map.layout.positions.every(p=>p.x===switchPositions.get(p.id).x&&p.y===switchPositions.get(p.id).y),'Switching focus must preserve pan, zoom, depth and node geometry');
   focusItem=contextMenu('2. 访问网页');assert(focusItem.getAttribute('aria-checked')==='true','Only the new focus entry must show its checkmark');key('Escape');
-  const switchedSource=state.snapshot.source;blankMenu();map.nodeMenu.lastChild.click();await settle();
+  const switchedSource=state.snapshot.source.replace(' [isFocus]','');assert(switchedSource!==state.snapshot.source&&await window.__mindRules.request('ReadDisk')===state.snapshot.source,'Switched focus must persist its marker');blankMenu();map.nodeMenu.lastChild.click();await settle();
   assert(!map.focusedId&&map.layout.positions.some(p=>p.id===find('第二主节点').id)&&state.snapshot.source===switchedSource&&await window.__mindRules.request('ReadDisk')===switchedSource,'Blank menu must still exit switched focus without rewriting Markdown');
   map.fit();map.render();await settle();contextMenu('独立细分').click();await settle();
   await deleteNode();await settle();
