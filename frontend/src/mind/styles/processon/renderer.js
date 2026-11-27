@@ -93,12 +93,19 @@ export class ProcessonRenderer {
     y = Math.round(y * pixelRatio) / pixelRatio;
     this.scene.style.transform = `translate(${x}px,${y}px) scale(${scale})`;
     const view = {x: (-x - 150) / scale, y: (-y - 100) / scale, width: (this.canvas.clientWidth + 300) / scale, height: (this.canvas.clientHeight + 200) / scale};
+    const stableContent = !editor && !editing && !drag?.active;
+    const reuseNodes = stableContent && this.lastLayout === layout && this.lastSelected === selected;
+    const reuseEdges = this.lastEdgeLayout === layout;
+    this.lastLayout = stableContent ? layout : null;
+    this.lastSelected = selected;
+    this.lastEdgeLayout = layout;
     const keep = new Set();
     for (const p of layout.positions) {
       if (!renderAll && !intersects(p, view) && p.id !== selected) continue;
       keep.add(p.id);
-      const depth = styleDepth(p.node, p.depth);
       let element = this.elements.get(p.id);
+      if (reuseNodes && element) continue;
+      const depth = styleDepth(p.node, p.depth);
       if (!element) {
         element = this.document.createElement('div');
         element.tabIndex = 0;
@@ -137,6 +144,7 @@ export class ProcessonRenderer {
       if (!renderAll && !intersects({x: startX, y: Math.min(startY, endY), width: b.x - startX, height: Math.abs(endY - startY)}, view)) continue;
       keepEdges.add(edge.id);
       let path = this.edgeElements.get(edge.id);
+      if (reuseEdges && path) continue;
       if (!path) {path = this.document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('fill', 'none'); this.edges.append(path); this.edgeElements.set(edge.id, path);}
       const mid = startX + (b.x - startX) * .4, radius = Math.min(7, Math.abs(endY - startY), (b.x - mid) / 2), direction = Math.sign(endY - startY);
       path.setAttribute('d', direction === 0 ? `M ${startX} ${startY} H ${b.x}` : `M ${startX} ${startY} H ${mid} V ${endY - direction * radius} Q ${mid} ${endY} ${mid + radius} ${endY} H ${b.x}`);
@@ -285,6 +293,8 @@ export class ProcessonRenderer {
   }
 
   clear() {
+    this.lastLayout = null;
+    this.lastEdgeLayout = null;
     for (const element of this.elements.values()) element.remove();
     for (const path of this.edgeElements.values()) path.remove();
     this.elements.clear();
