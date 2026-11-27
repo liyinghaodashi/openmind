@@ -23,7 +23,7 @@ export function bindCodeViewer(container,editable){
   const content=document.createElement('div');
   viewer.append(close,content);
   container.append(controls,viewer);
-  bindCodeHighlights(content);
+  const setHighlightsVisible=bindCodeHighlights(content);
 
   const buttons=new Map();
   let active,frame;
@@ -32,6 +32,7 @@ export function bindCodeViewer(container,editable){
     const button=buttons.get(active);
     active=null;
     viewer.hidden=true;
+    setHighlightsVisible?.(false);
     editable.inert=false;
     controls.hidden=false;
     content.replaceChildren();
@@ -52,6 +53,7 @@ export function bindCodeViewer(container,editable){
     content.replaceChildren(copy);
     active=block;
     viewer.hidden=false;
+    setHighlightsVisible?.(true);
     controls.hidden=true;
     editable.inert=true;
     close.focus({preventScroll:true});

@@ -350,7 +350,10 @@ function updateDocumentView(){
   document.body.classList.toggle('markdown-mode',opened&&!mind);
   document.body.classList.toggle('source-open',opened&&state.sourceOpen);
   $('canvas').hidden=opened&&!mind;
-  $('markdown-page').hidden=!opened||mind||state.sourceOpen;
+  const showMarkdown=opened&&!mind&&!state.sourceOpen;
+  $('markdown-page').hidden=!showMarkdown;
+  if(!showMarkdown)markdown.dismissCodeViewer?.();
+  markdown.setHighlightsVisible?.(showMarkdown);
   $('source-panel').hidden=!opened||!state.sourceOpen;
   $('zoom-controls').hidden=!mind||!mindZoomControlsEnabled;
   const sourceButton=$('toggle-source');

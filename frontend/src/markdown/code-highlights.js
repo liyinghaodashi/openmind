@@ -38,13 +38,16 @@ export function bindCodeHighlights(editable){
   if(!window.CSS?.highlights||!window.Highlight)return;
   const selector='[data-type="code-block"]';
   const painted=new Map(),dirty=new Set();
-  let frame;
+  let frame,visible=false;
+  function removeBlock(block){
+    for(const [style,range] of painted.get(block)||[])CSS.highlights.get('md-'+style)?.delete(range);
+    painted.delete(block);
+  }
   function refresh(){
     frame=0;
     for(const block of painted.keys())if(!editable.contains(block))dirty.add(block);
     for(const block of dirty){
-      for(const [style,range] of painted.get(block)||[])CSS.highlights.get('md-'+style)?.delete(range);
-      painted.delete(block);
+      removeBlock(block);
       if(!editable.contains(block))continue;
       const language=block.querySelector('[data-type="code-block-info"]')?.textContent.replaceAll('\u200b','').trim().toLowerCase();
       const grammar=Object.hasOwn(Prism.languages,language)&&Prism.languages[language];
@@ -60,7 +63,7 @@ export function bindCodeHighlights(editable){
     }
     dirty.clear();
   }
-  new MutationObserver(records=>{
+  const observer=new MutationObserver(records=>{
     for(const record of records){
       const element=record.target.nodeType===1?record.target:record.target.parentElement;
       const block=element?.closest(selector);
@@ -72,5 +75,20 @@ export function bindCodeHighlights(editable){
       }
     }
     if(!frame)frame=requestAnimationFrame(refresh);
-  }).observe(editable,{subtree:true,childList:true,characterData:true});
+  });
+  return function setVisible(next){
+    if(visible===next)return;
+    visible=next;
+    if(visible){
+      observer.observe(editable,{subtree:true,childList:true,characterData:true});
+      for(const block of editable.querySelectorAll(selector))dirty.add(block);
+      if(dirty.size)frame=requestAnimationFrame(refresh);
+    }else{
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      frame=0;
+      dirty.clear();
+      for(const block of painted.keys())removeBlock(block);
+    }
+  };
 }
