@@ -13,7 +13,8 @@ function iconButton(label,path){
   return button;
 }
 
-const diagramHeaders={swimlane:'swimlane-beta LR',flowchart:'flowchart TD'};
+const defaultLane='  subgraph lane1["泳道 1"]\n  end';
+const diagramTemplates={swimlane:'swimlane-beta LR\n'+defaultLane,flowchart:'flowchart TD'};
 const emptyDeclaration=/^(?:swimlane-beta|flowchart|graph)(?:[ \t]+(?:TD|TB|LR|RL|BT))?[ \t]*;?$/i;
 
 function currentType(source){
@@ -163,15 +164,19 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(!body)return;
     const source=body.textContent;
     const original=source.replaceAll('\u200b','').trim();
-    if(!Object.hasOwn(diagramHeaders,target)||currentType(original)===target||type.trigger.disabled||dialog.open)return;
-    if(original&&!emptyDeclaration.test(original)){
+    if(!Object.hasOwn(diagramTemplates,target)||type.trigger.disabled||dialog.open)return;
+    const sameType=currentType(original)===target;
+    const headerOnly=emptyDeclaration.test(original);
+    if(sameType&&!(target==='swimlane'&&headerOnly))return;
+    if(original&&!headerOnly&&original!==diagramTemplates.swimlane){
       dialog.returnValue='cancel';
       const result=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
       dialog.showModal();
       if(await result!=='switch')return;
     }
     if(active!==block||!editable.contains(body)||body.textContent!==source)return;
-    replaceSource(body,diagramHeaders[target]+'\n');
+    const template=sameType?original+'\n'+defaultLane:diagramTemplates[target];
+    replaceSource(body,template+'\n');
     updatePreview(block);
   }
   dialog.addEventListener('keydown',event=>{

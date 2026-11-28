@@ -37,12 +37,16 @@ try{
   dialog.querySelector('[value="cancel"]').click();await settle();
   assert(selected()==='flowchart'&&markdown.currentSource()===original,'取消后应保留原图');
   choose('swimlane');dialog.querySelector('[value="switch"]').click();await settle();await state.queue.drain();
-  const changed=original.replace('graph LR\nA --> B','swimlane-beta LR');
+  const swimlane='swimlane-beta LR\n  subgraph lane1["泳道 1"]\n  end';
+  const changed=original.replace('graph LR\nA --> B',swimlane);
   assert(documentFile.source===changed&&selected()==='swimlane'&&!viewer.querySelector('img').hidden,'泳道图未保存或预览失败');
+  const svg=await (await fetch(viewer.querySelector('img').src)).text();
+  const lanes=new DOMParser().parseFromString(svg,'image/svg+xml').querySelectorAll('.pele-lane');
+  assert(lanes.length===1&&lanes[0].textContent.includes('泳道 1'),'默认泳道未渲染');
   await openDocument('根.md');await openDocument(path);await settle();await open();
   assert(selected()==='swimlane'&&markdown.currentSource()===changed,'重新打开后图类型错误');
   choose('flowchart');await settle();await state.queue.drain();
-  assert(!dialog.open&&selected()==='flowchart'&&documentFile.source===changed.replace('swimlane-beta LR','flowchart TD'),'空图切换失败');
+  assert(!dialog.open&&selected()==='flowchart'&&documentFile.source===changed.replace(swimlane,'flowchart TD'),'空图切换失败');
   viewer.querySelector('button').click();
   assert(markdown.editable.querySelector('[data-mermaid-preview="ready"] pre code').textContent.trim()==='flowchart TD','正文预览未同步');
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: Mermaid type switch, confirmation, inline preview, save and reopen'});
