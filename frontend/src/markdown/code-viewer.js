@@ -12,7 +12,17 @@ function iconButton(label,path){
   return button;
 }
 
-export function bindCodeViewer(container,editable){
+const diagramHeaders={swimlane:'swimlane-beta LR',flowchart:'flowchart TD'};
+const emptyDeclaration=/^(?:swimlane-beta|flowchart|graph)(?:[ \t]+(?:TD|TB|LR|RL|BT))?[ \t]*;?$/i;
+
+function currentType(source){
+  const declaration=source.trimStart().replace(/^---[^\S\n]*\n[\s\S]*?\n---(?:\n|$)/,'').replace(/^(?:\s*%%[^\n]*(?:\n|$))*/, '').trimStart();
+  if(/^swimlane-beta\b/i.test(declaration))return 'swimlane';
+  if(/^(?:flowchart|graph)\b/i.test(declaration))return 'flowchart';
+  return '';
+}
+
+export function bindCodeViewer(container,editable,replaceSource){
   const controls=document.createElement('div');
   controls.className='markdown-code-controls';
   const viewer=document.createElement('section');
@@ -46,7 +56,13 @@ export function bindCodeViewer(container,editable){
   const error=document.createElement('p');
   error.className='markdown-mermaid-error';
   error.setAttribute('role','status');
-  canvas.append(image,error,close);
+  const type=document.createElement('select');
+  type.className='markdown-mermaid-type';
+  type.setAttribute('aria-label','图类型');
+  type.add(new Option('泳道图','swimlane'));
+  type.add(new Option('流程图','flowchart'));
+  const dialog=document.getElementById('mermaid-type-dialog');
+  canvas.append(image,error,close,type);
   const panel=document.createElement('div');
   panel.className='markdown-mermaid-panel';
   panes.append(canvas,divider,panel);
@@ -81,6 +97,8 @@ export function bindCodeViewer(container,editable){
     if(block===active)showDiagram(preview);
   }
   function showDiagram(preview){
+    type.value=currentType(preview.source);
+    type.disabled=editable.getAttribute('aria-readonly')==='true';
     if(preview.url)image.src=preview.url;
     else image.removeAttribute('src');
     image.hidden=!preview.url;
@@ -90,6 +108,7 @@ export function bindCodeViewer(container,editable){
   function dismiss(restoreFocus=false){
     if(!active)return;
     const button=buttons.get(active);
+    if(dialog.open)dialog.close('cancel');
     stopResize();
     image.removeAttribute('src');
     active=null;
@@ -113,6 +132,7 @@ export function bindCodeViewer(container,editable){
   function layout(){
     frame=0;
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
+    if(active)type.disabled=editable.getAttribute('aria-readonly')==='true';
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
       if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}
@@ -140,6 +160,29 @@ export function bindCodeViewer(container,editable){
     }
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(layout)}
+  type.addEventListener('change',async()=>{
+    const block=active,body=block?.querySelector('pre code');
+    if(!body)return;
+    const source=body.textContent,target=type.value;
+    const original=source.replaceAll('\u200b','').trim();
+    type.value=currentType(original);
+    if(!Object.hasOwn(diagramHeaders,target)||type.value===target||type.disabled||dialog.open)return;
+    if(original&&!emptyDeclaration.test(original)){
+      dialog.returnValue='cancel';
+      const result=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
+      dialog.showModal();
+      if(await result!=='switch')return;
+    }
+    if(active!==block||!editable.contains(body)||body.textContent!==source)return;
+    replaceSource(body,diagramHeaders[target]+'\n');
+    updatePreview(block);
+  });
+  dialog.addEventListener('keydown',event=>{
+    if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+    event.preventDefault();
+    const buttons=dialog.querySelectorAll('button');
+    (document.activeElement===buttons[0]?buttons[1]:buttons[0]).focus();
+  });
   close.addEventListener('click',()=>dismiss(true));
   viewer.addEventListener('keydown',event=>{
     if(event.key==='Escape'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();event.stopPropagation();dismiss(true)}

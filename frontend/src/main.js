@@ -1078,7 +1078,7 @@ async function finishAppClose(windowOnly){
 }
 
 await Promise.all([settings.ready,markdown.ready]);
-markdown.dismissCodeViewer=bindCodeViewer(markdown.container,markdown.editable);
+markdown.dismissCodeViewer=bindCodeViewer(markdown.container,markdown.editable,(body,source)=>markdown.replaceCodeSource(body,source));
 const tableActions=markdown.tableActions=new TableActions(markdown);
 if(paneHost){
   let locked=false;

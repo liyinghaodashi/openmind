@@ -202,6 +202,11 @@ export class MarkdownEditor {
     if(cell){range.selectNodeContents(cell);range.collapse(true);selection.removeAllRanges();selection.addRange(range);cell.scrollIntoView({block:'nearest'})}
     this.flush();
   }
+  replaceCodeSource(body,source) {
+    if(!this.loaded||this.readOnly||this.composing||!this.editable.contains(body)||!this.onBeforeInput(this.currentSource(),{data:source}))return;
+    body.textContent=source;
+    this.flush();
+  }
   replaceTable(table,html) {
     if(!this.loaded||this.readOnly||this.composing||!this.editable.contains(table)||!this.onBeforeInput(this.currentSource(),{data:html}))return false;
     const index=this.tableActions?.tableIndex(table);
