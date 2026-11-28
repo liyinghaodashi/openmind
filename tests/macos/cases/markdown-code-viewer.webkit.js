@@ -14,9 +14,14 @@ try{
   const buttonBounds=buttons()[0].getBoundingClientRect();
   const language=markdown.editable.querySelectorAll('[data-type="code-block-info"]')[1].getBoundingClientRect();
   assert(buttonBounds.right<=language.left&&Math.abs(buttonBounds.top-language.top)<2,'Button placement');
+  const block=markdown.editable.querySelectorAll('[data-type="code-block"]')[1];
+  assert(block.dataset.mermaidPreview==='ready'&&getComputedStyle(block,'::before').backgroundImage.includes('blob:'),'Inline diagram missing');
+  assert(markdown.currentSource()===source,'Rendering changed Markdown');
   buttons()[0].click();await wait();
   const viewer=page.querySelector('.markdown-code-viewer'),box=viewer.getBoundingClientRect();
   assert(box.width>0&&Math.abs(box.width-bounds.width)<2&&Math.abs(box.height-bounds.height)<2&&box.left>=sidebarBounds.right-1,'Viewer must fill only the canvas');
+  const diagram=viewer.querySelector('.markdown-mermaid-expanded');
+  assert(diagram?.complete&&diagram.naturalWidth>0,'WebKit could not display the SVG');
   assert(side.getBoundingClientRect().width===sidebarBounds.width,'Sidebar resized');
   assert(viewer.querySelector('code').textContent.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
   viewer.querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
@@ -28,6 +33,11 @@ try{
     field.textContent=language;await wait();
     assert(buttons().length===count,'Unexpected button count for '+language);
   }
+  const body=block.querySelector('pre code');
+  body.textContent='invalid diagram';await wait();
+  assert(block.dataset.mermaidPreview==='error'&&body.textContent==='invalid diagram','Invalid source lost');
+  body.textContent='sequenceDiagram\nAlice->>Bob: Hello';await wait();
+  assert(block.dataset.mermaidPreview==='ready','Diagram did not recover after editing');
   buttons()[0].click();markdown.load('另一篇文档', {...options,path:'另一篇.md'});
   assert(viewer.hidden&&!markdown.editable.inert,'Viewer survived document switch');
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: code viewer placement, sidebar, language changes, dismissal and document switch'});

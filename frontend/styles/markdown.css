@@ -118,3 +118,18 @@
 #markdown-editor .markdown-code-viewer [data-type="code-block-info"]{position:static;width:auto;height:48px;padding:0 52px 0 20px;background:none;box-shadow:none;text-align:left;font:13px/48px ui-monospace,Menlo,monospace;cursor:default}
 #markdown-editor .markdown-code-viewer pre{box-sizing:border-box;height:calc(100% - 48px);margin:0;padding:16px 20px;overflow:auto;background:var(--markdown-block-background);border:0;border-radius:0;white-space:pre;user-select:text;font:14px/1.7 ui-monospace,Menlo,monospace}
 .markdown-code-viewer code{font:inherit}
+
+#markdown-editor [data-mermaid-preview="ready"]::before,.markdown-mermaid-expanded{
+  display:block;box-sizing:border-box;border-radius:12px;
+  background-color:#edf3f4;
+  background-image:var(--mermaid-image,none),radial-gradient(ellipse at 12% 0%,#cfe6e899,transparent 62%),linear-gradient(120deg,#ffffff99,#e6e7f199);
+  background-position:center;background-size:contain,cover,cover;background-repeat:no-repeat;
+  box-shadow:inset 0 1px 1px #fffe,inset 0 0 0 1px #70869026;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)
+}
+#markdown-editor [data-mermaid-preview="ready"]::before{content:"";position:static;width:100%;height:var(--mermaid-height);margin-bottom:6px}
+#markdown-editor [data-mermaid-preview="error"]::before{content:"Mermaid 语法有误，请检查下方源码";position:static;display:block;color:var(--markdown-muted-text);font-size:13px}
+#markdown-editor .markdown-code-viewer [data-type="code-block"]{overflow:auto}
+.markdown-mermaid-expanded{width:calc(100% - 32px);height:calc(100% - 100px);margin:0 16px;object-fit:contain;padding:16px}
+.markdown-code-viewer details,.markdown-code-viewer p{margin:12px 16px}
+.markdown-code-viewer summary{cursor:pointer}

@@ -1,5 +1,7 @@
 import {bindCodeHighlights} from './code-highlights.js';
 
+import {createMermaidPreview} from './mermaid-preview.js';
+
 const blockSelector='[data-type="code-block"]';
 
 function iconButton(label,path){
@@ -26,7 +28,32 @@ export function bindCodeViewer(container,editable){
   const setHighlightsVisible=bindCodeHighlights(content);
 
   const buttons=new Map();
-  let active,frame;
+  const previews=new Map();
+  let active,frame,renderer,loading;
+  function clearPreview(block){
+    const preview=previews.get(block);
+    if(preview?.url)URL.revokeObjectURL(preview.url);
+    previews.delete(block);
+    block.removeAttribute('data-mermaid-preview');
+    block.style.removeProperty('--mermaid-image');
+    block.style.removeProperty('--mermaid-height');
+  }
+  function updatePreview(block){
+    if(!renderer){
+      loading??=import('../vendor/pele/pele.js').then(module=>{renderer=module.render;schedule()});
+      return;
+    }
+    const source=block.querySelector('pre code')?.textContent.replaceAll('\u200b','')||'';
+    if(previews.get(block)?.source===source)return;
+    clearPreview(block);
+    const preview=createMermaidPreview(renderer,source);
+    previews.set(block,preview);
+    if(preview.url){
+      block.style.setProperty('--mermaid-image','url("'+preview.url+'")');
+      block.style.setProperty('--mermaid-height',Math.min(360,preview.height+24)+'px');
+    }
+    block.dataset.mermaidPreview=preview.url?'ready':'error';
+  }
   function dismiss(restoreFocus=false){
     if(!active)return;
     const button=buttons.get(active);
@@ -50,6 +77,21 @@ export function bindCodeViewer(container,editable){
     pre.tabIndex=0;
     code.textContent=body.textContent;
     pre.append(code);copy.append(language,pre);
+    const preview=previews.get(block);
+    if(preview?.url){
+      const image=document.createElement('img');
+      image.className='markdown-mermaid-expanded';
+      image.src=preview.url;
+      image.alt='Mermaid 图表';
+      const details=document.createElement('details'),summary=document.createElement('summary');
+      summary.textContent='查看源码';
+      details.append(summary,pre);
+      copy.append(image,details);
+    }else if(preview?.error){
+      const message=document.createElement('p');
+      message.textContent='Mermaid 语法错误：'+preview.error;
+      pre.before(message);
+    }
     content.replaceChildren(copy);
     active=block;
     viewer.hidden=false;
@@ -63,15 +105,18 @@ export function bindCodeViewer(container,editable){
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
-      if(!editable.contains(block)){button.remove();buttons.delete(block)}
+      if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}
     }
     for(const block of editable.querySelectorAll(blockSelector)){
       const field=block.querySelector('[data-type="code-block-info"]');
       if(field?.textContent.replaceAll('\u200b','').trim().toLowerCase()!=='mermaid'){
+        if(previews.has(block)||block.hasAttribute('data-mermaid-preview'))clearPreview(block);
         buttons.get(block)?.remove();
         buttons.delete(block);
         continue;
       }
+      updatePreview(block);
+      if(!renderer)continue;
       const rect=field.getBoundingClientRect();
       let button=buttons.get(block);
       if(!button){
