@@ -44,8 +44,11 @@ export function bindCodeViewer(container,editable){
   divider.setAttribute('aria-valuemin','15');
   divider.setAttribute('aria-valuemax','85');
   divider.setAttribute('aria-valuenow','75');
-  panes.append(image,divider);
-  const stopResize=bindSplitDivider(divider,image);
+  const canvas=document.createElement('div');
+  canvas.className='markdown-mermaid-canvas';
+  canvas.append(image);
+  panes.append(canvas,divider);
+  const stopResize=bindSplitDivider(divider,canvas);
 
   const buttons=new Map();
   const previews=new Map();
@@ -105,8 +108,10 @@ export function bindCodeViewer(container,editable){
       image.src=preview.url;
       pre.setAttribute('aria-label','Mermaid 源码');
       panes.append(pre);
-      copy.append(panes);
+      canvas.append(close);
+      copy.replaceChildren(panes);
     }else if(preview?.error){
+      viewer.prepend(close);
       const message=document.createElement('p');
       message.textContent='Mermaid 语法错误：'+preview.error;
       pre.before(message);

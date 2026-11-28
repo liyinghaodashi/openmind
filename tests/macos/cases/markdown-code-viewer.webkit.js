@@ -25,6 +25,12 @@ try{
   const diagram=viewer.querySelector('.markdown-mermaid-expanded');
   assert(diagram?.complete&&diagram.naturalWidth>0,'WebKit could not display the SVG');
   const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('pre').getBoundingClientRect();
+  const checkClose=()=>{
+    const canvas=diagram.getBoundingClientRect(),button=viewer.querySelector('button').getBoundingClientRect();
+    assert(Math.abs(canvas.top-box.top)<1,'Unexpected header above diagram');
+    assert(button.width>0&&button.left>=canvas.left&&button.right<=canvas.right&&canvas.right-button.right<=12&&button.top>=canvas.top&&button.top-canvas.top<=12,'Close button outside canvas corner');
+  };
+  checkClose();
   assert(sourceBounds.width>0&&imageBounds.right<=sourceBounds.left&&Math.abs(imageBounds.width/sourceBounds.width-3)<0.05,'Expected 3:1 diagram and source columns');
   assert(imageBounds.top===sourceBounds.top&&imageBounds.bottom===sourceBounds.bottom&&sourceBounds.right<=box.right,'Panes must share the available height and fit inside the viewer');
   const divider=viewer.querySelector('[role="separator"]');
@@ -34,6 +40,7 @@ try{
   divider.releasePointerCapture=()=>captured=null;
   const drag=(type,x)=>divider.dispatchEvent(new PointerEvent(type,{pointerId:1,isPrimary:true,clientX:x,bubbles:true}));
   const checkShare=expected=>{
+    checkClose();
     const left=diagram.getBoundingClientRect().width,right=viewer.querySelector('pre').getBoundingClientRect().width;
     assert(Math.abs(100*left/(left+right)-expected)<0.2,'Unexpected diagram width at '+expected+'%');
   };
