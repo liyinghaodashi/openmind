@@ -69,7 +69,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(!body||editable.getAttribute('aria-readonly')==='true')return;
     const source=body.textContent.replaceAll('\u200b','');
     if(previews.get(active)?.source!==source)return;
-    const next=insert(source);
+    const next=insert(source,renderer.parse);
     if(next===undefined){
       const message=document.createElement('p');
       message.setAttribute('role','status');
@@ -97,13 +97,13 @@ export function bindCodeViewer(container,editable,replaceSource){
   }
   function updatePreview(block){
     if(!renderer){
-      loading??=import('../vendor/pele/pele.js').then(module=>{renderer=module.render;schedule()});
+      loading??=import('../vendor/pele/pele.js').then(module=>{renderer=module;schedule()});
       return;
     }
     const source=block.querySelector('pre code')?.textContent.replaceAll('\u200b','')||'';
     if(previews.get(block)?.source===source)return;
     clearPreview(block);
-    const preview=createMermaidPreview(renderer,source);
+    const preview=createMermaidPreview(renderer.render,source);
     previews.set(block,preview);
     if(preview.url){
       block.style.setProperty('--mermaid-image','url("'+preview.url+'")');

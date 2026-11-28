@@ -77,8 +77,16 @@ try{
   add().click();await settle();await state.queue.drain();
   const withBoth=withNode.replace('lane1["泳道 1"]','lane1["泳道 1"]\n    node2["节点 2"]');
   assert(documentFile.source===withBoth,'第二个节点写入错误');
+  add().click();await settle();
+  add().click();await settle();await state.queue.drain();
+  const chain=withBoth.replace('node2["节点 2"]','node2["节点 2"]\n    node3["节点 3"]\n    node2 ~~~ node3\n    node4["节点 4"]\n    node3 ~~~ node4');
+  assert(documentFile.source===chain,'同泳道连续新建节点应逐个虚连');
+  const chainedSvg=await (await fetch(viewer.querySelector('img').src)).text();
+  const graph=new DOMParser().parseFromString(chainedSvg,'image/svg+xml');
+  const positions=['node2','node3','node4'].map(id=>graph.querySelector('.pele-node[data-id="'+id+'"]').transform.baseVal.getItem(0).matrix);
+  assert(positions.every((pos,i)=>pos.f===positions[0].f&&(!i||pos.e>positions[i-1].e))&&!graph.querySelector('.pele-edge'),'虚连节点应横向排列且隐藏连线');
   await openDocument('根.md');await openDocument(path);await settle();await open();checkPanel();
-  assert(markdown.currentSource()===withBoth,'重开后泳道节点丢失');
+  assert(markdown.currentSource()===chain,'重开后泳道节点丢失');
   choose('flowchart');dialog.querySelector('[value="switch"]').click();await settle();await state.queue.drain();
   assert(!dialog.open&&selected()==='flowchart'&&documentFile.source===changed.replace(swimlane,'flowchart TD'),'切换流程图失败');
   viewer.querySelector('button').click();

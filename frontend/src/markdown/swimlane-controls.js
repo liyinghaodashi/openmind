@@ -1,13 +1,28 @@
 const svgNamespace='http://www.w3.org/2000/svg';
 
-function insertNode(source,laneId){
+function insertNode(source,laneId,parse){
   const lines=source.split('\n');
   const declarations=lines.map(line=>/^([ \t]*)subgraph[ \t]+([^\s[;]+)(?:[ \t]*\[.*\])?[ \t]*(?:%%.*)?$/.exec(line));
   const index=declarations.findIndex(match=>match?.[2]===laneId);
   if(index<0||declarations.some((match,i)=>i!==index&&match?.[2]===laneId))return;
+  let end=index+1,depth=1;
+  for(;end<lines.length;end++){
+    if(/^\s*subgraph\s/.test(lines[end]))depth++;
+    if(/^\s*end\s*;?\s*(?:%%.*)?$/.test(lines[end])&&--depth===0)break;
+  }
+  if(end===lines.length)return;
+  const diagram=parse(source);
+  const members=diagram.subgraphLookup.get(laneId)?.nodes;
+  if(!members)return;
+  const laneNodes=new Set(members);
+  const previous=[...diagram.nodes.keys()].filter(id=>laneNodes.has(id)).at(-1);
   let number=1;
   while(source.includes('node'+number))number++;
-  lines.splice(index+1,0,declarations[index][1]+'  node'+number+'["节点 '+number+'"]');
+  const indent=declarations[index][1]+'  ';
+  const id='node'+number;
+  const additions=[indent+id+'["节点 '+number+'"]'];
+  if(previous)additions.push(indent+previous+' ~~~ '+id);
+  lines.splice(end,0,...additions);
   return lines.join('\n');
 }
 
@@ -26,7 +41,7 @@ export function createSwimlaneControls(panel,onInsert){
     if(id)panel.replaceChildren(add);
     else panel.replaceChildren();
   }
-  add.addEventListener('click',()=>{if(selected)onInsert(source=>insertNode(source,selected))});
+  add.addEventListener('click',()=>{if(selected)onInsert((source,parse)=>insertNode(source,selected,parse))});
   function show(geometry){
     overlay.replaceChildren();
     if(geometry){
