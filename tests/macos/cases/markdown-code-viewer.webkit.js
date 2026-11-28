@@ -16,6 +16,8 @@ try{
   assert(buttonBounds.right<=language.left&&Math.abs(buttonBounds.top-language.top)<2,'Button placement');
   const block=markdown.editable.querySelectorAll('[data-type="code-block"]')[1];
   assert(block.dataset.mermaidPreview==='ready'&&getComputedStyle(block,'::before').backgroundImage.includes('blob:'),'Inline diagram missing');
+  assert(block.querySelector('pre code').getClientRects().length===0,'Rendered Mermaid source occupies space');
+  assert(markdown.editable.querySelector('pre code').getBoundingClientRect().height>0,'Ordinary code hidden');
   assert(markdown.currentSource()===source,'Rendering changed Markdown');
   buttons()[0].click();await wait();
   const viewer=page.querySelector('.markdown-code-viewer'),box=viewer.getBoundingClientRect();
@@ -28,6 +30,9 @@ try{
   assert(viewer.hidden&&!markdown.editable.inert&&markdown.currentSource()===original&&markdown.editable.scrollTop===scroll,'Esc must restore document');
   buttons()[0].click();viewer.querySelector('button').click();
   assert(viewer.hidden,'Collapse button failed');
+  await toggleSource(true);
+  assert(document.querySelector('#source-editor').value===source,'Original Mermaid source missing in source mode');
+  await toggleSource(false);await wait();
   const field=markdown.editable.querySelectorAll('[data-type="code-block-info"]')[1];
   for(const [language,count] of [['mermaidx',0],['MERMAID',1],['',0],['mermaid',1]]){
     field.textContent=language;await wait();
@@ -35,7 +40,7 @@ try{
   }
   const body=block.querySelector('pre code');
   body.textContent='invalid diagram';await wait();
-  assert(block.dataset.mermaidPreview==='error'&&body.textContent==='invalid diagram','Invalid source lost');
+  assert(block.dataset.mermaidPreview==='error'&&body.textContent==='invalid diagram'&&body.getBoundingClientRect().height>0,'Invalid source lost');
   body.textContent='sequenceDiagram\nAlice->>Bob: Hello';await wait();
   assert(block.dataset.mermaidPreview==='ready','Diagram did not recover after editing');
   buttons()[0].click();markdown.load('另一篇文档', {...options,path:'另一篇.md'});
