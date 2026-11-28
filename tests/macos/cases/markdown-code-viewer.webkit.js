@@ -24,7 +24,7 @@ try{
   assert(box.width>0&&Math.abs(box.width-bounds.width)<2&&Math.abs(box.height-bounds.height)<2&&box.left>=sidebarBounds.right-1,'Viewer must fill only the canvas');
   const diagram=viewer.querySelector('.markdown-mermaid-expanded');
   assert(diagram?.complete&&diagram.naturalWidth>0,'WebKit could not display the SVG');
-  const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('pre').getBoundingClientRect();
+  const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('textarea').getBoundingClientRect();
   const checkClose=()=>{
     const canvas=diagram.getBoundingClientRect(),button=viewer.querySelector('button').getBoundingClientRect();
     assert(Math.abs(canvas.top-box.top-16)<1&&Math.abs(box.bottom-canvas.bottom-16)<1,'Expected matching 16px vertical insets');
@@ -41,7 +41,7 @@ try{
   const drag=(type,x)=>divider.dispatchEvent(new PointerEvent(type,{pointerId:1,isPrimary:true,clientX:x,bubbles:true}));
   const checkShare=expected=>{
     checkClose();
-    const left=diagram.getBoundingClientRect().width,right=viewer.querySelector('pre').getBoundingClientRect().width;
+    const left=diagram.getBoundingClientRect().width,right=viewer.querySelector('textarea').getBoundingClientRect().width;
     assert(Math.abs(100*left/(left+right)-expected)<0.2,'Unexpected diagram width at '+expected+'%');
   };
   drag('pointerdown',imageBounds.right+5);
@@ -50,7 +50,7 @@ try{
   drag('pointerup',box.right);drag('pointermove',box.left);checkShare(85);
   divider.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));checkShare(84);
   assert(side.getBoundingClientRect().width===sidebarBounds.width,'Sidebar resized');
-  assert(viewer.querySelector('code').textContent.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
+  assert(viewer.querySelector('textarea').value.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
   viewer.querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert(viewer.hidden&&!markdown.editable.inert&&markdown.currentSource()===original&&markdown.editable.scrollTop===scroll,'Esc must restore document');
   buttons()[0].click();viewer.querySelector('button').click();

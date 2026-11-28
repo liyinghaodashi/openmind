@@ -13,6 +13,7 @@ export class MarkdownEditor {
     container.addEventListener('compositionend',()=>{this.composing=false;this.onComposition(false);this.flush()});
     container.addEventListener('beforeinput',event=>{
       if(this.readOnly||!this.onBeforeInput(this.source,event)){event.preventDefault();return}
+      if(!this.editable?.contains(event.target))return;
       this.handleListCodeContinuation(event);
       this.handleHeadingContinuation(event);
     },true);
@@ -34,7 +35,7 @@ export class MarkdownEditor {
     });
     container.addEventListener('paste',event=>{this.headingContinuation=null;const text=event.clipboardData?.getData('text')||'';if(this.readOnly||!this.onBeforeInput(this.source,{data:text})){event.preventDefault();event.stopImmediatePropagation()}},true);
     container.addEventListener('pointerdown',()=>{this.headingContinuation=null},true);
-    container.addEventListener('keydown',event=>{this.headingContinuation=null;this.handleCodeEnter(event);this.handleHeadingStartEnter(event);this.handleShortcut(event)},true);
+    container.addEventListener('keydown',event=>{if(!this.editable?.contains(event.target))return;this.headingContinuation=null;this.handleCodeEnter(event);this.handleHeadingStartEnter(event);this.handleShortcut(event)},true);
     this.ready=new Promise(resolve=>{
       this.editor=new window.Vditor(container,{
         cdn:'/src/vendor/vditor',mode:'ir',lang:'zh_CN',height:'100%',

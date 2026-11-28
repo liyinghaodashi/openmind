@@ -12,10 +12,12 @@ try {
   await settle();
   const originalCount = registered();
   if (!originalCount) throw new Error('正文未创建高亮');
-  document.querySelector('button[aria-label="放大代码块"]').click();
+  const expandSelector='button[aria-label="放大代码块"]';
+  for(let i=0;i<60&&!document.querySelector(expandSelector);i++)await settle();
+  document.querySelector(expandSelector).click();
   await settle();
   const viewer = document.querySelector('.markdown-code-viewer');
-  if (viewer.hidden || !viewer.textContent.includes('A --> B'))
+  if (viewer.hidden || !viewer.querySelector('textarea')?.value.includes('A --> B'))
     throw new Error('Mermaid 代码块未放大');
 
   await openDocument(mind);

@@ -1,5 +1,3 @@
-import {bindCodeHighlights} from './code-highlights.js';
-
 import {bindSplitDivider} from '../workspace/split-view.js';
 import {createMermaidPreview} from './mermaid-preview.js';
 
@@ -24,9 +22,8 @@ export function bindCodeViewer(container,editable){
   const close=iconButton('收起代码块（Esc）','M1 5h4V1m10 10h-4v4');
   close.title=close.getAttribute('aria-label');
   const content=document.createElement('div');
-  viewer.append(close,content);
+  viewer.append(content);
   container.append(controls,viewer);
-  const setHighlightsVisible=bindCodeHighlights(content);
 
   const panes=document.createElement('div');
   panes.className='markdown-mermaid-panes';
@@ -46,13 +43,16 @@ export function bindCodeViewer(container,editable){
   divider.setAttribute('aria-valuenow','75');
   const canvas=document.createElement('div');
   canvas.className='markdown-mermaid-canvas';
-  canvas.append(image);
+  const error=document.createElement('p');
+  error.className='markdown-mermaid-error';
+  error.setAttribute('role','status');
+  canvas.append(image,error,close);
   panes.append(canvas,divider);
   const stopResize=bindSplitDivider(divider,canvas);
 
   const buttons=new Map();
   const previews=new Map();
-  let active,frame,renderer,loading;
+  let active,sourceEditor,frame,renderer,loading;
   function clearPreview(block){
     const preview=previews.get(block);
     if(preview?.url)URL.revokeObjectURL(preview.url);
@@ -76,16 +76,24 @@ export function bindCodeViewer(container,editable){
       block.style.setProperty('--mermaid-height',Math.min(360,preview.height+24)+'px');
     }
     block.dataset.mermaidPreview=preview.url?'ready':'error';
+    if(block===active)showDiagram(preview);
+  }
+  function showDiagram(preview){
+    if(preview.url)image.src=preview.url;
+    else image.removeAttribute('src');
+    image.hidden=!preview.url;
+    error.hidden=!!preview.url;
+    error.textContent=preview.error?'Mermaid 语法错误：'+preview.error:'';
   }
   function dismiss(restoreFocus=false){
     if(!active)return;
     const button=buttons.get(active);
     stopResize();
-    panes.querySelector('pre')?.remove();
+    sourceEditor.remove();
+    sourceEditor=null;
     image.removeAttribute('src');
     active=null;
     viewer.hidden=true;
-    setHighlightsVisible?.(false);
     editable.inert=false;
     controls.hidden=false;
     content.replaceChildren();
@@ -94,32 +102,23 @@ export function bindCodeViewer(container,editable){
   function open(block){
     const body=block.querySelector('pre code');
     if(!body)return;
-    const copy=document.createElement('div');
-    copy.dataset.type='code-block';
-    const language=document.createElement('span');
-    language.dataset.type='code-block-info';
-    language.textContent=block.querySelector('[data-type="code-block-info"]')?.textContent.replaceAll('\u200b','').trim()||'';
-    const pre=document.createElement('pre'),code=document.createElement('code');
-    pre.tabIndex=0;
-    code.textContent=body.textContent;
-    pre.append(code);copy.append(language,pre);
-    const preview=previews.get(block);
-    if(preview?.url){
-      image.src=preview.url;
-      pre.setAttribute('aria-label','Mermaid 源码');
-      panes.append(pre);
-      canvas.append(close);
-      copy.replaceChildren(panes);
-    }else if(preview?.error){
-      viewer.prepend(close);
-      const message=document.createElement('p');
-      message.textContent='Mermaid 语法错误：'+preview.error;
-      pre.before(message);
-    }
-    content.replaceChildren(copy);
     active=block;
+    sourceEditor=document.createElement('textarea');
+    sourceEditor.className='markdown-mermaid-source';
+    sourceEditor.setAttribute('aria-label','Mermaid 源码');
+    sourceEditor.wrap='off';
+    sourceEditor.spellcheck=false;
+    sourceEditor.readOnly=editable.getAttribute('aria-readonly')==='true';
+    sourceEditor.value=body.textContent.replaceAll('\u200b','').replace(/\n$/,'');
+    sourceEditor.addEventListener('input',()=>{
+      if(active===block&&editable.contains(block)&&editable.getAttribute('aria-readonly')!=='true'){
+        body.textContent=sourceEditor.value+'\n';
+      }
+    });
+    panes.append(sourceEditor);
+    content.replaceChildren(panes);
+    showDiagram(previews.get(block));
     viewer.hidden=false;
-    setHighlightsVisible?.(true);
     controls.hidden=true;
     editable.inert=true;
     close.focus({preventScroll:true});
@@ -127,6 +126,7 @@ export function bindCodeViewer(container,editable){
   function layout(){
     frame=0;
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
+    if(active)sourceEditor.readOnly=editable.getAttribute('aria-readonly')==='true';
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
       if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}
@@ -156,7 +156,7 @@ export function bindCodeViewer(container,editable){
   function schedule(){if(!frame)frame=requestAnimationFrame(layout)}
   close.addEventListener('click',()=>dismiss(true));
   viewer.addEventListener('keydown',event=>{
-    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();dismiss(true)}
+    if(event.key==='Escape'&&!event.isComposing&&event.keyCode!==229){event.preventDefault();event.stopPropagation();dismiss(true)}
   });
   editable.addEventListener('scroll',schedule,true);
   editable.addEventListener('load',schedule,true);

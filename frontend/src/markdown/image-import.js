@@ -40,6 +40,7 @@ export function bindImageImport(editor,{importImage,convertImage,discardImages,o
     return editor.editable.contains(range.startContainer)&&editor.editable.contains(range.endContainer)?range.cloneRange():null;
   };
   const receive=event=>{
+    if(event.target.closest?.('.markdown-code-viewer'))return;
     const files=imageTransferFiles(event.clipboardData||event.dataTransfer);
     if(!files.length)return;
     event.preventDefault();event.stopImmediatePropagation();
