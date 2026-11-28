@@ -83,10 +83,11 @@ export function bindCodeViewer(container,editable){
       image.className='markdown-mermaid-expanded';
       image.src=preview.url;
       image.alt='Mermaid 图表';
-      const details=document.createElement('details'),summary=document.createElement('summary');
-      summary.textContent='查看源码';
-      details.append(summary,pre);
-      copy.append(image,details);
+      const panes=document.createElement('div');
+      panes.className='markdown-mermaid-panes';
+      pre.setAttribute('aria-label','Mermaid 源码');
+      panes.append(image,pre);
+      copy.append(panes);
     }else if(preview?.error){
       const message=document.createElement('p');
       message.textContent='Mermaid 语法错误：'+preview.error;

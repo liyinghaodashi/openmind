@@ -24,6 +24,9 @@ try{
   assert(box.width>0&&Math.abs(box.width-bounds.width)<2&&Math.abs(box.height-bounds.height)<2&&box.left>=sidebarBounds.right-1,'Viewer must fill only the canvas');
   const diagram=viewer.querySelector('.markdown-mermaid-expanded');
   assert(diagram?.complete&&diagram.naturalWidth>0,'WebKit could not display the SVG');
+  const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('pre').getBoundingClientRect();
+  assert(sourceBounds.width>0&&imageBounds.right<=sourceBounds.left&&Math.abs(imageBounds.width/sourceBounds.width-3)<0.05,'Expected 3:1 diagram and source columns');
+  assert(imageBounds.top===sourceBounds.top&&imageBounds.bottom===sourceBounds.bottom&&sourceBounds.right<=box.right,'Panes must share the available height and fit inside the viewer');
   assert(side.getBoundingClientRect().width===sidebarBounds.width,'Sidebar resized');
   assert(viewer.querySelector('code').textContent.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
   viewer.querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
