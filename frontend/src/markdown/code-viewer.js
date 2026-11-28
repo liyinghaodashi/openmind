@@ -47,12 +47,14 @@ export function bindCodeViewer(container,editable){
   error.className='markdown-mermaid-error';
   error.setAttribute('role','status');
   canvas.append(image,error,close);
-  panes.append(canvas,divider);
+  const panel=document.createElement('div');
+  panel.className='markdown-mermaid-panel';
+  panes.append(canvas,divider,panel);
   const stopResize=bindSplitDivider(divider,canvas);
 
   const buttons=new Map();
   const previews=new Map();
-  let active,sourceEditor,frame,renderer,loading;
+  let active,frame,renderer,loading;
   function clearPreview(block){
     const preview=previews.get(block);
     if(preview?.url)URL.revokeObjectURL(preview.url);
@@ -89,8 +91,6 @@ export function bindCodeViewer(container,editable){
     if(!active)return;
     const button=buttons.get(active);
     stopResize();
-    sourceEditor.remove();
-    sourceEditor=null;
     image.removeAttribute('src');
     active=null;
     viewer.hidden=true;
@@ -103,19 +103,6 @@ export function bindCodeViewer(container,editable){
     const body=block.querySelector('pre code');
     if(!body)return;
     active=block;
-    sourceEditor=document.createElement('textarea');
-    sourceEditor.className='markdown-mermaid-source';
-    sourceEditor.setAttribute('aria-label','Mermaid 源码');
-    sourceEditor.wrap='off';
-    sourceEditor.spellcheck=false;
-    sourceEditor.readOnly=editable.getAttribute('aria-readonly')==='true';
-    sourceEditor.value=body.textContent.replaceAll('\u200b','').replace(/\n$/,'');
-    sourceEditor.addEventListener('input',()=>{
-      if(active===block&&editable.contains(block)&&editable.getAttribute('aria-readonly')!=='true'){
-        body.textContent=sourceEditor.value+'\n';
-      }
-    });
-    panes.append(sourceEditor);
     content.replaceChildren(panes);
     showDiagram(previews.get(block));
     viewer.hidden=false;
@@ -126,7 +113,6 @@ export function bindCodeViewer(container,editable){
   function layout(){
     frame=0;
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
-    if(active)sourceEditor.readOnly=editable.getAttribute('aria-readonly')==='true';
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
       if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}

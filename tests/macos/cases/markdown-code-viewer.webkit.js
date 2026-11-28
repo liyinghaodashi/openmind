@@ -24,15 +24,15 @@ try{
   assert(box.width>0&&Math.abs(box.width-bounds.width)<2&&Math.abs(box.height-bounds.height)<2&&box.left>=sidebarBounds.right-1,'Viewer must fill only the canvas');
   const diagram=viewer.querySelector('.markdown-mermaid-expanded');
   assert(diagram?.complete&&diagram.naturalWidth>0,'WebKit could not display the SVG');
-  const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('textarea').getBoundingClientRect();
+  const imageBounds=diagram.getBoundingClientRect(),panel=viewer.querySelector('.markdown-mermaid-panel'),panelBounds=panel.getBoundingClientRect();
   const checkClose=()=>{
     const canvas=diagram.getBoundingClientRect(),button=viewer.querySelector('button').getBoundingClientRect();
     assert(Math.abs(canvas.top-box.top-16)<1&&Math.abs(box.bottom-canvas.bottom-16)<1,'Expected matching 16px vertical insets');
     assert(button.width>0&&button.left>=canvas.left&&button.right<=canvas.right&&canvas.right-button.right<=12&&button.top>=canvas.top&&button.top-canvas.top<=12,'Close button outside canvas corner');
   };
   checkClose();
-  assert(sourceBounds.width>0&&imageBounds.right<=sourceBounds.left&&Math.abs(imageBounds.width/sourceBounds.width-3)<0.05,'Expected 3:1 diagram and source columns');
-  assert(imageBounds.top===sourceBounds.top&&imageBounds.bottom===sourceBounds.bottom&&sourceBounds.right<=box.right,'Panes must share the available height and fit inside the viewer');
+  assert(panelBounds.width>0&&imageBounds.right<=panelBounds.left&&Math.abs(imageBounds.width/panelBounds.width-3)<0.05,'Expected 3:1 diagram and panel columns');
+  assert(imageBounds.top===panelBounds.top&&imageBounds.bottom===panelBounds.bottom&&panelBounds.right<=box.right,'Panes must share the available height and fit inside the viewer');
   const divider=viewer.querySelector('[role="separator"]');
   let captured=null;
   divider.setPointerCapture=id=>captured=id;
@@ -41,7 +41,7 @@ try{
   const drag=(type,x)=>divider.dispatchEvent(new PointerEvent(type,{pointerId:1,isPrimary:true,clientX:x,bubbles:true}));
   const checkShare=expected=>{
     checkClose();
-    const left=diagram.getBoundingClientRect().width,right=viewer.querySelector('textarea').getBoundingClientRect().width;
+    const left=diagram.getBoundingClientRect().width,right=panel.getBoundingClientRect().width;
     assert(Math.abs(100*left/(left+right)-expected)<0.2,'Unexpected diagram width at '+expected+'%');
   };
   drag('pointerdown',imageBounds.right+5);
@@ -50,7 +50,7 @@ try{
   drag('pointerup',box.right);drag('pointermove',box.left);checkShare(85);
   divider.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));checkShare(84);
   assert(side.getBoundingClientRect().width===sidebarBounds.width,'Sidebar resized');
-  assert(viewer.querySelector('textarea').value.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
+  assert(!panel.hasChildNodes()&&!viewer.querySelector('textarea'),'Expected an empty workbench panel');
   viewer.querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));
   assert(viewer.hidden&&!markdown.editable.inert&&markdown.currentSource()===original&&markdown.editable.scrollTop===scroll,'Esc must restore document');
   buttons()[0].click();viewer.querySelector('button').click();

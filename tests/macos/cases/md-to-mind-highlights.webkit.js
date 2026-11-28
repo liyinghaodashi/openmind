@@ -17,7 +17,7 @@ try {
   document.querySelector(expandSelector).click();
   await settle();
   const viewer = document.querySelector('.markdown-code-viewer');
-  if (viewer.hidden || !viewer.querySelector('textarea')?.value.includes('A --> B'))
+  if (viewer.hidden || !viewer.querySelector('img')?.naturalWidth)
     throw new Error('Mermaid 代码块未放大');
 
   await openDocument(mind);
