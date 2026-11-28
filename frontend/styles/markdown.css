@@ -141,5 +141,5 @@
 #markdown-editor .markdown-mermaid-panes pre{height:100%;min-width:0;padding:14px;border-radius:12px}
 .markdown-code-viewer p{margin:12px 16px}
 .markdown-mermaid-divider{position:relative;cursor:col-resize;touch-action:none;-webkit-user-select:none;user-select:none}
-.markdown-mermaid-divider::after{content:"";position:absolute;inset:0 auto 0 50%;width:1px;background:var(--markdown-border)}
+.markdown-mermaid-divider::after{content:"";position:absolute;inset:0 auto 0 50%;width:1px}
 .markdown-mermaid-divider:is(:hover,:focus-visible,.dragging)::after{background:var(--markdown-muted-text)}
