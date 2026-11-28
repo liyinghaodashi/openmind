@@ -65,6 +65,12 @@ try{
   assert(header('lane2').getAttribute('aria-pressed')==='true'&&header('lane1').getAttribute('aria-pressed')==='false'&&add().textContent==='新建节点','选中泳道或操作按钮错误');
   assert(markdown.currentSource()===changed,'选择泳道不应修改原文');
   add().click();await settle();await state.queue.drain();
+  const populatedSvg=await (await fetch(viewer.querySelector('img').src)).text();
+  const populated=new DOMParser().parseFromString(populatedSvg,'image/svg+xml');
+  const emptyWidth=Number(lanes[0].querySelector('rect').getAttribute('width'));
+  for(const outline of populated.querySelectorAll('.pele-lane > rect:first-child')){
+    assert(Number(outline.getAttribute('width'))>=emptyWidth,'新建节点后泳道变窄');
+  }
   const withNode=changed.replace('lane2["泳道 2"]','lane2["泳道 2"]\n    node1["节点 1"]');
   assert(documentFile.source===withNode&&header('lane2').getAttribute('aria-pressed')==='true','创建节点后泳道或保存结果错误');
   clickHeader('lane1');

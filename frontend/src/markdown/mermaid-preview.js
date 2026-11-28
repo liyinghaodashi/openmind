@@ -1,7 +1,6 @@
 const theme = '--pele-surface:rgba(255,255,255,.78);--pele-surface-alt:#e0ecee;--pele-border:#94aaaF;--pele-line:#516975;--pele-fg:#213540;--pele-radius:9px;';
 
-function widenEmptySwimlanes(root) {
-  if (root.querySelector('.pele-node, .pele-edge')) return;
+function ensureSwimlaneWidth(root) {
   const lanes = [...root.querySelectorAll('.pele-cluster')];
   if (!lanes.length || !lanes.every(lane => lane.matches('.pele-lane') && lane.querySelector('g[transform^="rotate(-90"]'))) return;
 
@@ -24,7 +23,7 @@ export function createMermaidPreview(render, source) {
     let geometry;
     if (svg.includes('class="pele pele-swimlane"')) {
       const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
-      widenEmptySwimlanes(root);
+      ensureSwimlaneWidth(root);
       const headers = [...root.querySelectorAll('.pele-cluster.pele-lane')].map(lane => {
         const header = lane.querySelector('rect:nth-of-type(2)');
         const id = lane.getAttribute('data-id');
