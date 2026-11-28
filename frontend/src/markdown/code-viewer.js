@@ -13,8 +13,8 @@ function iconButton(label,path){
   return button;
 }
 
-const defaultLane='  subgraph lane1["泳道 1"]\n  end';
-const diagramTemplates={swimlane:'swimlane-beta LR\n'+defaultLane,flowchart:'flowchart TD'};
+const defaultLanes='  subgraph lane1["泳道 1"]\n  end\n  subgraph lane2["泳道 2"]\n  end';
+const diagramTemplates={swimlane:'swimlane-beta LR\n'+defaultLanes,flowchart:'flowchart TD'};
 const emptyDeclaration=/^(?:swimlane-beta|flowchart|graph)(?:[ \t]+(?:TD|TB|LR|RL|BT))?[ \t]*;?$/i;
 
 function currentType(source){
@@ -175,7 +175,7 @@ export function bindCodeViewer(container,editable,replaceSource){
       if(await result!=='switch')return;
     }
     if(active!==block||!editable.contains(body)||body.textContent!==source)return;
-    const template=sameType?original+'\n'+defaultLane:diagramTemplates[target];
+    const template=sameType?original+'\n'+defaultLanes:diagramTemplates[target];
     replaceSource(body,template+'\n');
     updatePreview(block);
   }
