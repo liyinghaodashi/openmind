@@ -43,6 +43,10 @@ try{
   const svg=await (await fetch(viewer.querySelector('img').src)).text();
   const lanes=new DOMParser().parseFromString(svg,'image/svg+xml').querySelectorAll('.pele-lane');
   assert([...lanes].map(lane=>lane.textContent.trim()).sort().join(',')==='泳道 1,泳道 2','默认泳道未渲染');
+  for(const lane of lanes){
+    const outline=lane.querySelector('rect');
+    assert(Number(outline.getAttribute('width'))>=7*Number(outline.getAttribute('height')),'默认泳道应为横向长条');
+  }
   await openDocument('根.md');await openDocument(path);await settle();await open();
   assert(selected()==='swimlane'&&markdown.currentSource()===changed,'重新打开后图类型错误');
   choose('flowchart');await settle();await state.queue.drain();
