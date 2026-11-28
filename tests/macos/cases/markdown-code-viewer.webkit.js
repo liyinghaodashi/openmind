@@ -27,7 +27,7 @@ try{
   const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('pre').getBoundingClientRect();
   const checkClose=()=>{
     const canvas=diagram.getBoundingClientRect(),button=viewer.querySelector('button').getBoundingClientRect();
-    assert(Math.abs(canvas.top-box.top)<1,'Unexpected header above diagram');
+    assert(Math.abs(canvas.top-box.top-16)<1&&Math.abs(box.bottom-canvas.bottom-16)<1,'Expected matching 16px vertical insets');
     assert(button.width>0&&button.left>=canvas.left&&button.right<=canvas.right&&canvas.right-button.right<=12&&button.top>=canvas.top&&button.top-canvas.top<=12,'Close button outside canvas corner');
   };
   checkClose();
