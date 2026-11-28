@@ -133,7 +133,20 @@
   box-sizing:border-box;height:100%;padding:16px;
 }
 .markdown-mermaid-canvas{position:relative;min-width:0;min-height:0}
-.markdown-mermaid-type{position:absolute;top:12px;left:16px;max-width:calc(100% - 60px);border:0;border-radius:8px;padding:4px 8px;background:var(--markdown-block-background);color:var(--markdown-text);font:inherit;font-size:13px}
+.markdown-mermaid-type{position:absolute;z-index:1;top:12px;left:16px;max-width:calc(100% - 56px);color:#262a2c}
+.markdown-mermaid-type button{display:flex;align-items:center;gap:9px;border:0;font:500 13px/1.2 -apple-system,BlinkMacSystemFont,sans-serif;white-space:nowrap}
+.markdown-mermaid-type svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
+.markdown-mermaid-type>button{max-width:100%;height:34px;padding:0 10px;border-radius:10px;background:#fffffff2;box-shadow:0 2px 8px #18333512;color:inherit}
+.markdown-mermaid-type>button span{overflow:hidden;text-overflow:ellipsis}
+.markdown-mermaid-type>button svg:last-child{width:13px;height:13px;margin-left:auto;color:#697374}
+.markdown-mermaid-type>button[aria-expanded=true] svg:last-child{transform:rotate(180deg)}
+.markdown-mermaid-type [role=listbox]{position:absolute;top:calc(100% + 5px);left:0;width:142px;padding:5px;border-radius:12px;background:#fff;box-shadow:0 6px 22px #18333521,0 1px 4px #18333512}
+.markdown-mermaid-type [role=option]{width:100%;height:34px;padding:0 10px;border-radius:8px;color:#60686a}
+.markdown-mermaid-type [role=option]+[role=option]{margin-top:2px}
+.markdown-mermaid-type [role=option]:hover,.markdown-mermaid-type [role=option]:focus-visible{background:#eef1f1}
+.markdown-mermaid-type [role=option][aria-selected=true]{background:#25292a;color:white}
+.markdown-mermaid-type [role=option][aria-selected=true]::after{content:"";width:8px;height:4px;margin-left:auto;border-left:1.5px solid;border-bottom:1.5px solid;transform:rotate(-45deg)}
+.markdown-mermaid-type button:focus-visible{outline:2px solid #77878a;outline-offset:-2px}
 .markdown-mermaid-canvas>.markdown-code-button{position:absolute;right:8px;top:8px}
 .markdown-mermaid-expanded{width:100%;height:100%;min-width:0;min-height:0;object-fit:contain;padding:16px}
 .markdown-mermaid-panel{border-radius:12px;background:var(--markdown-block-background)}

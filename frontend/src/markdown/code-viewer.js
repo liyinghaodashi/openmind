@@ -1,3 +1,4 @@
+import {createMermaidTypePicker} from './mermaid-type-picker.js';
 import {bindSplitDivider} from '../workspace/split-view.js';
 import {createMermaidPreview} from './mermaid-preview.js';
 
@@ -56,13 +57,9 @@ export function bindCodeViewer(container,editable,replaceSource){
   const error=document.createElement('p');
   error.className='markdown-mermaid-error';
   error.setAttribute('role','status');
-  const type=document.createElement('select');
-  type.className='markdown-mermaid-type';
-  type.setAttribute('aria-label','图类型');
-  type.add(new Option('泳道图','swimlane'));
-  type.add(new Option('流程图','flowchart'));
+  const type=createMermaidTypePicker(changeType);
   const dialog=document.getElementById('mermaid-type-dialog');
-  canvas.append(image,error,close,type);
+  canvas.append(image,error,close,type.element);
   const panel=document.createElement('div');
   panel.className='markdown-mermaid-panel';
   panes.append(canvas,divider,panel);
@@ -97,8 +94,8 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(block===active)showDiagram(preview);
   }
   function showDiagram(preview){
-    type.value=currentType(preview.source);
-    type.disabled=editable.getAttribute('aria-readonly')==='true';
+    type.setValue(currentType(preview.source));
+    type.trigger.disabled=editable.getAttribute('aria-readonly')==='true';
     if(preview.url)image.src=preview.url;
     else image.removeAttribute('src');
     image.hidden=!preview.url;
@@ -109,6 +106,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(!active)return;
     const button=buttons.get(active);
     if(dialog.open)dialog.close('cancel');
+    type.close();
     stopResize();
     image.removeAttribute('src');
     active=null;
@@ -132,7 +130,7 @@ export function bindCodeViewer(container,editable,replaceSource){
   function layout(){
     frame=0;
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
-    if(active)type.disabled=editable.getAttribute('aria-readonly')==='true';
+    if(active)type.trigger.disabled=editable.getAttribute('aria-readonly')==='true';
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
       if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}
@@ -160,13 +158,12 @@ export function bindCodeViewer(container,editable,replaceSource){
     }
   }
   function schedule(){if(!frame)frame=requestAnimationFrame(layout)}
-  type.addEventListener('change',async()=>{
+  async function changeType(target){
     const block=active,body=block?.querySelector('pre code');
     if(!body)return;
-    const source=body.textContent,target=type.value;
+    const source=body.textContent;
     const original=source.replaceAll('\u200b','').trim();
-    type.value=currentType(original);
-    if(!Object.hasOwn(diagramHeaders,target)||type.value===target||type.disabled||dialog.open)return;
+    if(!Object.hasOwn(diagramHeaders,target)||currentType(original)===target||type.trigger.disabled||dialog.open)return;
     if(original&&!emptyDeclaration.test(original)){
       dialog.returnValue='cancel';
       const result=new Promise(resolve=>dialog.addEventListener('close',()=>resolve(dialog.returnValue),{once:true}));
@@ -176,7 +173,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(active!==block||!editable.contains(body)||body.textContent!==source)return;
     replaceSource(body,diagramHeaders[target]+'\n');
     updatePreview(block);
-  });
+  }
   dialog.addEventListener('keydown',event=>{
     if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
     event.preventDefault();
