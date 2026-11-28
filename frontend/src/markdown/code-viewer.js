@@ -1,3 +1,4 @@
+import {bindDiagramPan} from './diagram-pan.js';
 import {createSwimlaneControls} from './swimlane-controls.js';
 import {createMermaidTypePicker} from './mermaid-type-picker.js';
 import {bindSplitDivider} from '../workspace/split-view.js';
@@ -42,6 +43,7 @@ export function bindCodeViewer(container,editable,replaceSource){
   panes.className='markdown-mermaid-panes';
   const image=document.createElement('img');
   image.className='markdown-mermaid-expanded';
+  image.draggable=false;
   image.alt='Mermaid 图表';
   image.id='markdown-mermaid-diagram';
   const divider=document.createElement('div');
@@ -61,7 +63,14 @@ export function bindCodeViewer(container,editable,replaceSource){
   error.setAttribute('role','status');
   const type=createMermaidTypePicker(changeType);
   const dialog=document.getElementById('mermaid-type-dialog');
-  canvas.append(image,error,close,type.element);
+  const viewport=document.createElement('div');
+  viewport.className='markdown-diagram-viewport';
+  const layer=document.createElement('div');
+  layer.className='markdown-diagram-layer';
+  layer.append(image);
+  viewport.append(layer);
+  canvas.append(viewport,error,close,type.element);
+  const resetPan=bindDiagramPan(viewport,layer);
   const panel=document.createElement('div');
   panel.className='markdown-mermaid-panel';
   const lanes=createSwimlaneControls(panel,insert=>{
@@ -119,7 +128,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     lanes.add.disabled=type.trigger.disabled;
     if(preview.url)image.src=preview.url;
     else image.removeAttribute('src');
-    image.hidden=!preview.url;
+    viewport.hidden=image.hidden=!preview.url;
     error.hidden=!!preview.url;
     error.textContent=preview.error?'Mermaid 语法错误：'+preview.error:'';
   }
@@ -129,6 +138,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(dialog.open)dialog.close('cancel');
     type.close();
     stopResize();
+    resetPan();
     image.removeAttribute('src');
     lanes.show();
     active=null;
@@ -197,6 +207,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     }
     if(active!==block||!editable.contains(body)||body.textContent!==source)return;
     const template=sameType?original+'\n'+defaultLanes:diagramTemplates[target];
+    resetPan();
     replaceSource(body,template+'\n');
     updatePreview(block);
   }

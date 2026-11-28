@@ -60,6 +60,19 @@ try{
     assert(target===header(id),'泳道头部无法点选');
     target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
   }
+  const image=viewer.querySelector('img'),lane=header('lane1');
+  assert(!image.draggable,'工作台图表应禁用原生图片拖动');
+  const before=[image,lane,type].map(el=>el.getBoundingClientRect());
+  lane.setPointerCapture=()=>{};
+  const pointer=(kind,x,y)=>lane.dispatchEvent(new PointerEvent(kind,{bubbles:true,isPrimary:true,pointerId:1,clientX:x,clientY:y}));
+  pointer('pointerdown',100,100);pointer('pointermove',126,114);pointer('pointerup',126,114);
+  lane.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+  checkPanel();
+  for(const [i,el] of [image,lane,type].entries()){
+    const box=el.getBoundingClientRect();
+    assert(Math.abs(box.x-before[i].x-(i<2?26:0))<1&&Math.abs(box.y-before[i].y-(i<2?14:0))<1,'图表与泳道热区应同步平移，工具栏应固定');
+  }
+  pointer('pointerdown',126,114);pointer('pointerup',126,114);
   clickHeader('lane1');
   clickHeader('lane2');
   assert(header('lane2').getAttribute('aria-pressed')==='true'&&header('lane1').getAttribute('aria-pressed')==='false'&&add().textContent==='新建节点','选中泳道或操作按钮错误');
