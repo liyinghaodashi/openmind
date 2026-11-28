@@ -144,7 +144,6 @@
 .markdown-mermaid-type [role=option]{width:100%;height:34px;padding:0 10px;border-radius:8px;color:#60686a}
 .markdown-mermaid-type [role=option]+[role=option]{margin-top:2px}
 .markdown-mermaid-type [role=option]:hover,.markdown-mermaid-type [role=option]:focus-visible{background:#eef1f1}
-.markdown-mermaid-type [role=option][aria-selected=true]{background:#25292a;color:white}
 .markdown-mermaid-type [role=option][aria-selected=true]::after{content:"";width:8px;height:4px;margin-left:auto;border-left:1.5px solid;border-bottom:1.5px solid;transform:rotate(-45deg)}
 .markdown-mermaid-type button:focus-visible{outline:2px solid #77878a;outline-offset:-2px}
 .markdown-mermaid-canvas>.markdown-code-button{position:absolute;right:8px;top:8px}
