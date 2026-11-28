@@ -1,5 +1,25 @@
-export function bindDiagramPan(viewport, layer) {
-  let x=0, y=0, drag, moved=false;
+export function bindDiagramPan(viewport, layer, zoomOut, zoomIn, resetButton) {
+  const scales=[0.25,0.5,0.75,1,1.25,1.5,2,3,4];
+  const initial=scales.indexOf(1);
+  let level=initial, x=0, y=0, drag, moved=false;
+
+  function apply(){
+    layer.style.transform='translate('+x+'px,'+y+'px) scale('+scales[level]+')';
+    zoomOut.disabled=level===0;
+    zoomIn.disabled=level===scales.length-1;
+  }
+  function zoom(step){
+    stop();
+    const previous=scales[level];
+    level=Math.max(0,Math.min(scales.length-1,level+step));
+    const ratio=scales[level]/previous;
+    x*=ratio;
+    y*=ratio;
+    apply();
+  }
+  zoomOut.addEventListener('click',()=>zoom(-1));
+  zoomIn.addEventListener('click',()=>zoom(1));
+  resetButton.addEventListener('click',reset);
 
   function stop() {
     if(!drag)return;
@@ -23,7 +43,7 @@ export function bindDiagramPan(viewport, layer) {
     viewport.classList.add('panning');
     x=drag.x+dx;
     y=drag.y+dy;
-    layer.style.transform='translate('+x+'px,'+y+'px)';
+    apply();
   });
   for(const type of ['pointerup','pointercancel','lostpointercapture']){
     viewport.addEventListener(type,event=>{if(event.pointerId===drag?.id)stop()});
@@ -32,10 +52,12 @@ export function bindDiagramPan(viewport, layer) {
     if(moved&&event.detail){event.stopPropagation();event.preventDefault()}
   },true);
   window.addEventListener('blur',stop);
-  return ()=>{
+  function reset(){
     stop();
     moved=false;
     x=y=0;
-    layer.style.removeProperty('transform');
-  };
+    level=initial;
+    apply();
+  }
+  return reset;
 }

@@ -69,8 +69,26 @@ export function bindCodeViewer(container,editable,replaceSource){
   layer.className='markdown-diagram-layer';
   layer.append(image);
   viewport.append(layer);
-  canvas.append(viewport,error,close,type.element);
-  const resetPan=bindDiagramPan(viewport,layer);
+  const zoomControls=document.createElement('div');
+  zoomControls.className='markdown-diagram-zoom';
+  zoomControls.setAttribute('role','group');
+  zoomControls.setAttribute('aria-label','图表视图');
+  const zoomOut=iconButton('缩小','M3 8h10');
+  const zoomIn=iconButton('放大','M3 8h10M8 3v10');
+  const resetButton=iconButton('复位','M3 2v4h4M3 6a5.5 5.5 0 1 1-.2 4');
+  for(const button of [zoomOut,zoomIn,resetButton]){
+    button.title=button.getAttribute('aria-label');
+    zoomControls.append(button);
+  }
+  zoomControls.addEventListener('keydown',event=>{
+    if(event.key!=='ArrowLeft'&&event.key!=='ArrowRight')return;
+    const buttons=[...zoomControls.querySelectorAll('button:enabled')];
+    const step=event.key==='ArrowRight'?1:-1;
+    event.preventDefault();
+    buttons[(buttons.indexOf(event.target)+step+buttons.length)%buttons.length].focus();
+  });
+  canvas.append(viewport,error,close,type.element,zoomControls);
+  const resetView=bindDiagramPan(viewport,layer,zoomOut,zoomIn,resetButton);
   const panel=document.createElement('div');
   panel.className='markdown-mermaid-panel';
   const lanes=createSwimlaneControls(panel,insert=>{
@@ -128,7 +146,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     lanes.add.disabled=type.trigger.disabled;
     if(preview.url)image.src=preview.url;
     else image.removeAttribute('src');
-    viewport.hidden=image.hidden=!preview.url;
+    zoomControls.hidden=viewport.hidden=image.hidden=!preview.url;
     error.hidden=!!preview.url;
     error.textContent=preview.error?'Mermaid 语法错误：'+preview.error:'';
   }
@@ -138,7 +156,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(dialog.open)dialog.close('cancel');
     type.close();
     stopResize();
-    resetPan();
+    resetView();
     image.removeAttribute('src');
     lanes.show();
     active=null;
@@ -207,7 +225,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     }
     if(active!==block||!editable.contains(body)||body.textContent!==source)return;
     const template=sameType?original+'\n'+defaultLanes:diagramTemplates[target];
-    resetPan();
+    resetView();
     replaceSource(body,template+'\n');
     updatePreview(block);
   }

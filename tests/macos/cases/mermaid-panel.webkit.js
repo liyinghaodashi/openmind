@@ -72,6 +72,19 @@ try{
     const box=el.getBoundingClientRect();
     assert(Math.abs(box.x-before[i].x-(i<2?26:0))<1&&Math.abs(box.y-before[i].y-(i<2?14:0))<1,'图表与泳道热区应同步平移，工具栏应固定');
   }
+  const zoom=viewer.querySelector('.markdown-diagram-zoom');
+  const action=name=>zoom.querySelector('[aria-label="'+name+'"]').click();
+  const zoomBounds=zoom.getBoundingClientRect();
+  action('放大');
+  assert(image.getBoundingClientRect().width>before[0].width&&lane.getBoundingClientRect().width>before[1].width,'图表和泳道热区应同步放大');
+  action('缩小');
+  assert(Math.abs(image.getBoundingClientRect().width-before[0].width)<1,'缩小应回到上一级比例');
+  action('缩小');action('复位');
+  for(const [i,el] of [image,lane].entries()){
+    const box=el.getBoundingClientRect();
+    assert(Math.abs(box.width-before[i].width)<1&&Math.abs(box.x-before[i].x)<1&&Math.abs(box.y-before[i].y)<1,'复位应恢复比例和位置');
+  }
+  assert(zoom.getBoundingClientRect().x===zoomBounds.x&&zoom.getBoundingClientRect().y===zoomBounds.y,'缩放按钮应固定在画布上');
   pointer('pointerdown',126,114);pointer('pointerup',126,114);
   clickHeader('lane1');
   clickHeader('lane2');

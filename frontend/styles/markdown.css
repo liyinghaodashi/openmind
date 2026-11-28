@@ -163,3 +163,9 @@
 .markdown-swimlane-headers rect:hover{fill:#182e3912}
 .markdown-swimlane-headers rect[aria-pressed=true],.markdown-swimlane-headers rect:focus-visible{fill:#182e3924;stroke:#263b42;stroke-width:2;vector-effect:non-scaling-stroke}
 .markdown-mermaid-panel>button{margin:12px;padding:8px 12px;border:0;border-radius:8px;background:#282828;color:white;cursor:pointer}
+
+.markdown-diagram-zoom{position:absolute;right:12px;bottom:12px;display:flex;gap:2px;padding:4px;border-radius:10px;background:#fffffff2;box-shadow:0 2px 8px #18333512}
+.markdown-diagram-zoom[hidden]{display:none}
+.markdown-diagram-zoom button{width:30px;height:30px;border-radius:7px;background:transparent;color:#596062}
+.markdown-diagram-zoom button:is(:hover,:focus-visible):enabled{background:#252525;color:white}
+.markdown-diagram-zoom button:disabled{opacity:.35;cursor:default}
