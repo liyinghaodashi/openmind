@@ -50,7 +50,31 @@ try{
   await openDocument('根.md');await openDocument(path);await settle();await open();
   assert(selected()==='swimlane'&&markdown.currentSource()===changed,'重新打开后图类型错误');
   choose('flowchart');await settle();await state.queue.drain();
-  assert(!dialog.open&&selected()==='flowchart'&&documentFile.source===changed.replace(swimlane,'flowchart TD'),'空图切换失败');
+  assert(!dialog.open&&documentFile.source===changed.replace(swimlane,'flowchart TD'),'空图切换失败');
+  choose('swimlane');await settle();await state.queue.drain();
+  const header=id=>viewer.querySelector('.markdown-swimlane-headers [data-id="'+id+'"]');
+  const add=()=>viewer.querySelector('.markdown-mermaid-panel button');
+  function clickHeader(id){
+    const rect=header(id).getBoundingClientRect();
+    const target=document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+    assert(target===header(id),'泳道头部无法点选');
+    target.dispatchEvent(new MouseEvent('click',{bubbles:true}));
+  }
+  clickHeader('lane1');
+  clickHeader('lane2');
+  assert(header('lane2').getAttribute('aria-pressed')==='true'&&header('lane1').getAttribute('aria-pressed')==='false'&&add().textContent==='新建节点','选中泳道或操作按钮错误');
+  assert(markdown.currentSource()===changed,'选择泳道不应修改原文');
+  add().click();await settle();await state.queue.drain();
+  const withNode=changed.replace('lane2["泳道 2"]','lane2["泳道 2"]\n    node1["节点 1"]');
+  assert(documentFile.source===withNode&&header('lane2').getAttribute('aria-pressed')==='true','创建节点后泳道或保存结果错误');
+  clickHeader('lane1');
+  add().click();await settle();await state.queue.drain();
+  const withBoth=withNode.replace('lane1["泳道 1"]','lane1["泳道 1"]\n    node2["节点 2"]');
+  assert(documentFile.source===withBoth,'第二个节点写入错误');
+  await openDocument('根.md');await openDocument(path);await settle();await open();checkPanel();
+  assert(markdown.currentSource()===withBoth,'重开后泳道节点丢失');
+  choose('flowchart');dialog.querySelector('[value="switch"]').click();await settle();await state.queue.drain();
+  assert(!dialog.open&&selected()==='flowchart'&&documentFile.source===changed.replace(swimlane,'flowchart TD'),'切换流程图失败');
   viewer.querySelector('button').click();
   assert(markdown.editable.querySelector('[data-mermaid-preview="ready"] pre code').textContent.trim()==='flowchart TD','正文预览未同步');
   window.webkit.messageHandlers.result.postMessage({passed:true,message:'PASS: Mermaid type switch, confirmation, inline preview, save and reopen'});

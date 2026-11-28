@@ -1,3 +1,4 @@
+import {createSwimlaneControls} from './swimlane-controls.js';
 import {createMermaidTypePicker} from './mermaid-type-picker.js';
 import {bindSplitDivider} from '../workspace/split-view.js';
 import {createMermaidPreview} from './mermaid-preview.js';
@@ -63,6 +64,23 @@ export function bindCodeViewer(container,editable,replaceSource){
   canvas.append(image,error,close,type.element);
   const panel=document.createElement('div');
   panel.className='markdown-mermaid-panel';
+  const lanes=createSwimlaneControls(panel,insert=>{
+    const body=active?.querySelector('pre code');
+    if(!body||editable.getAttribute('aria-readonly')==='true')return;
+    const source=body.textContent.replaceAll('\u200b','');
+    if(previews.get(active)?.source!==source)return;
+    const next=insert(source);
+    if(next===undefined){
+      const message=document.createElement('p');
+      message.setAttribute('role','status');
+      message.textContent='无法定位泳道。请在源码中用独立一行的 subgraph ID 声明泳道。';
+      panel.replaceChildren(lanes.add,message);
+      return;
+    }
+    replaceSource(body,next);
+    updatePreview(active);
+  });
+  image.after(lanes.overlay);
   panes.append(canvas,divider,panel);
   const stopResize=bindSplitDivider(divider,canvas);
 
@@ -95,8 +113,10 @@ export function bindCodeViewer(container,editable,replaceSource){
     if(block===active)showDiagram(preview);
   }
   function showDiagram(preview){
+    lanes.show(preview.geometry);
     type.setValue(currentType(preview.source));
     type.trigger.disabled=editable.getAttribute('aria-readonly')==='true';
+    lanes.add.disabled=type.trigger.disabled;
     if(preview.url)image.src=preview.url;
     else image.removeAttribute('src');
     image.hidden=!preview.url;
@@ -110,6 +130,7 @@ export function bindCodeViewer(container,editable,replaceSource){
     type.close();
     stopResize();
     image.removeAttribute('src');
+    lanes.show();
     active=null;
     viewer.hidden=true;
     editable.inert=false;
@@ -131,7 +152,7 @@ export function bindCodeViewer(container,editable,replaceSource){
   function layout(){
     frame=0;
     if(active&&(!editable.contains(active)||container.clientHeight===0))dismiss();
-    if(active)type.trigger.disabled=editable.getAttribute('aria-readonly')==='true';
+    if(active)lanes.add.disabled=type.trigger.disabled=editable.getAttribute('aria-readonly')==='true';
     const bounds=container.getBoundingClientRect();
     for(const [block,button] of buttons){
       if(!editable.contains(block)){clearPreview(block);button.remove();buttons.delete(block)}
