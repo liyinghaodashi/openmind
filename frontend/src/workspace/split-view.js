@@ -2,7 +2,7 @@ export function workspacePath(root,path) {
   return root&&path ? root.replace(/\/$/,'')+'/'+path : null;
 }
 
-function bindSplitDivider(divider, container) {
+export function bindSplitDivider(divider, container) {
   const min=Number(divider.getAttribute('aria-valuemin'));
   const max=Number(divider.getAttribute('aria-valuemax'));
   let share=Number(divider.getAttribute('aria-valuenow'));

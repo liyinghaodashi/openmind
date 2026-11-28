@@ -27,6 +27,21 @@ try{
   const imageBounds=diagram.getBoundingClientRect(),sourceBounds=viewer.querySelector('pre').getBoundingClientRect();
   assert(sourceBounds.width>0&&imageBounds.right<=sourceBounds.left&&Math.abs(imageBounds.width/sourceBounds.width-3)<0.05,'Expected 3:1 diagram and source columns');
   assert(imageBounds.top===sourceBounds.top&&imageBounds.bottom===sourceBounds.bottom&&sourceBounds.right<=box.right,'Panes must share the available height and fit inside the viewer');
+  const divider=viewer.querySelector('[role="separator"]');
+  let captured=null;
+  divider.setPointerCapture=id=>captured=id;
+  divider.hasPointerCapture=id=>captured===id;
+  divider.releasePointerCapture=()=>captured=null;
+  const drag=(type,x)=>divider.dispatchEvent(new PointerEvent(type,{pointerId:1,isPrimary:true,clientX:x,bubbles:true}));
+  const checkShare=expected=>{
+    const left=diagram.getBoundingClientRect().width,right=viewer.querySelector('pre').getBoundingClientRect().width;
+    assert(Math.abs(100*left/(left+right)-expected)<0.2,'Unexpected diagram width at '+expected+'%');
+  };
+  drag('pointerdown',imageBounds.right+5);
+  drag('pointermove',box.left-box.width);checkShare(15);
+  drag('pointermove',box.right+box.width);checkShare(85);
+  drag('pointerup',box.right);drag('pointermove',box.left);checkShare(85);
+  divider.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true}));checkShare(84);
   assert(side.getBoundingClientRect().width===sidebarBounds.width,'Sidebar resized');
   assert(viewer.querySelector('code').textContent.includes('A --> B')&&!viewer.textContent.includes('const first'),'Wrong block');
   viewer.querySelector('button').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));

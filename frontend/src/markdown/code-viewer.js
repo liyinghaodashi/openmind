@@ -1,5 +1,6 @@
 import {bindCodeHighlights} from './code-highlights.js';
 
+import {bindSplitDivider} from '../workspace/split-view.js';
 import {createMermaidPreview} from './mermaid-preview.js';
 
 const blockSelector='[data-type="code-block"]';
@@ -26,6 +27,25 @@ export function bindCodeViewer(container,editable){
   viewer.append(close,content);
   container.append(controls,viewer);
   const setHighlightsVisible=bindCodeHighlights(content);
+
+  const panes=document.createElement('div');
+  panes.className='markdown-mermaid-panes';
+  const image=document.createElement('img');
+  image.className='markdown-mermaid-expanded';
+  image.alt='Mermaid 图表';
+  image.id='markdown-mermaid-diagram';
+  const divider=document.createElement('div');
+  divider.className='markdown-mermaid-divider';
+  divider.tabIndex=0;
+  divider.setAttribute('role','separator');
+  divider.setAttribute('aria-label','图表宽度');
+  divider.setAttribute('aria-orientation','vertical');
+  divider.setAttribute('aria-controls',image.id);
+  divider.setAttribute('aria-valuemin','15');
+  divider.setAttribute('aria-valuemax','85');
+  divider.setAttribute('aria-valuenow','75');
+  panes.append(image,divider);
+  const stopResize=bindSplitDivider(divider,image);
 
   const buttons=new Map();
   const previews=new Map();
@@ -57,6 +77,9 @@ export function bindCodeViewer(container,editable){
   function dismiss(restoreFocus=false){
     if(!active)return;
     const button=buttons.get(active);
+    stopResize();
+    panes.querySelector('pre')?.remove();
+    image.removeAttribute('src');
     active=null;
     viewer.hidden=true;
     setHighlightsVisible?.(false);
@@ -79,14 +102,9 @@ export function bindCodeViewer(container,editable){
     pre.append(code);copy.append(language,pre);
     const preview=previews.get(block);
     if(preview?.url){
-      const image=document.createElement('img');
-      image.className='markdown-mermaid-expanded';
       image.src=preview.url;
-      image.alt='Mermaid 图表';
-      const panes=document.createElement('div');
-      panes.className='markdown-mermaid-panes';
       pre.setAttribute('aria-label','Mermaid 源码');
-      panes.append(image,pre);
+      panes.append(pre);
       copy.append(panes);
     }else if(preview?.error){
       const message=document.createElement('p');
